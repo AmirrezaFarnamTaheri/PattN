@@ -52,6 +52,9 @@ public class WireguardFmt : BaseFmt
             WgDns = GetQueryDecoded(query, "dns"),
         });
 
+        // PattN: WireGuard reads its query by hand, so dialMode is not inherited from BaseFmt.ResolveUriQuery
+        item.DialMode = GetQueryDecoded(query, "dialMode");
+
         return item;
     }
 
@@ -70,6 +73,11 @@ public class WireguardFmt : BaseFmt
 
         var protoExtra = item.GetProtocolExtra();
         var dicQuery = new Dictionary<string, string>();
+        // PattN: WireGuard builds its query by hand, so dialMode is not inherited from BaseFmt.ToUriQuery
+        if (item.DialMode.IsNotEmpty())
+        {
+            dicQuery.Add("dialMode", Utils.UrlEncode(item.DialMode));
+        }
         if (!protoExtra.WgPublicKey.IsNullOrEmpty())
         {
             dicQuery.Add("publickey", Utils.UrlEncode(protoExtra.WgPublicKey));
