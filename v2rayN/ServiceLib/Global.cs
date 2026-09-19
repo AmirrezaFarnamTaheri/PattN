@@ -463,6 +463,22 @@ public class Global
         ""
     ];
 
+    // PattN: values of the Xray outbound targetStrategy; the first one is Xray's default
+    public static readonly List<string> TargetStrategies =
+    [
+        AsIs,
+        "UseIP",
+        "UseIPv4",
+        "UseIPv6",
+        "UseIPv4v6",
+        "UseIPv6v4",
+        "ForceIP",
+        "ForceIPv4",
+        "ForceIPv6",
+        "ForceIPv4v6",
+        "ForceIPv6v4"
+    ];
+
     public static readonly List<string> DomainDirectDNSAddress =
     [
         "8.8.8.8",

@@ -279,6 +279,7 @@ public static class ConfigHandler
             item.Alpn = profileItem.Alpn;
             item.CipherSuites = profileItem.CipherSuites;
             item.DialMode = profileItem.DialMode;
+            item.TargetStrategy = profileItem.TargetStrategy;
 
             item.PublicKey = profileItem.PublicKey;
             item.ShortId = profileItem.ShortId;
