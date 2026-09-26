@@ -74,7 +74,7 @@ public sealed class SQLiteHelper
     public Task RunInTransactionAsync(Action<SQLiteConnection> action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        return _dbAsync.RunInTransactionAsync(action);
+        return _dbAsync.RunInTransactionAsync(() => action(_dbAsync.GetConnection()));
     }
 
     public async Task<List<T>> QueryAsync<T>(string sql, params object[] args) where T : new()
