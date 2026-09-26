@@ -16,6 +16,8 @@ jobs:
     name: build and release windows x86 WPF & Avalonia
     if: inputs.release_tag != ''
     runs-on: windows-latest
+    env:
+      ReleaseTag: ${{ inputs.release_tag }}
 
     strategy:
       fail-fast: false
@@ -56,10 +58,16 @@ jobs:
         with:
           dotnet-version: 10.0.1xx
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: './pattn-discovery/go.mod'
+          cache: false
+
       - name: Check release tag
         shell: pwsh
         run: |
-          if ("${{ inputs.release_tag }}" -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-P[0-9]+)?$') { throw "release_tag must be x.y.z-P<n> (got '${{ inputs.release_tag }}')" }
+          if ($env:ReleaseTag -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-P[0-9]+)?$') { throw "release_tag must be x.y.z-P<n> (got '$env:ReleaseTag')" }
 
       - name: Publish ${{ matrix.flavor }} win-x86
         shell: pwsh
@@ -73,7 +81,7 @@ jobs:
             -r win-x86 `
             -p:SelfContained=true `
             -p:EnableWindowsTargeting=true `
-            -p:Version=${{ inputs.release_tag }} `
+            "-p:Version=$env:ReleaseTag" `
             -o "publish/${{ matrix.flavor }}"
 
       - name: Publish AmazTool win-x86
@@ -87,9 +95,48 @@ jobs:
             -p:SelfContained=true `
             -p:PublishTrimmed=true `
             -p:EnableWindowsTargeting=true `
-            -p:Version=${{ inputs.release_tag }} `
+            "-p:Version=$env:ReleaseTag" `
             -o "publish/${{ matrix.flavor }}"
 
+      - name: Build pattn-discovery win-x86
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = (Resolve-Path ".").Path
+          $output = Join-Path $root "publish/${{ matrix.flavor }}/bin/pattn-discovery/pattn-discovery.exe"
+          New-Item -ItemType Directory -Force -Path (Split-Path $output) | Out-Null
+
+          Push-Location "pattn-discovery"
+          try {
+            go test ./...
+            if ($LASTEXITCODE -ne 0) { throw "pattn-discovery tests failed" }
+
+            go vet ./...
+            if ($LASTEXITCODE -ne 0) { throw "pattn-discovery vet failed" }
+
+            $env:CGO_ENABLED = "0"
+            $env:GOOS = "windows"
+            $env:GOARCH = "386"
+            go build -trimpath -ldflags="-s -w" -o $output ./cmd/pattn-discovery
+            if ($LASTEXITCODE -ne 0) { throw "pattn-discovery build failed" }
+          }
+          finally {
+            Pop-Location
+          }
+
+      - name: Smoke bundled pattn-discovery win-x86
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $helper = Resolve-Path "publish/${{ matrix.flavor }}/bin/pattn-discovery/pattn-discovery.exe"
+          $response = '{"v":1,"id":"smoke","method":"engine.version"}' | & $helper.Path
+          if ($LASTEXITCODE -ne 0) {
+            throw "pattn-discovery smoke handshake failed with exit code $LASTEXITCODE"
+          }
+          $parsed = $response | ConvertFrom-Json
+          if ($parsed.id -ne "smoke" -or $parsed.data.engine -ne "pattn-discovery") {
+            throw "pattn-discovery returned an unexpected smoke response: $response"
+          }
       - name: Detect bundled core versions
         id: detect-core
         shell: pwsh
