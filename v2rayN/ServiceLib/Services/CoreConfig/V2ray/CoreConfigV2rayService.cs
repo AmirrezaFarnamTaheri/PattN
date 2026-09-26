@@ -44,6 +44,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
                 return ret;
             }
 
+            // PattN: the ECH outbounds of this config are collected while its outbounds are built
             context.EchOutbounds.Clear();
             GenLog();
 
@@ -86,6 +87,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             }
 
             var coreConfigContent = ApplyFinalConfigModifiers();
+            // PattN: the ECH outbounds go after every other outbound
             var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
             if (echOutboundError != null)
             {
@@ -130,6 +132,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
 
             var (lstIpEndPoints, lstTcpConns) = Utils.GetActiveNetworkInfo();
 
+            // PattN: the ECH outbounds of this config are collected while its outbounds are built
             context.EchOutbounds.Clear();
             GenLog();
             _coreConfig.inbounds.Clear();
@@ -236,6 +239,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             ApplyOutboundBindInterface();
             ApplyOutboundSendThrough();
             var coreConfigContent = ApplyCustomOutboundReplace();
+            // PattN: the ECH outbounds go after every other outbound
             var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
             if (echOutboundError != null)
             {
@@ -288,6 +292,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
                 return ret;
             }
 
+            // PattN: the ECH outbounds of this config are collected while its outbounds are built
             context.EchOutbounds.Clear();
             GenLog();
             GenOutbounds();
@@ -322,6 +327,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             ApplyOutboundSendThrough();
 
             var coreConfigContent = ApplyCustomOutboundReplace();
+            // PattN: the ECH outbounds go after every other outbound
             var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
             if (echOutboundError != null)
             {

@@ -79,6 +79,63 @@ public class NodeValidatorEchOutboundTests
         await result.Errors.Should().Contain(ResUI.MsgEchOutboundInvalidTag);
     }
 
+    [Test]
+    [Arguments("""{"tag": "ech-out", "protocol": "freedom", "protocol": "freedom"}""")]
+    [Arguments("""{"tag": "ech-out", "protocol": "freedom", "settings": {"domainStrategy": "UseIP", "domainStrategy": "AsIs"}}""")]
+    public async Task ValidateEchOutbound_RepeatedKey_ShouldFail(string echOutbound)
+    {
+        // Every read of a parsed object that repeats a key throws, so such an outbound is invalid.
+        await NodeValidator.ValidateEchOutbound(CreateNode(echOutbound))
+            .Should().BeEqualTo(string.Format(ResUI.MsgInvalidProperty, ResUI.TbEchOutbound));
+        await NodeValidator.Validate(CreateNode(echOutbound), ECoreType.Xray).Success.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task ValidateEchOutbound_WithComments_ShouldGiveTheOutbound()
+    {
+        var node = CreateNode("""
+            {
+              // the ECH config query goes direct
+              "tag": "ech-out",
+              "protocol": "freedom"
+            }
+            """);
+
+        var error = NodeValidator.ValidateEchOutbound(node, out var echOutbound);
+
+        await error.Should().BeNull();
+        await echOutbound.Should().NotBeNull();
+        await NodeValidator.GetOutboundTag(echOutbound!).Should().BeEqualTo("ech-out");
+    }
+
+    [Test]
+    [Arguments(EConfigType.VLESS, "reality")]
+    [Arguments(EConfigType.VLESS, "")]
+    [Arguments(EConfigType.WireGuard, "tls")]
+    [Arguments(EConfigType.TUIC, "tls")]
+    [Arguments(EConfigType.Anytls, "tls")]
+    [Arguments(EConfigType.Naive, "tls")]
+    public async Task ValidateEchOutbound_WhereItDoesNotApply_ShouldBeIgnored(EConfigType configType, string streamSecurity)
+    {
+        // The editor hides the field there and no config uses it, so an imported value must not block the profile.
+        var node = CreateNode("""{"tag": "proxy", "protocol": "freedom"}""");
+        node.ConfigType = configType;
+        node.StreamSecurity = streamSecurity;
+
+        var error = NodeValidator.ValidateEchOutbound(node, out var echOutbound);
+
+        await error.Should().BeNull();
+        await echOutbound.Should().BeNull();
+    }
+
+    [Test]
+    public async Task GetOutboundTag_RepeatedTag_ShouldTakeTheLastLikeXray()
+    {
+        var outbound = JsonUtils.ParseJson("""{"tag": "first", "protocol": "freedom", "tag": "last"}""")!.AsObject();
+
+        await NodeValidator.GetOutboundTag(outbound).Should().BeEqualTo("last");
+    }
+
     private static ProfileItem CreateNode(string echOutbound)
     {
         var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray);

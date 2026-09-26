@@ -412,7 +412,56 @@ public class CoreConfigContextBuilder
             context.ProtectDomainList.Add(dAddr);
         }
 
+        // PattN: the servers of the ECH outbound, which the ECH config query is sent through
+        if (NodeValidator.ValidateEchOutbound(node, out var echOutbound) == null && echOutbound != null)
+        {
+            foreach (var echServer in GetOutboundServerAddresses(echOutbound).Where(Utils.IsDomain))
+            {
+                context.ProtectDomainList.Add(echServer);
+            }
+        }
+
         return nodeValidatorResult;
+    }
+
+    /// <summary>
+    ///     PattN: the servers an outbound written as JSON connects to: the address of each vnext and
+    ///     servers entry, the address of the flat settings that newer configs use, and the host of each
+    ///     WireGuard peer endpoint.
+    /// </summary>
+    private static IEnumerable<string> GetOutboundServerAddresses(JsonObject outbound)
+    {
+        if (outbound["settings"] is not JsonObject settings)
+        {
+            yield break;
+        }
+        var servers = new List<JsonObject> { settings };
+        foreach (var key in new[] { "vnext", "servers" })
+        {
+            if (settings[key] is JsonArray entries)
+            {
+                servers.AddRange(entries.OfType<JsonObject>());
+            }
+        }
+        foreach (var server in servers)
+        {
+            if (server["address"] is JsonValue address && address.TryGetValue<string>(out var value))
+            {
+                yield return value;
+            }
+        }
+        if (settings["peers"] is JsonArray peers)
+        {
+            foreach (var peer in peers.OfType<JsonObject>())
+            {
+                // host:port, where an IPv6 host is in brackets and so never taken for a domain
+                if (peer["endpoint"] is JsonValue endpoint && endpoint.TryGetValue<string>(out var value))
+                {
+                    var portColon = value.LastIndexOf(':');
+                    yield return portColon > 0 ? value[..portColon] : value;
+                }
+            }
+        }
     }
 
     /// <summary>

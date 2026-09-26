@@ -339,10 +339,7 @@ public partial class CoreConfigV2rayService
                 }
                 // PattN: the ECH config query goes through the profile's ECH outbound, which is
                 // appended to the config after every other outbound (AppendEchOutbounds)
-                if (!tlsSettings.echConfigList.IsNullOrEmpty()
-                    && !_node.EchOutbound.IsNullOrEmpty()
-                    && NodeValidator.ValidateEchOutbound(_node) == null
-                    && JsonUtils.ParseJson(_node.EchOutbound) is JsonObject echOutbound)
+                if (NodeValidator.ValidateEchOutbound(_node, out var echOutbound) == null && echOutbound != null)
                 {
                     tlsSettings.echSockopt = new Sockopt4Ray { dialerProxy = AddEchOutbound(echOutbound) };
                 }

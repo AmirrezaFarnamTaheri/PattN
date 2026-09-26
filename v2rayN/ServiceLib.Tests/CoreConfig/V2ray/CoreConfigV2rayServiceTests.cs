@@ -1028,6 +1028,116 @@ public class CoreConfigV2rayServiceTests
         await EchDialerProxy(outbounds, Global.ProxyTag).Should().BeEqualTo("ech-out");
     }
 
+    [Test]
+    public async Task GenerateClientConfigContent_NumberedEchTagUsedByTheTemplate_ShouldMoveOn()
+    {
+        // The user never wrote "ech-out-2", so it moves on to a free number instead of failing the config,
+        // and only the generated outbound that points at it follows.
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+        var n1 = CreateEchNode("n1", "node-1", """{"tag": "ech-out", "protocol": "freedom"}""");
+        var n2 = CreateEchNode("n2", "node-2", """{"tag": "ech-out", "protocol": "blackhole"}""");
+        var group = CoreConfigTestFactory.CreatePolicyGroupNode(ECoreType.Xray, "g1", "group", [n1.IndexId, n2.IndexId]);
+        var template = new FullConfigTemplateItem
+        {
+            Id = "t1",
+            Remarks = "template",
+            Enabled = true,
+            CoreType = ECoreType.Xray,
+            Config = """
+                {
+                  "outbounds": [
+                    { "tag": "ech-out-2", "protocol": "freedom" },
+                    {
+                      "tag": "template-tls",
+                      "protocol": "vless",
+                      "streamSettings": { "security": "tls", "tlsSettings": { "echSockopt": { "dialerProxy": "ech-out-2" } } }
+                    }
+                  ]
+                }
+                """,
+        };
+        var context = CoreConfigTestFactory.CreateContext(config, group, ECoreType.Xray, fullConfigTemplate: template);
+        context.AllProxiesMap[n1.IndexId] = n1;
+        context.AllProxiesMap[n2.IndexId] = n2;
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        var outbounds = ParseOutbounds(result);
+        await EchDialerProxy(outbounds, "proxy-1-node-1").Should().BeEqualTo("ech-out");
+        await EchDialerProxy(outbounds, "proxy-2-node-2").Should().BeEqualTo("ech-out-3");
+        await EchDialerProxy(outbounds, "template-tls").Should().BeEqualTo("ech-out-2");
+        await outbounds[^2]!["tag"]!.GetValue<string>().Should().BeEqualTo("ech-out");
+        await outbounds[^1]!["tag"]!.GetValue<string>().Should().BeEqualTo("ech-out-3");
+        await outbounds[^1]!["protocol"]!.GetValue<string>().Should().BeEqualTo("blackhole");
+    }
+
+    [Test]
+    public async Task GenerateClientConfigContent_TemplateOutboundWithRepeatedKey_ShouldStillGetTheEchOutbound()
+    {
+        // Xray takes the last of repeated keys, and the tag check before the append reads them the same way.
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+        var node = CreateEchNode("n1", "node-1", """{"tag": "ech-out", "protocol": "freedom"}""");
+        var template = new FullConfigTemplateItem
+        {
+            Id = "t1",
+            Remarks = "template",
+            Enabled = true,
+            CoreType = ECoreType.Xray,
+            Config = """
+                {
+                  "outbounds": [ { "tag": "template-out", "protocol": "blackhole", "protocol": "freedom" } ]
+                }
+                """,
+        };
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray, fullConfigTemplate: template);
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        await result.Data!.ToString()!.Should().Contain("template-out");
+        var outbounds = ParseOutbounds(result);
+        await outbounds[^1]!["tag"]!.GetValue<string>().Should().BeEqualTo("ech-out");
+        await EchDialerProxy(outbounds, Global.ProxyTag).Should().BeEqualTo("ech-out");
+    }
+
+    [Test]
+    public async Task GenerateClientConfigContent_EchOutboundWithRepeatedKey_ShouldBeLeftOut()
+    {
+        // Validation stops such a profile before a real start; the proxy outbound must keep its TLS settings.
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+        var node = CreateEchNode("n1", "node-1", """{"tag": "ech-out", "protocol": "freedom", "settings": {"x": 1, "x": 2}}""");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        var outbounds = ParseOutbounds(result);
+        var proxy = outbounds.First(o => o?["tag"]?.GetValue<string>() == Global.ProxyTag)!;
+        var serverName = proxy["streamSettings"]?["tlsSettings"]?["serverName"]?.GetValue<string>();
+        await serverName.Should().BeEqualTo("example.com");
+        await EchDialerProxy(outbounds, Global.ProxyTag).Should().BeNull();
+        await outbounds.Any(o => o?["tag"]?.GetValue<string>() == "ech-out").Should().BeFalse();
+    }
+
+    [Test]
+    public async Task GenerateClientConfigContent_Twice_ShouldAppendTheEchOutboundOnce()
+    {
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+        var node = CreateEchNode("n1", "node-1", """{"tag": "ech-out", "protocol": "freedom"}""");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+
+        new CoreConfigV2rayService(context).GenerateClientConfigContent();
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        await ParseOutbounds(result).Count(o => o?["tag"]?.GetValue<string>() == "ech-out").Should().BeEqualTo(1);
+    }
+
     private static ProfileItem CreateEchNode(string indexId, string remarks, string echOutbound)
     {
         var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, indexId, remarks);

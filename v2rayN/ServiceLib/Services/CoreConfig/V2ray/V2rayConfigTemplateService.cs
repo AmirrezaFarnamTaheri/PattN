@@ -39,8 +39,9 @@ public partial class CoreConfigV2rayService
     /// <summary>
     ///     PattN: appends the ECH outbounds of the profiles after every other outbound, exactly as the
     ///     user wrote them rather than through the typed model, which would drop fields it does not know.
-    ///     A tag that another outbound of the config already has fails the config instead of sending
-    ///     the ECH config query through that outbound.
+    ///     A tag the user wrote that another outbound of the config already has fails the config instead
+    ///     of sending the ECH config query through that outbound. A numbered tag ("ech-2") that one has
+    ///     moves on to a free number.
     /// </summary>
     /// <returns>The error message, or null on success.</returns>
     private string? AppendEchOutbounds(ref string coreConfigContent)
@@ -63,10 +64,32 @@ public partial class CoreConfigV2rayService
             .Select(o => o is JsonObject outbound ? NodeValidator.GetOutboundTag(outbound) : null)
             .OfType<string>()
             .ToHashSet();
-        var conflict = context.EchOutbounds.FirstOrDefault(item => usedTags.Contains(item.Tag));
-        if (conflict != null)
+        var takenTags = usedTags.Concat(context.EchOutbounds.Select(item => item.Tag)).ToHashSet();
+        var renumbered = new Dictionary<string, string>();
+        for (var i = 0; i < context.EchOutbounds.Count; i++)
         {
-            return string.Format(ResUI.MsgEchOutboundTagConflict, conflict.Tag);
+            var item = context.EchOutbounds[i];
+            if (!usedTags.Contains(item.Tag))
+            {
+                continue;
+            }
+            var tag = NodeValidator.GetOutboundTag(item.Outbound) ?? string.Empty;
+            if (item.Tag == tag)
+            {
+                return string.Format(ResUI.MsgEchOutboundTagConflict, tag);
+            }
+            var freeTag = item.Tag;
+            for (var number = 2; takenTags.Contains(freeTag); number++)
+            {
+                freeTag = $"{tag}-{number}";
+            }
+            takenTags.Add(freeTag);
+            renumbered[item.Tag] = freeTag;
+            context.EchOutbounds[i] = item with { Tag = freeTag };
+        }
+        if (renumbered.Count > 0)
+        {
+            RelinkEchSockopts(outboundsNode, renumbered);
         }
 
         foreach (var item in context.EchOutbounds)
@@ -77,6 +100,27 @@ public partial class CoreConfigV2rayService
         }
         coreConfigContent = JsonUtils.Serialize(coreConfigNode);
         return null;
+    }
+
+    /// <summary>
+    ///     PattN: points the echSockopt of the generated outbounds that use a renumbered ECH tag at its
+    ///     new number. Other outbounds keep theirs: the old number is the tag of one of them.
+    /// </summary>
+    private void RelinkEchSockopts(JsonArray outboundsNode, Dictionary<string, string> renumbered)
+    {
+        var generatedTags = _coreConfig.outbounds?.Select(o => o.tag).ToHashSet() ?? [];
+        foreach (var outbound in outboundsNode.OfType<JsonObject>())
+        {
+            if (NodeValidator.GetOutboundTag(outbound) is { } outboundTag
+                && generatedTags.Contains(outboundTag)
+                && outbound["streamSettings"]?["tlsSettings"]?["echSockopt"] is JsonObject echSockopt
+                && echSockopt["dialerProxy"] is JsonValue value
+                && value.TryGetValue<string>(out var dialerProxy)
+                && renumbered.TryGetValue(dialerProxy, out var tag))
+            {
+                echSockopt["dialerProxy"] = tag;
+            }
+        }
     }
 
     private string ApplyCustomOutboundReplace()

@@ -236,6 +236,7 @@ public class Hysteria2Fmt : BaseFmt
         {
             dicQuery.Add("ech", Utils.UrlEncode(item.EchConfigList));
         }
+        // PattN: echOutbound goes with ech
         if (!item.EchOutbound.IsNullOrEmpty())
         {
             dicQuery.Add("echOutbound", Utils.UrlEncode(ToShareJson(item.EchOutbound)));

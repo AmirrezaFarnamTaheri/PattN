@@ -293,6 +293,7 @@ public class FmtHandlerTests
         await JsonNode.DeepEquals(JsonNode.Parse(resolved.EchOutbound), JsonNode.Parse(source.EchOutbound)).Should().BeTrue();
         await resolved.EchOutbound.Should().Contain("\n");
         await AssertExportContains(source, "echOutbound=");
+        await FmtHandler.GetShareUri(source)!.Contains("%0A", StringComparison.OrdinalIgnoreCase).Should().BeFalse();
     }
 
     [Test]
