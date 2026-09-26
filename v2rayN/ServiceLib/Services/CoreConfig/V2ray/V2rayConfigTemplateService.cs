@@ -12,6 +12,73 @@ public partial class CoreConfigV2rayService
         return ApplyFullConfigTemplate(coreConfigContent);
     }
 
+    /// <summary>
+    ///     PattN: registers the ECH outbound of the profile being built and returns the tag that its
+    ///     echSockopt points at. Profiles with the same ECH outbound share it. A different ECH outbound
+    ///     under a tag that an earlier one has gets a numbered tag of its own ("ech-2"): the tag only
+    ///     links a proxy outbound to its ECH outbound, and a group or a speed test puts unrelated
+    ///     profiles in one config.
+    /// </summary>
+    private string AddEchOutbound(JsonObject echOutbound)
+    {
+        var same = context.EchOutbounds.FirstOrDefault(item => JsonNode.DeepEquals(item.Outbound, echOutbound));
+        if (same != null)
+        {
+            return same.Tag;
+        }
+        var tag = NodeValidator.GetOutboundTag(echOutbound) ?? string.Empty;
+        var uniqueTag = tag;
+        for (var i = 2; context.EchOutbounds.Any(item => item.Tag == uniqueTag); i++)
+        {
+            uniqueTag = $"{tag}-{i}";
+        }
+        context.EchOutbounds.Add(new EchOutboundItem(echOutbound, uniqueTag));
+        return uniqueTag;
+    }
+
+    /// <summary>
+    ///     PattN: appends the ECH outbounds of the profiles after every other outbound, exactly as the
+    ///     user wrote them rather than through the typed model, which would drop fields it does not know.
+    ///     A tag that another outbound of the config already has fails the config instead of sending
+    ///     the ECH config query through that outbound.
+    /// </summary>
+    /// <returns>The error message, or null on success.</returns>
+    private string? AppendEchOutbounds(ref string coreConfigContent)
+    {
+        if (context.EchOutbounds.Count == 0)
+        {
+            return null;
+        }
+        if (JsonUtils.ParseJson(coreConfigContent) is not JsonObject coreConfigNode)
+        {
+            return ResUI.FailedGenDefaultConfiguration;
+        }
+        if (coreConfigNode["outbounds"] is not JsonArray outboundsNode)
+        {
+            outboundsNode = [];
+            coreConfigNode["outbounds"] = outboundsNode;
+        }
+
+        var usedTags = outboundsNode
+            .Select(o => o is JsonObject outbound ? NodeValidator.GetOutboundTag(outbound) : null)
+            .OfType<string>()
+            .ToHashSet();
+        var conflict = context.EchOutbounds.FirstOrDefault(item => usedTags.Contains(item.Tag));
+        if (conflict != null)
+        {
+            return string.Format(ResUI.MsgEchOutboundTagConflict, conflict.Tag);
+        }
+
+        foreach (var item in context.EchOutbounds)
+        {
+            var echOutbound = item.Outbound.DeepClone().AsObject();
+            echOutbound["tag"] = item.Tag;
+            outboundsNode.Add(echOutbound);
+        }
+        coreConfigContent = JsonUtils.Serialize(coreConfigNode);
+        return null;
+    }
+
     private string ApplyCustomOutboundReplace()
     {
         var coreConfigContent = JsonUtils.Serialize(_coreConfig);

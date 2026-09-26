@@ -285,6 +285,7 @@ public static class ConfigHandler
             item.Cert = profileItem.Cert;
             item.CertSha = profileItem.CertSha;
             item.EchConfigList = profileItem.EchConfigList;
+            item.EchOutbound = profileItem.EchOutbound;
             item.VerifyPeerCertByName = profileItem.VerifyPeerCertByName;
             item.Finalmask = profileItem.Finalmask;
             item.ProtoExtra = profileItem.ProtoExtra;
@@ -1309,6 +1310,7 @@ public static class ConfigHandler
                && AreEqual(o.PublicKey, n.PublicKey)
                && AreEqual(o.ShortId, n.ShortId)
                && AreEqual(o.Finalmask, n.Finalmask)
+               && AreEqual(o.EchOutbound, n.EchOutbound)
                && (!remarks || o.Remarks == n.Remarks);
 
         static bool AreEqual(string? a, string? b)

@@ -29,6 +29,43 @@ public class NodeValidator
         return v.ToResult();
     }
 
+    /// <summary>
+    ///     PattN: the ECH outbound is a whole Xray outbound that the ECH config query is sent through
+    ///     (tlsSettings.echSockopt.dialerProxy), so it has to be a JSON object with a tag of its own,
+    ///     and it only applies together with EchConfigList.
+    /// </summary>
+    /// <returns>The error message, or null when the ECH outbound is empty or valid.</returns>
+    public static string? ValidateEchOutbound(ProfileItem item)
+    {
+        if (item.EchOutbound.IsNullOrEmpty())
+        {
+            return null;
+        }
+        if (JsonUtils.ParseJson(item.EchOutbound) is not JsonObject echOutbound)
+        {
+            return string.Format(ResUI.MsgInvalidProperty, ResUI.TbEchOutbound);
+        }
+        if (item.EchConfigList.IsNullOrEmpty())
+        {
+            return ResUI.MsgEchOutboundNeedsEchConfigList;
+        }
+        // direct and block are the config's own outbounds; balancers pick their members by the
+        // "proxy" tag prefix, so an ECH outbound starting with it would carry the proxied traffic
+        var tag = GetOutboundTag(echOutbound);
+        if (tag.IsNullOrEmpty()
+            || tag is Global.DirectTag or Global.BlockTag
+            || tag.StartsWith(Global.ProxyTag, StringComparison.Ordinal))
+        {
+            return ResUI.MsgEchOutboundInvalidTag;
+        }
+        return null;
+    }
+
+    public static string? GetOutboundTag(JsonObject outbound)
+    {
+        return outbound["tag"] is JsonValue value && value.TryGetValue<string>(out var tag) ? tag : null;
+    }
+
     private static void ValidateNodeAndCoreSupport(ProfileItem item, ECoreType coreType, ValidationContext v)
     {
         if (item.ConfigType is EConfigType.Custom)
@@ -167,6 +204,12 @@ public class NodeValidator
             {
                 v.Error(string.Format(ResUI.MsgInvalidProperty, ResUI.TbFinalmask));
             }
+        }
+
+        var echOutboundError = ValidateEchOutbound(item);
+        if (echOutboundError != null)
+        {
+            v.Error(echOutboundError);
         }
     }
 

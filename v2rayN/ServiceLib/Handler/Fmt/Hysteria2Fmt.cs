@@ -236,6 +236,10 @@ public class Hysteria2Fmt : BaseFmt
         {
             dicQuery.Add("ech", Utils.UrlEncode(item.EchConfigList));
         }
+        if (!item.EchOutbound.IsNullOrEmpty())
+        {
+            dicQuery.Add("echOutbound", Utils.UrlEncode(ToShareJson(item.EchOutbound)));
+        }
         var protocolExtraItem = item.GetProtocolExtra();
         var isGecko = !protocolExtraItem.GeckoMinPacketSize.IsNullOrEmpty() || !protocolExtraItem.GeckoMaxPacketSize.IsNullOrEmpty();
         if (!protocolExtraItem.SalamanderPass.IsNullOrEmpty())

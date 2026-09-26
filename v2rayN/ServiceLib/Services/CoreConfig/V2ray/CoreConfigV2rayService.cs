@@ -44,6 +44,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
                 return ret;
             }
 
+            context.EchOutbounds.Clear();
             GenLog();
 
             GenInbounds();
@@ -84,9 +85,17 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
                 _coreConfig.routing.rules.Add(finalRule);
             }
 
+            var coreConfigContent = ApplyFinalConfigModifiers();
+            var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
+            if (echOutboundError != null)
+            {
+                ret.Msg = echOutboundError;
+                return ret;
+            }
+
             ret.Msg = string.Format(ResUI.SuccessfulConfiguration, "");
             ret.Success = true;
-            ret.Data = ApplyFinalConfigModifiers();
+            ret.Data = coreConfigContent;
             return ret;
         }
         catch (Exception ex)
@@ -121,6 +130,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
 
             var (lstIpEndPoints, lstTcpConns) = Utils.GetActiveNetworkInfo();
 
+            context.EchOutbounds.Clear();
             GenLog();
             _coreConfig.inbounds.Clear();
             _coreConfig.outbounds.Clear();
@@ -225,9 +235,17 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             }
             ApplyOutboundBindInterface();
             ApplyOutboundSendThrough();
+            var coreConfigContent = ApplyCustomOutboundReplace();
+            var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
+            if (echOutboundError != null)
+            {
+                ret.Msg = echOutboundError;
+                return ret;
+            }
+
             //ret.Msg =string.Format(ResUI.SuccessfulConfiguration"), node.getSummary());
             ret.Success = true;
-            ret.Data = ApplyCustomOutboundReplace();
+            ret.Data = coreConfigContent;
             return ret;
         }
         catch (Exception ex)
@@ -270,6 +288,7 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
                 return ret;
             }
 
+            context.EchOutbounds.Clear();
             GenLog();
             GenOutbounds();
 
@@ -302,9 +321,17 @@ public partial class CoreConfigV2rayService(CoreConfigContext context)
             ApplyOutboundBindInterface();
             ApplyOutboundSendThrough();
 
+            var coreConfigContent = ApplyCustomOutboundReplace();
+            var echOutboundError = AppendEchOutbounds(ref coreConfigContent);
+            if (echOutboundError != null)
+            {
+                ret.Msg = echOutboundError;
+                return ret;
+            }
+
             ret.Msg = string.Format(ResUI.SuccessfulConfiguration, "");
             ret.Success = true;
-            ret.Data = ApplyCustomOutboundReplace();
+            ret.Data = coreConfigContent;
             return ret;
         }
         catch (Exception ex)
