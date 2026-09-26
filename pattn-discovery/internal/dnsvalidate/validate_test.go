@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"pattn-discovery/internal/dnssec"
 	"pattn-discovery/internal/dnstrace"
@@ -84,6 +85,7 @@ func TestEmptyAliasChainIsVacuouslyAuthenticated(t *testing.T) {
 		context.Background(),
 		dnstrace.Result{},
 		dnstrace.Options{},
+		time.Unix(0, 0).UTC(),
 	)
 	if err != nil || len(values) != 0 || !authenticated || bogus {
 		t.Fatalf("values=%+v authenticated=%v bogus=%v err=%v", values, authenticated, bogus, err)
