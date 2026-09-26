@@ -47,11 +47,21 @@ public partial class CheckUpdateViewModel : MyReactiveObject
         y => y == true)
             .Subscribe(c => _ = OnUpdateViaProxyChanged());
 
-        RefreshCheckUpdateItems();
+        AppEvents.HasUpdateNotified
+         .AsObservable()
+         .ObserveOn(RxSchedulers.MainThreadScheduler)
+         .Subscribe(bl => RefreshCheckUpdateItems(bl));
+
+        RefreshCheckUpdateItems(true);
     }
 
-    private void RefreshCheckUpdateItems()
+    private void RefreshCheckUpdateItems(bool hasUpdate)
     {
+        if (!hasUpdate)
+        {
+            return;
+        }
+
         var models = CoreInfoManager.Instance.GetCheckUpdateCoreTypes()
                         .Select(t => GetCheckUpdateModel(t))
                         .ToList();
