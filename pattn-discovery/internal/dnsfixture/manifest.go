@@ -70,9 +70,6 @@ func (r ManifestReview) Validate(fixture Fixture) error {
 	if !allowedCases[caseName] {
 		return fmt.Errorf("captured fixture review has unsupported case %q", r.Case)
 	}
-	if err := ValidateReviewCase(caseName, fixture); err != nil {
-		return fmt.Errorf("captured fixture review case mismatch: %w", err)
-	}
 	if !strings.EqualFold(strings.TrimSpace(r.FixtureSHA256), fixture.SHA256) {
 		return fmt.Errorf("captured fixture review sha256 does not match fixture")
 	}
@@ -84,6 +81,9 @@ func (r ManifestReview) Validate(fixture Fixture) error {
 		upperExpectation == "TBD" ||
 		len(expectation) > 2048 {
 		return fmt.Errorf("captured fixture review requires a confirmed replayExpectation, not a template placeholder")
+	}
+	if err := ValidateReviewCase(caseName, fixture); err != nil {
+		return fmt.Errorf("captured fixture review case mismatch: %w", err)
 	}
 	return nil
 }
