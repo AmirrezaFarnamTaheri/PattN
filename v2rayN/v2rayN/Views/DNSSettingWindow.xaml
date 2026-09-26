@@ -440,6 +440,314 @@
                 </ScrollViewer>
             </TabItem>
 
+            <TabItem Header="{x:Static resx:ResUI.ThDNSHealth}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="{StaticResource Margin8}">
+                        <TextBlock
+                            Margin="{StaticResource Margin8}"
+                            Style="{StaticResource ToolbarTextBlock}"
+                            Text="{x:Static resx:ResUI.TbDNSHealthAdvisory}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            x:Name="btnRefreshDnsHealth"
+                            Width="180"
+                            MinHeight="44"
+                            AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthRefresh}"
+                            Margin="{StaticResource Margin8}"
+                            HorizontalAlignment="Left"
+                            Content="{x:Static resx:ResUI.TbDNSHealthRefresh}"
+                            Style="{StaticResource DefButton}" />
+
+                        <Grid Margin="{StaticResource Margin8}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSHealthSummary}" />
+                            <TextBlock
+                                x:Name="txtDnsHealthSummary"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthSummary}" AutomationProperties.LiveSetting="Polite"
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSCatalogStatus}" />
+                            <TextBlock
+                                x:Name="txtDnsCatalogStatus"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSCatalogStatus}"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSHealthLastUpdated}" />
+                            <TextBlock
+                                x:Name="txtDnsHealthLastUpdated"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthLastUpdated}"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSHealthError}" />
+                            <TextBlock
+                                x:Name="txtDnsHealthError"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthError}" AutomationProperties.LiveSetting="Polite"
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="4"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSResolverDetails}" />
+                            <TextBox AutomationProperties.Name="{x:Static resx:ResUI.TbDNSResolverDetails}"
+                                x:Name="txtDnsResolverDetails"
+                                Grid.Row="4"
+                                Grid.Column="1"
+                                MinHeight="180"
+                                Margin="{StaticResource Margin8}"
+                                AcceptsReturn="True"
+                                IsReadOnly="True"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"  />
+                        </Grid>
+
+                        <Separator Margin="{StaticResource Margin8}" />
+
+                        <TextBlock
+                            Margin="{StaticResource Margin8}"
+                            Style="{StaticResource ToolbarTextBlock}"
+                            Text="{x:Static resx:ResUI.TbDNSRepairSafety}"
+                            TextWrapping="Wrap" />
+
+                        <Grid Margin="{StaticResource Margin8}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSRepairResolver}" />
+                            <ComboBox MinHeight="44" AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairResolver}"
+                                x:Name="cmbDnsRepairResolver"
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Width="420"
+                                Margin="{StaticResource Margin8}"
+                                HorizontalAlignment="Left"
+                                Style="{StaticResource DefComboBox}" />
+
+                            <StackPanel
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Margin="{StaticResource Margin8}"
+                                Orientation="Horizontal">
+                                <Button MinHeight="44" AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairPreviewAction}"
+                                    x:Name="btnPreviewDnsRepair"
+                                    MinWidth="130"
+                                    Margin="0,0,8,0"
+                                    Content="{x:Static resx:ResUI.TbDNSRepairPreviewAction}"
+                                    Style="{StaticResource DefButton}" />
+                                <Button MinHeight="44" AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairApplyAction}"
+                                    x:Name="btnApplyDnsRepair"
+                                    MinWidth="130"
+                                    Margin="0,0,8,0"
+                                    Content="{x:Static resx:ResUI.TbDNSRepairApplyAction}"
+                                    Style="{StaticResource DefButton}" />
+                                <Button MinHeight="44" AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairRollbackAction}"
+                                    x:Name="btnRollbackDnsRepair"
+                                    MinWidth="130"
+                                    Content="{x:Static resx:ResUI.TbDNSRepairRollbackAction}"
+                                    Style="{StaticResource DefButton}" />
+                                <ProgressBar
+                                    x:Name="dnsRepairProgress"
+                                    Width="120"
+                                    Height="4"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    IsIndeterminate="True"
+                                    Visibility="Collapsed"
+                                    AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairStatus}" />
+                            </StackPanel>
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSRepairStatus}" />
+                            <TextBlock
+                                x:Name="txtDnsRepairStatus"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairStatus}"
+                                AutomationProperties.LiveSetting="Polite"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSRepairPlan}" />
+                            <TextBox AutomationProperties.Name="{x:Static resx:ResUI.TbDNSRepairPlan}"
+                                x:Name="txtDnsRepairPreview"
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                MinHeight="140"
+                                Margin="{StaticResource Margin8}"
+                                AcceptsReturn="True"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"  />
+                        </Grid>
+
+                        <Separator Margin="{StaticResource Margin8}" />
+
+                        <Grid Margin="{StaticResource Margin8}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSResolverHistory}" />
+                            <TextBox AutomationProperties.Name="{x:Static resx:ResUI.TbDNSResolverHistory}"
+                                x:Name="txtDnsResolverTrendDetails"
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                MinHeight="100"
+                                Margin="{StaticResource Margin8}"
+                                AcceptsReturn="True"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"  />
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSOperationHistory}" />
+                            <TextBox AutomationProperties.Name="{x:Static resx:ResUI.TbDNSOperationHistory}"
+                                x:Name="txtDnsOperationHistory"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                MinHeight="120"
+                                Margin="{StaticResource Margin8}"
+                                AcceptsReturn="True"
+                                IsReadOnly="True"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"  />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSHistoryLastUpdated}" />
+                            <TextBlock
+                                x:Name="txtDnsHistoryLastUpdated"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHistoryLastUpdated}"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+
+                            <TextBlock
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                Text="{x:Static resx:ResUI.TbDNSHistoryError}" />
+                            <TextBlock
+                                x:Name="txtDnsHistoryError"
+                                AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHistoryError}"
+                                AutomationProperties.LiveSetting="Polite"
+                                Grid.Row="3"
+                                Grid.Column="1"
+                                Margin="{StaticResource Margin8}"
+                                Style="{StaticResource ToolbarTextBlock}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <TabItem Header="{x:Static resx:ResUI.TbCustomDnsRay}">
                 <DockPanel Margin="{StaticResource Margin8}">
                     <Grid DockPanel.Dock="Top">

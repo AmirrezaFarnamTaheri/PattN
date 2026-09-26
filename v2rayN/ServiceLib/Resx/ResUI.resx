@@ -1923,4 +1923,547 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbSortingProcess" xml:space="preserve">
     <value>Process</value>
   </data>
+
+  <data name="ThDNSHealth" xml:space="preserve">
+    <value>DNS health</value>
+  </data>
+  <data name="TbDNSHealthRefresh" xml:space="preserve">
+    <value>Refresh DNS health</value>
+  </data>
+  <data name="TbDNSHealthAdvisory" xml:space="preserve">
+    <value>Live resolver checks are advisory and do not change DNS settings automatically.</value>
+  </data>
+  <data name="TbDNSHealthSummary" xml:space="preserve">
+    <value>Health summary</value>
+  </data>
+  <data name="TbDNSCatalogStatus" xml:space="preserve">
+    <value>Resolver catalog</value>
+  </data>
+  <data name="TbDNSHealthLastUpdated" xml:space="preserve">
+    <value>Last updated</value>
+  </data>
+  <data name="TbDNSResolverDetails" xml:space="preserve">
+    <value>Resolver details</value>
+  </data>
+  <data name="TbDNSHealthError" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
+
+  <data name="TbDNSRepairResolver" xml:space="preserve">
+    <value>DNS repair resolver</value>
+  </data>
+  <data name="TbDNSRepairPreviewAction" xml:space="preserve">
+    <value>Preview change</value>
+  </data>
+  <data name="TbDNSRepairApplyAction" xml:space="preserve">
+    <value>Apply DNS repair</value>
+  </data>
+  <data name="TbDNSRepairRollbackAction" xml:space="preserve">
+    <value>Rollback DNS repair</value>
+  </data>
+  <data name="TbDNSRepairPlan" xml:space="preserve">
+    <value>Changes to apply</value>
+  </data>
+  <data name="TbDNSRepairStatus" xml:space="preserve">
+    <value>Repair status</value>
+  </data>
+  <data name="TbDNSRepairSafety" xml:space="preserve">
+    <value>Preview shows the exact DNS changes. Apply changes only Remote DNS and Bootstrap DNS and saves a rollback snapshot.</value>
+  </data>
+  <data name="TbConfirmDNSRepairApply" xml:space="preserve">
+    <value>Apply this DNS repair now? Only Remote DNS and Bootstrap DNS will change, and a rollback snapshot will be saved.</value>
+  </data>
+  <data name="TbConfirmDNSRepairRollback" xml:space="preserve">
+    <value>Roll back the most recent DNS repair? The saved previous Remote DNS and Bootstrap DNS values will be restored if the current settings still match the applied repair.</value>
+  </data>
+  <data name="TbDNSRepairApplyCancelled" xml:space="preserve">
+    <value>DNS repair was not applied.</value>
+  </data>
+  <data name="TbDNSRepairRollbackCancelled" xml:space="preserve">
+    <value>DNS repair rollback was cancelled.</value>
+  </data>
+
+  <data name="TbDNSResolverHistory" xml:space="preserve">
+    <value>Resolver history</value>
+  </data>
+  <data name="TbDNSOperationHistory" xml:space="preserve">
+    <value>Recent DNS &amp; repair actions</value>
+  </data>
+  <data name="TbDNSHistoryLastUpdated" xml:space="preserve">
+    <value>History updated</value>
+  </data>
+  <data name="TbDNSHistoryError" xml:space="preserve">
+    <value>History diagnostics</value>
+  </data>
+
+  <data name="menuDiscoveryManagement" xml:space="preserve">
+    <value>Discovery &amp; repair</value>
+  </data>
+  <data name="TbDiscoveryManagementDesc" xml:space="preserve">
+    <value>Review discovery data, manage trusted catalog sources, inspect repairs, and run maintenance. Changes happen only when you choose an action.</value>
+  </data>
+  <data name="TbProviderCatalogs" xml:space="preserve">
+    <value>Catalogs</value>
+  </data>
+  <data name="TbEndpointPool" xml:space="preserve">
+    <value>Endpoints</value>
+  </data>
+  <data name="TbRepairHistory" xml:space="preserve">
+    <value>Repair history</value>
+  </data>
+  <data name="TbDiscoveryMaintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+  <data name="TbRegisterCatalog" xml:space="preserve">
+    <value>Register catalog</value>
+  </data>
+  <data name="TbRefreshAudit" xml:space="preserve">
+    <value>Refresh details</value>
+  </data>
+  <data name="TbToggleEnabled" xml:space="preserve">
+    <value>Enable / disable</value>
+  </data>
+  <data name="TbPreviewCatalogUpdate" xml:space="preserve">
+    <value>Preview update</value>
+  </data>
+  <data name="TbApplyCatalogUpdate" xml:space="preserve">
+    <value>Apply update</value>
+  </data>
+  <data name="TbRollbackRevision" xml:space="preserve">
+    <value>Roll back revision</value>
+  </data>
+  <data name="TbDisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="TbAuditSummary" xml:space="preserve">
+    <value>Audit summary</value>
+  </data>
+  <data name="TbUpdatePreview" xml:space="preserve">
+    <value>Update preview</value>
+  </data>
+  <data name="TbRevisions" xml:space="preserve">
+    <value>Revisions</value>
+  </data>
+  <data name="TbPinUnpin" xml:space="preserve">
+    <value>Pin / unpin</value>
+  </data>
+  <data name="TbRelabel" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="TbEndpointHistory" xml:space="preserve">
+    <value>Endpoint history</value>
+  </data>
+  <data name="TbPreviewEndpointCleanup" xml:space="preserve">
+    <value>Preview cleanup</value>
+  </data>
+  <data name="TbApplyEndpointCleanup" xml:space="preserve">
+    <value>Apply cleanup</value>
+  </data>
+  <data name="TbPreviewLifecycleRetention" xml:space="preserve">
+    <value>Preview retention</value>
+  </data>
+  <data name="TbApplyLifecycleRetention" xml:space="preserve">
+    <value>Apply retention</value>
+  </data>
+  <data name="TbRefreshAll" xml:space="preserve">
+    <value>Refresh all</value>
+  </data>
+  <data name="TbDiscoveryStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="LvVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="LvProvider" xml:space="preserve">
+    <value>Provider</value>
+  </data>
+  <data name="LvStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="LvType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="LvTime" xml:space="preserve">
+    <value>Time</value>
+  </data>
+
+  <data name="TbConfirmCatalogUpdate" xml:space="preserve">
+    <value>Apply the prepared provider catalog update? The stale-plan and atomic-write checks will run again before mutation.</value>
+  </data>
+  <data name="TbConfirmCatalogRollback" xml:space="preserve">
+    <value>Rollback the selected provider catalog revision? Newer edits or non-active revisions will still be protected by backend conflict checks.</value>
+  </data>
+  <data name="TbConfirmEndpointCleanup" xml:space="preserve">
+    <value>Apply the prepared endpoint-pool cleanup plan? Entries changed after preview will be skipped.</value>
+  </data>
+  <data name="TbConfirmLifecycleRetention" xml:space="preserve">
+    <value>Apply the prepared lifecycle-retention plan? Only the frozen preview IDs are eligible for deletion.</value>
+  </data>
+
+  <data name="TbUnregisterCatalog" xml:space="preserve">
+    <value>Unregister catalog</value>
+  </data>
+  <data name="TbConfirmCatalogUnregister" xml:space="preserve">
+    <value>Unregister the selected provider catalog? The JSON file will remain on disk and revision history will be preserved.</value>
+  </data>
+
+  <data name="TbRetiredCatalogs" xml:space="preserve">
+    <value>Retired catalogs</value>
+  </data>
+  <data name="TbRefreshRetiredCatalogs" xml:space="preserve">
+    <value>Refresh archive</value>
+  </data>
+  <data name="TbReRegisterCatalog" xml:space="preserve">
+    <value>Re-register catalog</value>
+  </data>
+  <data name="TbDiscardRetiredHistory" xml:space="preserve">
+    <value>Discard revision history</value>
+  </data>
+  <data name="TbConfirmDiscardRetiredCatalogHistory" xml:space="preserve">
+    <value>Permanently discard the selected retired catalog's persisted revision history? The catalog file will be kept, but rollback evidence cannot be recovered.</value>
+  </data>
+  <data name="TbRetiredCatalogDetails" xml:space="preserve">
+    <value>Retired catalog details</value>
+  </data>
+  <data name="TbEndpointTimeline" xml:space="preserve">
+    <value>Observation timeline</value>
+  </data>
+  <data name="TbApproximatePayload" xml:space="preserve">
+    <value>Approximate payload</value>
+  </data>
+
+  <data name="TbExportRetiredArchive" xml:space="preserve">
+    <value>Export archive</value>
+  </data>
+  <data name="TbDatabaseCompaction" xml:space="preserve">
+    <value>Database compaction</value>
+  </data>
+  <data name="TbPreviewDatabaseCompaction" xml:space="preserve">
+    <value>Preview compaction</value>
+  </data>
+  <data name="TbApplyDatabaseCompaction" xml:space="preserve">
+    <value>Compact database</value>
+  </data>
+  <data name="TbConfirmDatabaseCompaction" xml:space="preserve">
+    <value>Compact the SQLite database now? VACUUM rewrites the database file and may temporarily require additional disk space. The operation is stale-checked but cannot be undone.</value>
+  </data>
+
+  <data name="TbRemoteCatalogSource" xml:space="preserve">
+    <value>Remote source &amp; trust</value>
+  </data>
+  <data name="TbRemoteCatalogSourceDesc" xml:space="preserve">
+    <value>Configure an HTTPS source for the selected catalog. Fetch previews changes; Apply commits them only after validation.</value>
+  </data>
+  <data name="TbRemoteCatalogUri" xml:space="preserve">
+    <value>Catalog HTTPS URL</value>
+  </data>
+  <data name="TbRemoteSignatureUri" xml:space="preserve">
+    <value>Detached signature URL</value>
+  </data>
+  <data name="TbRemoteSignaturePolicy" xml:space="preserve">
+    <value>Signature policy</value>
+  </data>
+  <data name="TbRemoteTrustedKeyId" xml:space="preserve">
+    <value>Trusted key ID</value>
+  </data>
+  <data name="TbRemoteTrustedPublicKey" xml:space="preserve">
+    <value>Trusted public key (SPKI Base64)</value>
+  </data>
+  <data name="TbSaveRemoteSource" xml:space="preserve">
+    <value>Save remote source</value>
+  </data>
+  <data name="TbRemoveRemoteSource" xml:space="preserve">
+    <value>Remove remote source</value>
+  </data>
+  <data name="TbFetchRemotePreview" xml:space="preserve">
+    <value>Fetch preview</value>
+  </data>
+  <data name="TbApplyRemotePreview" xml:space="preserve">
+    <value>Apply remote preview</value>
+  </data>
+  <data name="TbRemoteSourceStatus" xml:space="preserve">
+    <value>Remote source status</value>
+  </data>
+  <data name="TbRemoteFetchPreview" xml:space="preserve">
+    <value>Remote fetch preview</value>
+  </data>
+  <data name="TbConfirmRemoveRemoteCatalogSource" xml:space="preserve">
+    <value>Remove this catalog's remote source configuration, cache validators, and signature status? The local catalog file and revision history will not be changed.</value>
+  </data>
+
+  <data name="TbRemoteSources" xml:space="preserve">
+    <value>Remote sources</value>
+  </data>
+  <data name="TbRemoteSourcesDesc" xml:space="preserve">
+    <value>Review saved source health. Refresh reads local history only and never contacts the network.</value>
+  </data>
+  <data name="TbRemoteSourceHealthSummary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="TbRemoteSourceHealthDetails" xml:space="preserve">
+    <value>Source details</value>
+  </data>
+  <data name="TbNeedsReview" xml:space="preserve">
+    <value>Needs review</value>
+  </data>
+  <data name="TbRemoteTlsPins" xml:space="preserve">
+    <value>HTTPS SPKI pins</value>
+  </data>
+  <data name="TbRemoteTlsPinsDesc" xml:space="preserve">
+    <value>Optional SHA-256 SPKI pins, one per line. Normal certificate validation still runs first. Keep overlapping pins only during key rotation.</value>
+  </data>
+  <data name="TbInspectServerSpki" xml:space="preserve">
+    <value>Inspect server SPKI</value>
+  </data>
+  <data name="TbAddObservedSpkiPin" xml:space="preserve">
+    <value>Add observed pin to editor</value>
+  </data>
+  <data name="TbObservedServerSpki" xml:space="preserve">
+    <value>Observed server SPKI</value>
+  </data>
+  <data name="TbRemoteTrustPortability" xml:space="preserve">
+    <value>Import / export trust</value>
+  </data>
+  <data name="TbExportRemoteSourceTrust" xml:space="preserve">
+    <value>Export trust config</value>
+  </data>
+  <data name="TbPreviewRemoteSourceImport" xml:space="preserve">
+    <value>Preview trust import</value>
+  </data>
+  <data name="TbApplyRemoteSourceImport" xml:space="preserve">
+    <value>Apply trust import</value>
+  </data>
+  <data name="TbRemoteSourceImportPreview" xml:space="preserve">
+    <value>Trust import preview</value>
+  </data>
+  <data name="TbConfirmRemoteSourceImport" xml:space="preserve">
+    <value>Apply this remote-source trust configuration? This changes source/trust settings only and does not fetch or apply catalog content.</value>
+  </data>
+  <data name="TbInspectCatalogArchive" xml:space="preserve">
+    <value>Inspect archive</value>
+  </data>
+  <data name="TbArchiveInspection" xml:space="preserve">
+    <value>Archive inspection</value>
+  </data>
+  <data name="TbRemoteProvenance" xml:space="preserve">
+    <value>Update provenance</value>
+  </data>
+  <data name="TbRemoteProvenanceDesc" xml:space="preserve">
+    <value>Search saved evidence from previous remote updates. This view is local and read-only.</value>
+  </data>
+  <data name="TbSearchProvenance" xml:space="preserve">
+    <value>Search provenance</value>
+  </data>
+  <data name="TbSourceHostFilter" xml:space="preserve">
+    <value>Source host</value>
+  </data>
+  <data name="TbTlsSpkiPinFilter" xml:space="preserve">
+    <value>TLS SPKI pin</value>
+  </data>
+  <data name="TbConfirmRemoveTlsPins" xml:space="preserve">
+    <value>Saving this remote source removes {0} existing HTTPS SPKI pin(s). This weakens or changes the current transport trust set. Continue?</value>
+  </data>
+
+  <data name="LvAsn" xml:space="preserve">
+    <value>ASN</value>
+  </data>
+  <data name="LvActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="LvAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="LvBefore" xml:space="preserve">
+    <value>Before</value>
+  </data>
+  <data name="LvCatalogId" xml:space="preserve">
+    <value>Catalog ID</value>
+  </data>
+  <data name="LvConfigured" xml:space="preserve">
+    <value>Configured</value>
+  </data>
+  <data name="TbEndpointPoolCleanup" xml:space="preserve">
+    <value>Endpoint pool cleanup</value>
+  </data>
+  <data name="LvFile" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="LvHttpHost" xml:space="preserve">
+    <value>HTTP Host</value>
+  </data>
+  <data name="LvHttpsSource" xml:space="preserve">
+    <value>HTTPS source</value>
+  </data>
+  <data name="LvHistorical" xml:space="preserve">
+    <value>Historical</value>
+  </data>
+  <data name="LvLastAudit" xml:space="preserve">
+    <value>Last audit</value>
+  </data>
+  <data name="LvLastCheck" xml:space="preserve">
+    <value>Last check</value>
+  </data>
+  <data name="LvLatencyMs" xml:space="preserve">
+    <value>Latency ms</value>
+  </data>
+  <data name="TbLifecycleEvidenceRetention" xml:space="preserve">
+    <value>Lifecycle evidence retention</value>
+  </data>
+  <data name="LvOriginalProfile" xml:space="preserve">
+    <value>Original profile</value>
+  </data>
+  <data name="LvPop" xml:space="preserve">
+    <value>POP</value>
+  </data>
+  <data name="LvPinned" xml:space="preserve">
+    <value>Pinned</value>
+  </data>
+  <data name="LvPromotedProfile" xml:space="preserve">
+    <value>Promoted profile</value>
+  </data>
+  <data name="LvQualified" xml:space="preserve">
+    <value>Qualified</value>
+  </data>
+  <data name="LvReliability" xml:space="preserve">
+    <value>Reliability</value>
+  </data>
+  <data name="LvRetired" xml:space="preserve">
+    <value>Retired</value>
+  </data>
+  <data name="LvRevision" xml:space="preserve">
+    <value>Revision</value>
+  </data>
+  <data name="LvRolledBack" xml:space="preserve">
+    <value>Rolled back</value>
+  </data>
+  <data name="LvScore" xml:space="preserve">
+    <value>Score</value>
+  </data>
+  <data name="LvSignature" xml:space="preserve">
+    <value>Signature</value>
+  </data>
+  <data name="LvSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="LvSuccesses" xml:space="preserve">
+    <value>Successes</value>
+  </data>
+  <data name="LvTlsServerName" xml:space="preserve">
+    <value>TLS server name</value>
+  </data>
+  <data name="LvTrustedKey" xml:space="preserve">
+    <value>Trusted key</value>
+  </data>
+  <data name="menuReviver" xml:space="preserve">
+    <value>Repair</value>
+  </data>
+  <data name="menuReviveSelectedProfile" xml:space="preserve">
+    <value>Diagnose &amp; repair</value>
+  </data>
+  <data name="menuExportReviverSupportBundle" xml:space="preserve">
+    <value>Export repair diagnostic bundle</value>
+  </data>
+  <data name="menuCancelReviver" xml:space="preserve">
+    <value>Cancel repair analysis</value>
+  </data>
+  <data name="TbReviverStatus" xml:space="preserve">
+    <value>Repair status</value>
+  </data>
+  <data name="TbReviverHelp" xml:space="preserve">
+    <value>Diagnose one selected profile. Repairs are validated first and saved as a new child; the source profile is never overwritten.</value>
+  </data>
+  <data name="TbDiscoveryReady" xml:space="preserve"><value>Ready</value></data>
+  <data name="TbDiscoveryWorking" xml:space="preserve"><value>Working…</value></data>
+  <data name="TbDiscoveryOperationFailed" xml:space="preserve"><value>The operation failed. Review the saved evidence or application log for details.</value></data>
+  <data name="TbDiscoverySelectCatalog" xml:space="preserve"><value>Select a catalog first.</value></data>
+  <data name="TbDiscoverySelectRetiredCatalog" xml:space="preserve"><value>Select a retired catalog first.</value></data>
+  <data name="TbDiscoverySelectEndpoint" xml:space="preserve"><value>Select an endpoint first.</value></data>
+  <data name="TbDiscoverySelectRevision" xml:space="preserve"><value>Select a catalog revision first.</value></data>
+  <data name="TbDiscoveryNoRemoteSource" xml:space="preserve"><value>No remote source is configured for this catalog.</value></data>
+  <data name="TbDiscoveryNoExtraTlsPins" xml:space="preserve"><value>Standard certificate validation is active; no additional SPKI pins are configured.</value></data>
+  <data name="TbDiscoveryInspectSpki" xml:space="preserve"><value>Inspect the current server key to view its SPKI.</value></data>
+  <data name="TbDiscoveryFetchPreview" xml:space="preserve"><value>Fetch a preview to compare the remote catalog before applying it.</value></data>
+  <data name="TbDiscoveryImportPreview" xml:space="preserve"><value>Preview the trust configuration before importing it.</value></data>
+  <data name="TbDiscoveryEndpointCleanupPreview" xml:space="preserve"><value>Preview endpoint cleanup to review the affected endpoints.</value></data>
+  <data name="TbDiscoveryRetentionPreview" xml:space="preserve"><value>Preview retention to review the records that would be removed.</value></data>
+  <data name="TbDiscoveryCompactionPreview" xml:space="preserve"><value>Preview compaction to review the current database state.</value></data>
+  <data name="TbDiscoveryPreviewRequired" xml:space="preserve"><value>Preview this operation before applying it.</value></data>
+  <data name="TbDiscoveryPreviewChanged" xml:space="preserve"><value>The preview changed. Review a fresh preview before applying.</value></data>
+  <data name="TbReviverDiagnosing" xml:space="preserve">
+    <value>Diagnosing the selected profile and validating bounded repair candidates…</value>
+  </data>
+  <data name="TbReviverHealthy" xml:space="preserve">
+    <value>Profile passed repeated real-core validation. No repair was needed.</value>
+  </data>
+  <data name="TbReviverUnsupported" xml:space="preserve">
+    <value>Automatic repair is not available for this profile type.</value>
+  </data>
+  <data name="TbReviverNoCandidate" xml:space="preserve">
+    <value>No repair passed repeated real-core validation. The source profile was not changed.</value>
+  </data>
+  <data name="TbReviverValidatedNotApplied" xml:space="preserve">
+    <value>A validated repair was found but was not applied.</value>
+  </data>
+  <data name="TbReviverPromoted" xml:space="preserve">
+    <value>A repaired child profile was created. The source profile and current default were not changed.</value>
+  </data>
+  <data name="TbReviverCancelling" xml:space="preserve">
+    <value>Cancelling repair analysis…</value>
+  </data>
+  <data name="TbReviverCancelled" xml:space="preserve">
+    <value>Repair analysis was cancelled or timed out. No changes were applied.</value>
+  </data>
+  <data name="TbReviverExported" xml:space="preserve">
+    <value>Repair diagnostic bundle saved.</value>
+  </data>
+  <data name="TbReviverExportUnavailable" xml:space="preserve">
+    <value>Run Diagnose &amp; repair before exporting a diagnostic bundle.</value>
+  </data>
+  <data name="TbReviverAnalysisFailed" xml:space="preserve">
+    <value>Repair analysis failed. No changes were applied.</value>
+  </data>
+  <data name="TbReviverConfirmPromotion" xml:space="preserve">
+    <value>A repair passed repeated real-core validation.\n\n{0}\n\nCreate a new detached repaired profile? The source profile and current default will not be changed.</value>
+  </data>
+  <data name="TbReviverDiagnosisLine" xml:space="preserve">
+    <value>Diagnosis: {0}</value>
+  </data>
+  <data name="TbReviverValidationLine" xml:space="preserve">
+    <value>Validation: {0}/{1} successful attempts; median latency {2}; loss {3}.</value>
+  </data>
+  <data name="TbReviverMutationLine" xml:space="preserve">
+    <value>{0}: {1} → {2} ({3})</value>
+  </data>
+  <data name="TbReviverEmptyValue" xml:space="preserve">
+    <value>(empty)</value>
+  </data>
+
+  <data name="TbDiscoveryRefreshingEndpointPool" xml:space="preserve"><value>Refreshing endpoint pool…</value></data>
+  <data name="TbDiscoveryEndpointPoolRefreshed" xml:space="preserve"><value>Endpoint pool refreshed.</value></data>
+  <data name="TbDiscoveryPinningEndpoint" xml:space="preserve"><value>Pinning endpoint…</value></data>
+  <data name="TbDiscoveryUnpinningEndpoint" xml:space="preserve"><value>Unpinning endpoint…</value></data>
+  <data name="TbDiscoveryEndpointPinned" xml:space="preserve"><value>Endpoint pinned.</value></data>
+  <data name="TbDiscoveryEndpointUnpinned" xml:space="preserve"><value>Endpoint unpinned.</value></data>
+  <data name="TbDiscoveryEnablingEndpoint" xml:space="preserve"><value>Enabling endpoint…</value></data>
+  <data name="TbDiscoveryDisablingEndpoint" xml:space="preserve"><value>Disabling endpoint…</value></data>
+  <data name="TbDiscoveryEndpointEnabled" xml:space="preserve"><value>Endpoint enabled.</value></data>
+  <data name="TbDiscoveryEndpointDisabled" xml:space="preserve"><value>Endpoint disabled.</value></data>
+  <data name="TbDiscoveryUpdatingEndpointLabel" xml:space="preserve"><value>Updating endpoint label…</value></data>
+  <data name="TbDiscoveryEndpointLabelUpdated" xml:space="preserve"><value>Endpoint label updated.</value></data>
+  <data name="TbDiscoveryRefreshingRepairHistory" xml:space="preserve"><value>Refreshing repair history…</value></data>
+  <data name="TbDiscoveryRepairHistoryRefreshed" xml:space="preserve"><value>Repair history refreshed.</value></data>
+  <data name="TbDiscoveryPreparingEndpointCleanup" xml:space="preserve"><value>Preparing endpoint cleanup preview…</value></data>
+  <data name="TbDiscoveryEndpointCleanupPrepared" xml:space="preserve"><value>Endpoint cleanup preview prepared.</value></data>
+  <data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve"><value>Applying endpoint cleanup…</value></data>
+  <data name="TbDiscoveryEndpointCleanupApplied" xml:space="preserve"><value>Endpoint cleanup applied.</value></data>
+  <data name="TbDiscoveryEndpointCleanupResult" xml:space="preserve"><value>Applied: {0}/{1} removed; {2} changed entries skipped.</value></data>
+  <data name="TbDiscoveryPreparingRetention" xml:space="preserve"><value>Preparing lifecycle-retention preview…</value></data>
+  <data name="TbDiscoveryRetentionPrepared" xml:space="preserve"><value>Lifecycle-retention preview prepared.</value></data>
+  <data name="TbDiscoveryApplyingRetention" xml:space="preserve"><value>Applying lifecycle retention…</value></data>
+  <data name="TbDiscoveryRetentionApplied" xml:space="preserve"><value>Lifecycle retention applied.</value></data>
+  <data name="TbDiscoveryRetentionResult" xml:space="preserve"><value>Applied: {0}/{1} deleted; {2} already missing.</value></data>
+  <data name="TbDiscoveryPreparingCompaction" xml:space="preserve"><value>Preparing SQLite compaction preview…</value></data>
+  <data name="TbDiscoveryCompactionPrepared" xml:space="preserve"><value>Database compaction preview prepared. Review it before Apply.</value></data>
+  <data name="TbDiscoveryCompactingDatabase" xml:space="preserve"><value>Compacting SQLite database…</value></data>
+  <data name="TbDiscoveryCompactionCompleted" xml:space="preserve"><value>Database compaction completed.</value></data>
 </root>
