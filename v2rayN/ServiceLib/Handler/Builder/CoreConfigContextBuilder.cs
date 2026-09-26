@@ -397,6 +397,23 @@ public class CoreConfigContextBuilder
             }
         }
 
+        // PattN: Xray sends the ECH config query to the DNS server after the "+" (the whole value when there
+        // is none) and resolves that server's domain itself; in TUN mode it would otherwise resolve through
+        // the proxy, whose handshake waits for this query. sing-box never uses that server: it queries the
+        // name protected above through its own DNS.
+        if (context.RunCoreType != ECoreType.sing_box
+            && node.StreamSecurity == Global.StreamSecurity
+            && !node.EchConfigList.IsNullOrEmpty()
+            && node.EchConfigList.Contains("://"))
+        {
+            var idx = node.EchConfigList.IndexOf('+');
+            var echDnsServer = idx > 0 ? node.EchConfigList[(idx + 1)..] : node.EchConfigList;
+            if (Uri.TryCreate(echDnsServer, UriKind.Absolute, out var echDnsUri) && Utils.IsDomain(echDnsUri.IdnHost))
+            {
+                context.ProtectDomainList.Add(echDnsUri.IdnHost);
+            }
+        }
+
         // xhttp downloadSettings address protect
         var xhttpExtra = node.GetTransportExtra().XhttpExtra;
         if (!string.IsNullOrEmpty(xhttpExtra)
