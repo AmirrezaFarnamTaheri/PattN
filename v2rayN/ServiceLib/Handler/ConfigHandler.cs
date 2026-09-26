@@ -2636,6 +2636,14 @@ public static class ConfigHandler
             item.Sort = ++maxSort;
             item.Url = string.Empty;
 
+            //PattN: the Iran template still ships what PattN removed from its Iran direct rule-set; clean it before storing
+            if (item.Remarks == IranDirectRoutingRemarks)
+            {
+                item.RuleSet = ruleSetsString;
+                CleanIranDirectRouting(item);
+                ruleSetsString = item.RuleSet;
+            }
+
             await AddBatchRoutingRules(item, ruleSetsString);
 
             //first rule as default at first startup
@@ -2704,6 +2712,64 @@ public static class ConfigHandler
     }
 
     /// <summary>
+    /// PattN: name of the Iran direct rule-set, which the Iran template (Chocolate4U) imports under the same name
+    /// </summary>
+    public const string IranDirectRoutingRemarks = "IR-ایران مستقیم، بقیه پراکسی";
+
+    /// <summary>
+    /// PattN: clean an Iran direct rule-set of what custom_routing_white_iran no longer has and the Iran template
+    /// (Chocolate4U) still ships:
+    /// the IPOnDemand domain strategy, which 7.24.8-P5 stored too, so that the default (AsIs) applies;
+    /// the "8.8.8.8 -> direct" rule for domestic DNS, which the direct-dns routing rule covers now;
+    /// "geosite:ir" (Chocolate4U only), which releases up to 7.25.1-P24 shipped too (see MigrateIranDirectDomains);
+    /// and the "port 0-65535 -> proxy" rule, which releases up to 7.25.2-P28 ended with too (see RemoveIranProxyCatchAll)
+    /// </summary>
+    /// <param name="item">An Iran direct rule-set, stored or being imported</param>
+    /// <returns>true when the rule-set changed</returns>
+    public static bool CleanIranDirectRouting(RoutingItem item)
+    {
+        var changed = false;
+        if (item.DomainStrategy == Global.IPOnDemand)
+        {
+            item.DomainStrategy = string.Empty;
+            changed = true;
+        }
+
+        var rules = JsonUtils.Deserialize<List<RulesItem>>(item.RuleSet) ?? [];
+        var removedCount = rules.RemoveAll(t => t.Remarks == "تبدیل نام دامنه های ایران - مستقیم"
+            && t.OutboundTag == Global.DirectTag
+            && t.Ip is ["8.8.8.8"]);
+        removedCount += RemoveIranProxyCatchAll(rules);
+        var domainsMigrated = MigrateIranDirectDomains(rules);
+        if (removedCount > 0 || domainsMigrated)
+        {
+            item.RuleNum = rules.Count;
+            item.RuleSet = JsonUtils.Serialize(rules, false);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// PattN: clean every Iran direct rule-set of items (see CleanIranDirectRouting), not only the first one: "Import Rules"
+    /// adds the one of the Iran template under the same name next to PattN's own
+    /// </summary>
+    /// <param name="items">Stored routing rule-sets</param>
+    /// <returns>The rule-sets that changed, to be saved</returns>
+    public static List<RoutingItem> CleanIranDirectRoutings(IEnumerable<RoutingItem> items)
+    {
+        var changed = new List<RoutingItem>();
+        foreach (var item in items.Where(t => t.Remarks == IranDirectRoutingRemarks))
+        {
+            if (CleanIranDirectRouting(item))
+            {
+                changed.Add(item);
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>
     /// Initialize built-in routing rules
     /// Creates default routing configurations (whitelist, blacklist, global)
     /// </summary>
@@ -2723,36 +2789,11 @@ public static class ConfigHandler
             items = await AppManager.Instance.RoutingItems();
         }
 
-        //PattN TODO Temporary code to be removed later: 7.24.8-P5 (and the Iran template) stored this
-        //ruleset with DomainStrategy IPOnDemand; reset it once so updaters get the AsIs default too
-        var iranDirectItem = items?.FirstOrDefault(t => t.Remarks == "IR-ایران مستقیم، بقیه پراکسی" && t.DomainStrategy == Global.IPOnDemand);
-        if (iranDirectItem != null)
+        //PattN TODO Temporary code to be removed later: clean every Iran direct rule-set that an older release stored,
+        //or that "Import Rules" took from the Iran template before it was cleaned on import (see CleanIranDirectRouting)
+        foreach (var iranDirectItem in CleanIranDirectRoutings(items ?? []))
         {
-            iranDirectItem.DomainStrategy = string.Empty;
             await SQLiteHelper.Instance.UpdateAsync(iranDirectItem);
-        }
-
-        //PattN TODO Temporary code to be removed later: the Iran template shipped an "8.8.8.8 -> direct"
-        //rule for domestic DNS; remove it once for updaters, the direct-dns routing rule covers this now.
-        //Releases up to 7.25.1-P24 also shipped the Iran direct rule as "geosite:ir" (Chocolate4U only);
-        //rewrite it once to "domain:ir" + "geosite:category-ir" like custom_routing_white_iran has now.
-        //Releases up to 7.25.2-P28 also ended it with a "port 0-65535 -> proxy" rule, which kept an IPIfNonMatch
-        //domain strategy from working; remove it once as well
-        var iranTemplateItem = items?.FirstOrDefault(t => t.Remarks == "IR-ایران مستقیم، بقیه پراکسی");
-        if (iranTemplateItem != null)
-        {
-            var iranRules = JsonUtils.Deserialize<List<RulesItem>>(iranTemplateItem.RuleSet) ?? [];
-            var removedCount = iranRules.RemoveAll(t => t.Remarks == "تبدیل نام دامنه های ایران - مستقیم"
-                && t.OutboundTag == Global.DirectTag
-                && t.Ip is ["8.8.8.8"]);
-            removedCount += RemoveIranProxyCatchAll(iranRules);
-            var domainsMigrated = MigrateIranDirectDomains(iranRules);
-            if (removedCount > 0 || domainsMigrated)
-            {
-                iranTemplateItem.RuleNum = iranRules.Count;
-                iranTemplateItem.RuleSet = JsonUtils.Serialize(iranRules, false);
-                await SQLiteHelper.Instance.UpdateAsync(iranTemplateItem);
-            }
         }
 
         if (!blImportAdvancedRules && items.Count() > 0) // items.Count(u => u.Remarks.StartsWith(ver)) > 0)
@@ -2803,7 +2844,7 @@ public static class ConfigHandler
         //PattN: Iran direct (Chocolate4U), see https://github.com/Chocolate4U/Iran-v2ray-rules
         var item4 = new RoutingItem()
         {
-            Remarks = "IR-ایران مستقیم، بقیه پراکسی",
+            Remarks = IranDirectRoutingRemarks,
             Url = string.Empty,
             Sort = maxSort + 4,
         };
