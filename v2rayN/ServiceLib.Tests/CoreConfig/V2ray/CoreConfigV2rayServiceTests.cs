@@ -762,6 +762,32 @@ public class CoreConfigV2rayServiceTests
     }
 
     [Test]
+    public async Task GenerateClientConfigContent_Tun_ShouldEnableAutoSystemDns()
+    {
+        var config = CoreConfigTestFactory.CreateConfigWithTun(ECoreType.Xray, false);
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, "n-main", "main");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        var cfg = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString())!;
+        var tunInbound = cfg.inbounds.FirstOrDefault(i => i.protocol == "tun");
+
+        await tunInbound.Should().NotBeNull();
+        await tunInbound!.settings.autoSystemDNS.Should().BeEqualTo(true);
+
+        // Xray-core takes over system DNS only when it can derive an address from an IPv4 gateway
+        // and a query to that address on port 53 is routed to a "dns" outbound.
+        await tunInbound.settings.gateway.Should().Contain(x => !x.Contains(':'));
+        await cfg.routing.rules.Should().Contain(r =>
+            r.port == "53" && r.inboundTag != null && r.inboundTag.Contains("tun") && r.outboundTag == Global.DnsOutboundTag);
+        await cfg.outbounds.Should().Contain(o => o.tag == Global.DnsOutboundTag && o.protocol == "dns");
+    }
+
+    [Test]
     public async Task GenerateClientConfigContent_TunRouteExcludeAddress_ShouldSkipIPv6RangesWithoutGlobalIPv6()
     {
         var config = CoreConfigTestFactory.CreateConfigWithTunRouteExcludeAddress(ECoreType.Xray);

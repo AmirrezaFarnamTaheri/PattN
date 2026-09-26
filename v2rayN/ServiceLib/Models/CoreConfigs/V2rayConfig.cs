@@ -93,6 +93,8 @@ public class Inboundsettings4Ray
 
     public string? autoOutboundsInterface { get; set; }
 
+    public bool? autoSystemDNS { get; set; }
+
     public List<string>? dns { get; set; }
 }
 
