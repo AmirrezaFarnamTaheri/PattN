@@ -42,11 +42,6 @@ public partial class CheckUpdateViewModel : MyReactiveObject
         this.WhenAnyValue(x => x.EnableUpdateViaProxy)
             .Subscribe(c => _ = OnUpdateViaProxyChanged());
 
-        this.WhenAnyValue(
-        x => x.EnableUpdateViaProxy,
-        y => y == true)
-            .Subscribe(c => _ = OnUpdateViaProxyChanged());
-
         AppEvents.HasUpdateNotified
          .AsObservable()
          .ObserveOn(RxSchedulers.MainThreadScheduler)
