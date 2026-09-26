@@ -7,7 +7,7 @@ on:
         required: false
         type: string
 
-permissions: 
+permissions:
   actions: write
   contents: write
 
@@ -21,75 +21,24 @@ jobs:
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
   update:
+    if: inputs.release_tag != ''
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      REF_NAME: ${{ github.ref_name }}
     steps:
-
-      - name: Trigger build windows
-        if: inputs.release_tag != ''
+      - name: Trigger platform release workflows
+        shell: bash
         run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-windows.yml/dispatches \
-            -d "{
-              \"ref\": \"${{ github.ref_name }}\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
-
-      - name: Trigger build linux
-        if: inputs.release_tag != ''
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-linux.yml/dispatches \
-            -d "{
-              \"ref\": \"${{ github.ref_name }}\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
-
-      - name: Trigger build osx
-        if: inputs.release_tag != ''
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-osx.yml/dispatches \
-            -d "{
-              \"ref\": \"${{ github.ref_name }}\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
-
-      - name: Trigger build windows desktop
-        if: inputs.release_tag != ''
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-windows-desktop.yml/dispatches \
-            -d "{
-              \"ref\": \"${{ github.ref_name }}\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
-            
-      - name: Trigger build windows x86
-        if: inputs.release_tag != ''
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-windows-x86.yml/dispatches \
-            -d "{
-              \"ref\": \"${{ github.ref_name }}\",
-              \"inputs\": {
-                \"release_tag\": \"${{ inputs.release_tag }}\"
-              }
-            }"
+          set -euo pipefail
+          workflows=(
+            build-windows.yml
+            build-linux.yml
+            build-osx.yml
+            build-windows-desktop.yml
+            build-windows-x86.yml
+          )
+          for workflow in "${workflows[@]}"; do
+            gh workflow run "$workflow"               --repo "$GITHUB_REPOSITORY"               --ref "$REF_NAME"               -f "release_tag=$RELEASE_TAG"
+          done

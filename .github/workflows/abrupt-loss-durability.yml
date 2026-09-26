@@ -1,0 +1,131 @@
+name: Abrupt-loss durability campaign
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: Repetitions per crash checkpoint
+        required: true
+        type: string
+        default: "5"
+  schedule:
+    - cron: '37 5 3 * *'
+
+permissions:
+  contents: read
+
+jobs:
+  process-kill:
+    name: real SQLite/file process-kill recovery
+    runs-on: ubuntu-latest
+    env:
+      ITERATIONS: ${{ inputs.iterations || '5' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'ga'
+
+    - name: Validate campaign input
+      shell: bash
+      run: |
+        set -euo pipefail
+        [[ "$ITERATIONS" =~ ^[0-9]+$ ]] || { echo "::error::iterations must be numeric"; exit 1; }
+        (( ITERATIONS >= 1 && ITERATIONS <= 50 )) || { echo "::error::iterations must be 1..50"; exit 1; }
+
+    - name: Publish isolated fault harness
+      shell: bash
+      run: |
+        set -euo pipefail
+        dotnet publish ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj           -c Release           -o "$RUNNER_TEMP/fault-harness-publish"
+
+    - name: Run abrupt process-loss campaign
+      shell: bash
+      run: |
+        set -euo pipefail
+        root="$RUNNER_TEMP/pattn-abrupt-loss"
+        mkdir -p "$root"
+
+        {
+          echo "run_id=$GITHUB_RUN_ID"
+          echo "commit=$GITHUB_SHA"
+          echo "runner_os=$RUNNER_OS"
+          echo "runner_arch=$RUNNER_ARCH"
+          echo "kernel=$(uname -a)"
+          echo "dotnet=$(dotnet --version)"
+          echo "iterations=$ITERATIONS"
+          echo "--- mounts ---"
+          cat /proc/mounts
+        } > "$root/environment.txt"
+
+        for checkpoint in after-file-apply after-revision-insert after-registry-upsert after-rollback-file after-rollback-registry after-rollback-revision; do
+          for i in $(seq 1 "$ITERATIONS"); do
+            case_dir="$root/$checkpoint-$i"
+            mkdir -p "$case_dir"
+            cp -a "$RUNNER_TEMP/fault-harness-publish/." "$case_dir/"
+            [[ -x "$case_dir/ServiceLib.FaultHarness" ]] || {
+              echo "::error::published fault harness apphost is missing"
+              ls -la "$case_dir"
+              exit 1
+            }
+
+            (
+              cd "$case_dir"
+              ./ServiceLib.FaultHarness init > init.json
+            )
+
+            (
+              cd "$case_dir"
+              exec ./ServiceLib.FaultHarness worker "$checkpoint"
+            ) > "$case_dir/worker.log" 2>&1 &
+            pid=$!
+
+            reached=0
+            for _ in $(seq 1 400); do
+              if [[ -s "$case_dir/fault-checkpoint.marker" ]]; then
+                reached=1
+                break
+              fi
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "::error::worker exited before $checkpoint"
+                cat "$case_dir/worker.log"
+                exit 1
+              fi
+              sleep 0.05
+            done
+            if [[ "$reached" != 1 ]]; then
+              echo "::error::worker never reached $checkpoint"
+              kill -9 "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+              cat "$case_dir/worker.log"
+              exit 1
+            fi
+
+            # Deliberately bypass finally/dispose/compensation: this is the
+            # process-death model, not an exception-injection unit test.
+            kill -9 "$pid"
+            wait "$pid" 2>/dev/null || true
+
+            (
+              cd "$case_dir"
+              ./ServiceLib.FaultHarness verify "$checkpoint" | tee verify.json
+              sha256sum catalog.json guiConfigs/guiNDB.db > recovered-checksums.txt
+              if [[ -e guiConfigs/guiNDB.db-wal ]]; then
+                sha256sum guiConfigs/guiNDB.db-wal >> recovered-checksums.txt
+              fi
+            )
+          done
+        done
+
+    - name: Upload process-loss evidence
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: abrupt-loss-${{ github.run_id }}
+        path: ${{ runner.temp }}/pattn-abrupt-loss/
+        if-no-files-found: error
+        retention-days: 90

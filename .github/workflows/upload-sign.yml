@@ -35,6 +35,17 @@ jobs:
         name: ${{ inputs.artifact_name }}
         path: dist
 
+    - name: Validate release inputs
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: |
+        set -euo pipefail
+        [[ "$RELEASE_TAG" =~ ^[0-9]+.[0-9]+.[0-9]+(-P[0-9]+)?$ ]] || {
+          echo "::error::release_tag must be x.y.z or x.y.z-Pn (got '$RELEASE_TAG')"
+          exit 1
+        }
+
     - name: Import GPG private key
       shell: bash
       env:
@@ -46,35 +57,47 @@ jobs:
 
     - name: Sign release files
       shell: bash
+      env:
+        FILE_PATTERN: ${{ inputs.file_pattern }}
       run: |
         set -euo pipefail
         cd dist
+        case "$FILE_PATTERN" in
+          /*|../*|*/../*|*/..)
+            echo "file_pattern must stay within the downloaded artifact: $FILE_PATTERN" >&2
+            exit 1
+            ;;
+        esac
         shopt -s globstar nullglob
-        files=( ${{ inputs.file_pattern }} )
-        (( ${#files[@]} )) || { echo "No files matched: ${{ inputs.file_pattern }}"; exit 1; }
+        mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
+        (( ${#files[@]} )) || { echo "No files matched: $FILE_PATTERN"; exit 1; }
         for f in "${files[@]}"; do
           [[ -f "$f" ]] || continue
           gpg --batch --yes --armor --detach-sign --output "$f.sig" "$f"
         done
 
-    - name: Upload release files
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/${{ inputs.file_pattern }}
-        tag: ${{ inputs.release_tag }}
-        release_name: PattN v${{ inputs.release_tag }}
-        body: "."
-        file_glob: true
-        prerelease: true
-        overwrite: true
+    - name: Upload signed assets with GitHub CLI
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        FILE_PATTERN: ${{ inputs.file_pattern }}
+      run: |
+        set -euo pipefail
+        cd dist
+        shopt -s globstar nullglob
+        mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
+        (( ${#files[@]} )) || { echo "No release files matched: $FILE_PATTERN"; exit 1; }
 
-    - name: Upload release signatures
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/${{ inputs.file_pattern }}.sig
-        tag: ${{ inputs.release_tag }}
-        release_name: PattN v${{ inputs.release_tag }}
-        body: "."
-        file_glob: true
-        prerelease: true
-        overwrite: true
+        assets=()
+        for f in "${files[@]}"; do
+          [[ -f "$f" ]] || continue
+          [[ -f "$f.sig" ]] || { echo "Missing signature for $f"; exit 1; }
+          assets+=("$f" "$f.sig")
+        done
+        (( ${#assets[@]} )) || { echo "No regular release files matched"; exit 1; }
+
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes "." --prerelease
+        fi
+        gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
