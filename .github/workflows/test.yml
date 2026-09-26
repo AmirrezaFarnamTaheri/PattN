@@ -43,87 +43,251 @@ jobs:
     name: Validate GitHub Actions workflows
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    - name: Checkout
+      uses: actions/checkout@v7
 
-      - name: Run actionlint
-        uses: docker://rhysd/actionlint:1.7.12
-        with:
-          args: -color
+    - name: Run actionlint
+      uses: docker://rhysd/actionlint:1.7.12
+      with:
+        args: -color
 
   test:
-    name: Test ServiceLib and discovery runtime
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    - name: Checkout
+      uses: actions/checkout@v7
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.x'
-          dotnet-quality: 'ga'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'ga'
 
-      - name: Setup Go
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: './pattn-discovery/go.mod'
-          cache: false
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: './pattn-discovery/go.mod'
+        cache: false
 
-      - name: Test and vet pattn-discovery
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        run: |
-          go test ./...
-          go vet ./...
+    - name: Audit new desktop XAML accessibility markup
+      shell: bash
+      run: |
+        set -euo pipefail
+        files=(
+          v2rayN/v2rayN/Views/DiscoveryManagementWindow.xaml
+          v2rayN/v2rayN.Desktop/Views/DiscoveryManagementWindow.axaml
+          v2rayN/v2rayN/Views/DNSSettingWindow.xaml
+          v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml
+          v2rayN/v2rayN/Views/ProfilesView.xaml
+          v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml
+        )
+        existing_files=()
+        for file in "${files[@]}"; do
+          [[ -f "$file" ]] && existing_files+=("$file")
+        done
+        if (( ${#existing_files[@]} > 0 )) \
+          && grep -nE '/[[:space:]]+(automation:)?AutomationProperties\.' "${existing_files[@]}"; then
+          echo "::error::malformed accessibility property after self-closing slash"
+          exit 1
+        fi
 
-      - name: Race-test pattn-discovery
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        run: go test -race ./...
+        python3 - <<'PY'
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
 
-      - name: Smoke pattn-discovery executable protocol
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        shell: bash
-        run: |
-          set -euo pipefail
-          helper="$RUNNER_TEMP/pattn-discovery"
-          go build -trimpath -o "$helper" ./cmd/pattn-discovery
-          output="$(printf '%s\n' '{"v":1,"id":"smoke","method":"engine.version"}' | timeout 5s "$helper")"
-          grep -F '"id":"smoke"' <<<"$output"
-          grep -F '"engine":"pattn-discovery"' <<<"$output"
+        XAML_NAME = "{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+        required_live = {
+            "v2rayN/v2rayN/Views/DiscoveryManagementWindow.xaml": {
+                "txtStatus", "txtRemoteTlsPinStatus", "txtRemoteSourceHealthSummary",
+                "txtRemoteProvenanceSummary", "txtRepairHistorySummary",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DiscoveryManagementWindow.axaml": {
+                "txtStatus", "txtRemoteTlsPinStatus", "txtRemoteSourceHealthSummary",
+                "txtRemoteProvenanceSummary", "txtRepairHistorySummary",
+            },
+            "v2rayN/v2rayN/Views/DNSSettingWindow.xaml": {
+                "txtDnsHealthSummary", "txtDnsHealthError", "txtDnsRepairStatus", "txtDnsHistoryError",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml": {
+                "txtDnsHealthSummary", "txtDnsHealthError", "txtDnsRepairStatus", "txtDnsHistoryError",
+            },
+            "v2rayN/v2rayN/Views/ProfilesView.xaml": {"txtReviverStatus"},
+            "v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml": {"txtReviverStatus"},
+        }
+        required_actions = {
+            "v2rayN/v2rayN/Views/DNSSettingWindow.xaml": {
+                "btnRefreshDnsHealth", "btnPreviewDnsRepair", "btnApplyDnsRepair", "btnRollbackDnsRepair",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml": {
+                "btnRefreshDnsHealth", "btnPreviewDnsRepair", "btnApplyDnsRepair", "btnRollbackDnsRepair",
+            },
+            "v2rayN/v2rayN/Views/ProfilesView.xaml": {
+                "btnReviveSelectedProfile", "btnCancelReviver", "btnExportReviverSupportBundle",
+            },
+            "v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml": {
+                "btnReviveSelectedProfile", "btnCancelReviver", "btnExportReviverSupportBundle",
+            },
+        }
 
-      - name: Test ServiceLib
-        run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
+        def attached(element, suffix):
+            for key, value in element.attrib.items():
+                if key.endswith(suffix):
+                    return value
+            return None
 
-      - name: Comment PR with results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: ./TestResults/*.trx
-          comment_mode: failures
+        failures = []
+        for file_name, live_names in required_live.items():
+            path = Path(file_name)
+            if not path.is_file():
+                # Split PRs intentionally do not all own the UI leaf. Validate
+                # every relevant file present in the checked-out composition.
+                continue
+            root = ET.parse(path).getroot()
+            named = {
+                element.attrib[XAML_NAME]: element
+                for element in root.iter()
+                if XAML_NAME in element.attrib
+            }
+            for name in live_names:
+                element = named.get(name)
+                if element is None:
+                    failures.append(f"{file_name}: missing required accessibility control {name}")
+                    continue
+                if not attached(element, "AutomationProperties.Name"):
+                    failures.append(f"{file_name}: {name} has no accessible name")
+                if attached(element, "AutomationProperties.LiveSetting") not in {"Polite", "Assertive"}:
+                    failures.append(f"{file_name}: {name} is not an accessibility live region")
+
+            for name in required_actions.get(file_name, set()):
+                element = named.get(name)
+                if element is None:
+                    failures.append(f"{file_name}: missing action {name}")
+                    continue
+                if not attached(element, "AutomationProperties.Name"):
+                    failures.append(f"{file_name}: {name} has no accessible name")
+                try:
+                    target_height = float(element.attrib.get("MinHeight", "0"))
+                except ValueError:
+                    target_height = 0
+                if target_height < 44:
+                    failures.append(f"{file_name}: {name} target height is below 44 DIPs")
+
+        if failures:
+            raise SystemExit("\n".join(failures))
+        PY
+
+    - name: Test pattn-discovery
+      working-directory: ./pattn-discovery
+      run: |
+        go test ./...
+        go vet ./...
+
+    - name: Smoke pattn-discovery executable protocol
+      working-directory: ./pattn-discovery
+      shell: bash
+      run: |
+        set -euo pipefail
+        helper="$RUNNER_TEMP/pattn-discovery"
+        go build -trimpath -o "$helper" ./cmd/pattn-discovery
+        output="$(printf '%s\n' '{"v":1,"id":"smoke","method":"engine.version"}' | timeout 5s "$helper")"
+        grep -F '"id":"smoke"' <<<"$output"
+        grep -F '"engine":"pattn-discovery"' <<<"$output"
+
+    - name: Race-test pattn-discovery
+      working-directory: ./pattn-discovery
+      run: go test -race ./...
+
+    - name: Fuzz smoke DNS parsers
+      working-directory: ./pattn-discovery
+      run: |
+        go test ./internal/dnswire -run=^$ -fuzz=^FuzzParseMessage$ -fuzztime=3s
+        go test ./internal/dnswire -run=^$ -fuzz=^FuzzReadName$ -fuzztime=3s
+        go test ./internal/dnssec -run=^$ -fuzz=^FuzzParseDNSSECRData$ -fuzztime=3s
+        go test ./internal/dnstrace -run=^$ -fuzz=^FuzzDnameSynthesis$ -fuzztime=3s
+        go test ./cmd/pattn-discovery -run=^$ -fuzz=^FuzzNDJSONFraming$ -fuzztime=3s
+
+    - name: Audit committed fuzz regression corpus
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/fuzz-corpus-audit -root .
+
+    - name: Audit DNS root trust-anchor snapshot
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/dns-trust-anchor-audit -max-age-days 90
+
+    - name: Audit DNS fixture corpus
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/dns-fixture-audit -root ./internal/dnsfixture/testdata -fail-on-orphans
+
+    - name: Test Code
+      run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
+
+    - name: Build durability fault harness
+      run: dotnet build ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release
+
+    - name: Abrupt-loss recovery smoke
+      shell: bash
+      run: |
+        set -euo pipefail
+        publish="$RUNNER_TEMP/fault-harness-publish"
+        dotnet publish ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release -o "$publish"
+
+        for checkpoint in after-file-apply after-revision-insert after-registry-upsert after-rollback-file after-rollback-registry after-rollback-revision; do
+          case_dir="$RUNNER_TEMP/fault-smoke-$checkpoint"
+          mkdir -p "$case_dir"
+          cp -a "$publish/." "$case_dir/"
+          (cd "$case_dir" && ./ServiceLib.FaultHarness init > init.json)
+
+          (
+            cd "$case_dir"
+            exec ./ServiceLib.FaultHarness worker "$checkpoint"
+          ) > "$case_dir/worker.log" 2>&1 &
+          pid=$!
+
+          reached=0
+          for _ in $(seq 1 400); do
+            if [[ -s "$case_dir/fault-checkpoint.marker" ]]; then
+              reached=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$case_dir/worker.log"
+              exit 1
+            fi
+            sleep 0.05
+          done
+          [[ "$reached" == 1 ]] || { kill -9 "$pid" 2>/dev/null || true; exit 1; }
+
+          kill -9 "$pid"
+          wait "$pid" 2>/dev/null || true
+          (cd "$case_dir" && ./ServiceLib.FaultHarness verify "$checkpoint")
+        done
+
+    - name: Comment PR with results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: ./TestResults/*.trx
+        comment_mode: failures
 
   ui-build:
     name: Build WPF and Avalonia UI
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        submodules: recursive
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.x'
-          dotnet-quality: 'ga'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '10.x'
+        dotnet-quality: 'ga'
 
-      - name: Build WPF
-        shell: pwsh
-        run: dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
+    - name: Build WPF
+      shell: pwsh
+      run: dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
 
-      - name: Build Avalonia
-        shell: pwsh
-        run: dotnet build ./v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj -c Release
+    - name: Build Avalonia
+      shell: pwsh
+      run: dotnet build ./v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj -c Release

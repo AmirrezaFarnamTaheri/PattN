@@ -99,7 +99,7 @@ install_dependencies() {
 
   if command -v dnf >/dev/null 2>&1; then
     sudo dnf -y install \
-      rpm-build rpmdevtools curl unzip tar jq rsync git python3 \
+      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang \
       glibc-devel kernel-headers libatomic file ca-certificates libicu \
       && install_ok=1
 
@@ -498,6 +498,86 @@ publish_binary() {
   dotnet publish "$PROJECT" -c Release -r "$rid" -p:PublishSingleFile=false -p:SelfContained=true ${VERSION_ARG:+-p:Version=${VERSION_ARG#v}}
 }
 
+host_can_execute_target() {
+  local short="$1"
+  local host
+  host="$(uname -m)"
+  case "$short:$host" in
+    x64:x86_64|arm64:aarch64|riscv64:riscv64|loongarch64:loongarch64) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+stage_discovery_helper() {
+  local outroot="$1"
+  local rid="$2"
+  local goarch=""
+  local helper="$outroot/bin/pattn-discovery/pattn-discovery"
+
+  case "$rid" in
+    linux-x64)         goarch=amd64 ;;
+    linux-arm64)       goarch=arm64 ;;
+    linux-riscv64)     goarch=riscv64 ;;
+    linux-loongarch64) goarch=loong64 ;;
+    *) echo "Unsupported pattn-discovery RID: $rid" >&2; return 1 ;;
+  esac
+
+  mkdir -p "$(dirname "$helper")"
+  if [[ -n "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+    [[ -s "$PATTN_DISCOVERY_PREBUILT" ]] || {
+      echo "PATTN_DISCOVERY_PREBUILT is missing or empty: $PATTN_DISCOVERY_PREBUILT" >&2
+      return 1
+    }
+    install -m 0755 "$PATTN_DISCOVERY_PREBUILT" "$helper"
+  else
+    command -v go >/dev/null 2>&1 || {
+      echo "Go 1.23+ or PATTN_DISCOVERY_PREBUILT is required to package pattn-discovery" >&2
+      return 1
+    }
+    (
+      cd "$SCRIPT_DIR/pattn-discovery"
+      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
+    )
+    chmod 0755 "$helper"
+  fi
+
+  [[ -s "$helper" && -x "$helper" ]] || {
+    echo "pattn-discovery helper was not staged as an executable: $helper" >&2
+    return 1
+  }
+}
+
+smoke_discovery_helper() {
+  local helper="$1"
+  local output
+  output="$(printf '%s\n' '{"v":1,"id":"package-smoke","method":"engine.version"}' | "$helper")"
+  grep -F '"id":"package-smoke"' <<<"$output" >/dev/null
+  grep -F '"engine":"pattn-discovery"' <<<"$output" >/dev/null
+}
+
+verify_discovery_rpm() {
+  local package="$1"
+  local short="$2"
+  local tmp helper
+  command -v rpm2cpio >/dev/null 2>&1 || { echo "rpm2cpio is required for package verification" >&2; return 1; }
+  command -v cpio >/dev/null 2>&1 || { echo "cpio is required for package verification" >&2; return 1; }
+  tmp="$(mktemp -d)"
+  (cd "$tmp" && rpm2cpio "$package" | cpio -idm --quiet)
+  helper="$tmp/opt/v2rayN/bin/pattn-discovery/pattn-discovery"
+  [[ -s "$helper" && -x "$helper" ]] || {
+    rm -rf "$tmp"
+    echo "final RPM is missing executable pattn-discovery: $package" >&2
+    return 1
+  }
+  if host_can_execute_target "$short"; then
+    smoke_discovery_helper "$helper"
+    echo "[OK] Final RPM pattn-discovery handshake passed for $short."
+  else
+    echo "[OK] Final RPM contains pattn-discovery for $short; execution deferred to matching architecture."
+  fi
+  rm -rf "$tmp"
+}
+
 write_spec_file() {
   local specfile="$1"
 
@@ -545,6 +625,7 @@ cp -a * %{buildroot}/opt/v2rayN/
 find %{buildroot}/opt/v2rayN -type d -exec chmod 0755 {} +
 find %{buildroot}/opt/v2rayN -type f -exec chmod 0644 {} +
 [ -f %{buildroot}/opt/v2rayN/PattN ] && chmod 0755 %{buildroot}/opt/v2rayN/PattN || :
+[ -f %{buildroot}/opt/v2rayN/bin/pattn-discovery/pattn-discovery ] && chmod 0755 %{buildroot}/opt/v2rayN/bin/pattn-discovery/pattn-discovery || :
 
 install -dm0755 %{buildroot}%{_bindir}
 install -m0755 /dev/stdin %{buildroot}%{_bindir}/v2rayn << 'EOF'
@@ -627,6 +708,7 @@ package_binary() {
   cp "$icon_candidate" "$workdir/$PKGROOT/v2rayn.png"
 
   stage_runtime_assets "$workdir/$PKGROOT" "$rid"
+  stage_discovery_helper "$workdir/$PKGROOT" "$rid"
 
   rpmdev-setuptree
   sourcedir="${RPM_TOPDIR}/SOURCES"
@@ -642,6 +724,7 @@ package_binary() {
   echo "Build done for $short. RPM at:"
   for f in "${RPM_TOPDIR}/RPMS/${archdir}/v2rayN-${VERSION}-1"*.rpm; do
     [[ -e "$f" ]] || continue
+    verify_discovery_rpm "$f" "$short"
     echo "  $f"
     BUILT_RPMS+=("$f")
   done

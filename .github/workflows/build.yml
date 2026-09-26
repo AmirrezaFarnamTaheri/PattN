@@ -49,6 +49,8 @@ jobs:
             ''
           )
         }}
+      DiscoveryTarget: ${{ inputs.target }}
+      DiscoveryArch: ${{ matrix.arch }}
 
     steps:
     - name: Checkout
@@ -77,6 +79,12 @@ jobs:
       uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 10.0.1xx
+
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: './pattn-discovery/go.mod'
+        cache: false
         
     - name: Check version
       if: inputs.version != ''
@@ -89,12 +97,68 @@ jobs:
     - name: Build v2rayN
       shell: bash
       working-directory: ./v2rayN
-      run: dotnet publish $Project -c Release -r $RID -p:SelfContained=true $ExtOpt ${Version:+-p:Version=$Version} -o $Output
+      run: |
+        set -euo pipefail
+        extra_args=()
+        [[ -n "$ExtOpt" ]] && extra_args+=("$ExtOpt")
+        [[ -n "$Version" ]] && extra_args+=("-p:Version=$Version")
+        dotnet publish "$Project" -c Release -r "$RID" -p:SelfContained=true "${extra_args[@]}" -o "$Output"
 
     - name: Build AmazTool
       shell: bash
       working-directory: ./v2rayN
-      run: dotnet publish ./AmazTool/AmazTool.csproj -c Release -r $RID -p:SelfContained=true -p:PublishTrimmed=true $ExtOpt ${Version:+-p:Version=$Version} -o $Output
+      run: |
+        set -euo pipefail
+        extra_args=()
+        [[ -n "$ExtOpt" ]] && extra_args+=("$ExtOpt")
+        [[ -n "$Version" ]] && extra_args+=("-p:Version=$Version")
+        dotnet publish ./AmazTool/AmazTool.csproj -c Release -r "$RID" -p:SelfContained=true -p:PublishTrimmed=true "${extra_args[@]}" -o "$Output"
+
+    - name: Build pattn-discovery
+      shell: bash
+      working-directory: ./pattn-discovery
+      run: |
+        set -euo pipefail
+
+        case "$DiscoveryTarget" in
+          macos) GOOS=darwin ;;
+          windows) GOOS=windows ;;
+          linux) GOOS=linux ;;
+          *) echo "Unsupported discovery target: $DiscoveryTarget" >&2; exit 1 ;;
+        esac
+
+        case "$DiscoveryArch" in
+          x64) GOARCH=amd64 ;;
+          arm64) GOARCH=arm64 ;;
+          *) echo "Unsupported discovery architecture: $DiscoveryArch" >&2; exit 1 ;;
+        esac
+
+        EXE=pattn-discovery
+        if [[ "$GOOS" == "windows" ]]; then
+          EXE=pattn-discovery.exe
+        fi
+
+        go test ./...
+        go vet ./...
+
+        mkdir -p "$Output/bin/pattn-discovery"
+        CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+          go build -trimpath -ldflags="-s -w" \
+          -o "$Output/bin/pattn-discovery/$EXE" ./cmd/pattn-discovery
+
+    - name: Smoke bundled pattn-discovery on native runner
+      if: (matrix.arch == 'x64' && runner.arch == 'X64') || (matrix.arch == 'arm64' && runner.arch == 'ARM64')
+      shell: bash
+      run: |
+        set -euo pipefail
+        helper="$Output/bin/pattn-discovery/pattn-discovery"
+        if [[ "$DiscoveryTarget" == "windows" ]]; then
+          helper="$helper.exe"
+        fi
+        [[ -s "$helper" ]] || { echo "::error::missing bundled discovery helper: $helper"; exit 1; }
+        output="$(printf '%s\n' '{"v":1,"id":"smoke","method":"engine.version"}' | "$helper")"
+        grep -F '"id":"smoke"' <<<"$output"
+        grep -F '"engine":"pattn-discovery"' <<<"$output"
 
     - name: Remove Debug Symbols
       shell: bash

@@ -103,7 +103,7 @@ install_dependencies() {
     sudo apt-get update
     sudo apt-get -y install \
       curl unzip tar jq rsync ca-certificates git dpkg-dev fakeroot file \
-      desktop-file-utils xdg-utils wget gcc make pkg-config \
+      desktop-file-utils xdg-utils wget gcc make pkg-config golang-go \
       libicu-dev libssl-dev libfontconfig1 libfreetype6 zlib1g
 
     mkdir -p "$HOME/.dotnet"
@@ -499,6 +499,84 @@ publish_binary() {
   dotnet publish "$PROJECT" -c Release -r "$rid" -p:PublishSingleFile=false -p:SelfContained=true ${VERSION_ARG:+-p:Version=${VERSION_ARG#v}}
 }
 
+host_can_execute_target() {
+  local short="$1"
+  local host
+  host="$(uname -m)"
+  case "$short:$host" in
+    x64:x86_64|arm64:aarch64|riscv64:riscv64|loongarch64:loongarch64) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+stage_discovery_helper() {
+  local outroot="$1"
+  local rid="$2"
+  local goarch=""
+  local helper="$outroot/bin/pattn-discovery/pattn-discovery"
+
+  case "$rid" in
+    linux-x64)         goarch=amd64 ;;
+    linux-arm64)       goarch=arm64 ;;
+    linux-riscv64)     goarch=riscv64 ;;
+    linux-loongarch64) goarch=loong64 ;;
+    *) echo "Unsupported pattn-discovery RID: $rid" >&2; return 1 ;;
+  esac
+
+  mkdir -p "$(dirname "$helper")"
+  if [[ -n "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+    [[ -s "$PATTN_DISCOVERY_PREBUILT" ]] || {
+      echo "PATTN_DISCOVERY_PREBUILT is missing or empty: $PATTN_DISCOVERY_PREBUILT" >&2
+      return 1
+    }
+    install -m 0755 "$PATTN_DISCOVERY_PREBUILT" "$helper"
+  else
+    command -v go >/dev/null 2>&1 || {
+      echo "Go 1.23+ or PATTN_DISCOVERY_PREBUILT is required to package pattn-discovery" >&2
+      return 1
+    }
+    (
+      cd "$SCRIPT_DIR/pattn-discovery"
+      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
+    )
+    chmod 0755 "$helper"
+  fi
+
+  [[ -s "$helper" && -x "$helper" ]] || {
+    echo "pattn-discovery helper was not staged as an executable: $helper" >&2
+    return 1
+  }
+}
+
+smoke_discovery_helper() {
+  local helper="$1"
+  local output
+  output="$(printf '%s\n' '{"v":1,"id":"package-smoke","method":"engine.version"}' | "$helper")"
+  grep -F '"id":"package-smoke"' <<<"$output" >/dev/null
+  grep -F '"engine":"pattn-discovery"' <<<"$output" >/dev/null
+}
+
+verify_discovery_deb() {
+  local package="$1"
+  local short="$2"
+  local tmp helper
+  tmp="$(mktemp -d)"
+  dpkg-deb -x "$package" "$tmp"
+  helper="$tmp/opt/v2rayN/bin/pattn-discovery/pattn-discovery"
+  [[ -s "$helper" && -x "$helper" ]] || {
+    rm -rf "$tmp"
+    echo "final DEB is missing executable pattn-discovery: $package" >&2
+    return 1
+  }
+  if host_can_execute_target "$short"; then
+    smoke_discovery_helper "$helper"
+    echo "[OK] Final DEB pattn-discovery handshake passed for $short."
+  else
+    echo "[OK] Final DEB contains pattn-discovery for $short; execution deferred to matching architecture."
+  fi
+  rm -rf "$tmp"
+}
+
 write_launcher_file() {
   local stage="$1"
 
@@ -599,6 +677,7 @@ package_binary() {
   [[ -f "$icon_candidate" ]] && cp "$icon_candidate" "$stage/usr/share/icons/hicolor/256x256/apps/v2rayn.png" || true
 
   stage_runtime_assets "$stage/opt/v2rayN" "$rid"
+  stage_discovery_helper "$stage/opt/v2rayN" "$rid"
   write_launcher_file "$stage"
   write_desktop_file "$stage"
   write_maintainer_scripts "$debian_dir"
@@ -669,9 +748,11 @@ EOF
   find "$stage/opt/v2rayN" -type d -exec chmod 0755 {} +
   find "$stage/opt/v2rayN" -type f -exec chmod 0644 {} +
   [[ -f "$stage/opt/v2rayN/PattN" ]] && chmod 0755 "$stage/opt/v2rayN/PattN" || true
+  [[ -f "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" ]] && chmod 0755 "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" || true
 
   deb_out="$OUTPUT_DIR/v2rayn_${VERSION}_${deb_arch}.deb"
   dpkg-deb --root-owner-group --build "$stage" "$deb_out"
+  verify_discovery_deb "$deb_out" "$short"
 
   echo "Build done for $short. DEB at:"
   echo "  $deb_out"
