@@ -5471,5 +5471,1578 @@ namespace ServiceLib.Resx {
                 return ResourceManager.GetString("UpgradeAppNotExistTip", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to DNS health.
+        /// </summary>
+        public static string ThDNSHealth {
+            get {
+                return ResourceManager.GetString("ThDNSHealth", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh DNS health.
+        /// </summary>
+        public static string TbDNSHealthRefresh {
+            get {
+                return ResourceManager.GetString("TbDNSHealthRefresh", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Live resolver checks are advisory and do not change DNS settings automatically.
+        /// </summary>
+        public static string TbDNSHealthAdvisory {
+            get {
+                return ResourceManager.GetString("TbDNSHealthAdvisory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Health summary.
+        /// </summary>
+        public static string TbDNSHealthSummary {
+            get {
+                return ResourceManager.GetString("TbDNSHealthSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resolver catalog.
+        /// </summary>
+        public static string TbDNSCatalogStatus {
+            get {
+                return ResourceManager.GetString("TbDNSCatalogStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Last updated.
+        /// </summary>
+        public static string TbDNSHealthLastUpdated {
+            get {
+                return ResourceManager.GetString("TbDNSHealthLastUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resolver details.
+        /// </summary>
+        public static string TbDNSResolverDetails {
+            get {
+                return ResourceManager.GetString("TbDNSResolverDetails", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Diagnostics.
+        /// </summary>
+        public static string TbDNSHealthError {
+            get {
+                return ResourceManager.GetString("TbDNSHealthError", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to DNS repair resolver.
+        /// </summary>
+        public static string TbDNSRepairResolver {
+            get {
+                return ResourceManager.GetString("TbDNSRepairResolver", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Preview change.
+        /// </summary>
+        public static string TbDNSRepairPreviewAction {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply DNS repair.
+        /// </summary>
+        public static string TbDNSRepairApplyAction {
+            get {
+                return ResourceManager.GetString("TbDNSRepairApplyAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rollback DNS repair.
+        /// </summary>
+        public static string TbDNSRepairRollbackAction {
+            get {
+                return ResourceManager.GetString("TbDNSRepairRollbackAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Repair preview.
+        /// </summary>
+        public static string TbDNSRepairPlan {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPlan", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Repair status.
+        /// </summary>
+        public static string TbDNSRepairStatus {
+            get {
+                return ResourceManager.GetString("TbDNSRepairStatus", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Applying persists immediately and changes only Remote DNS and Bootstrap DNS. Cancel does not undo an applied repair; use Rollback.
+        /// </summary>
+        public static string TbDNSRepairSafety {
+            get {
+                return ResourceManager.GetString("TbDNSRepairSafety", resourceCulture);
+            }
+        }
+
+        public static string TbConfirmDNSRepairApply {
+            get {
+                return ResourceManager.GetString("TbConfirmDNSRepairApply", resourceCulture);
+            }
+        }
+
+        public static string TbConfirmDNSRepairRollback {
+            get {
+                return ResourceManager.GetString("TbConfirmDNSRepairRollback", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairApplyCancelled {
+            get {
+                return ResourceManager.GetString("TbDNSRepairApplyCancelled", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairRollbackCancelled {
+            get {
+                return ResourceManager.GetString("TbDNSRepairRollbackCancelled", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resolver history.
+        /// </summary>
+        public static string TbDNSResolverHistory {
+            get {
+                return ResourceManager.GetString("TbDNSResolverHistory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Recent DNS / Reviver actions.
+        /// </summary>
+        public static string TbDNSOperationHistory {
+            get {
+                return ResourceManager.GetString("TbDNSOperationHistory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to History updated.
+        /// </summary>
+        public static string TbDNSHistoryLastUpdated {
+            get {
+                return ResourceManager.GetString("TbDNSHistoryLastUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to History diagnostics.
+        /// </summary>
+        public static string TbDNSHistoryError {
+            get {
+                return ResourceManager.GetString("TbDNSHistoryError", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Discovery management.
+        /// </summary>
+        public static string menuDiscoveryManagement {
+            get {
+                return ResourceManager.GetString("menuDiscoveryManagement", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Manage discovery catalogs, validated endpoint pools, repair history, and explicit maintenance..
+        /// </summary>
+        public static string TbDiscoveryManagementDesc {
+            get {
+                return ResourceManager.GetString("TbDiscoveryManagementDesc", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Provider catalogs.
+        /// </summary>
+        public static string TbProviderCatalogs {
+            get {
+                return ResourceManager.GetString("TbProviderCatalogs", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Endpoint pool.
+        /// </summary>
+        public static string TbEndpointPool {
+            get {
+                return ResourceManager.GetString("TbEndpointPool", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Repair history.
+        /// </summary>
+        public static string TbRepairHistory {
+            get {
+                return ResourceManager.GetString("TbRepairHistory", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Maintenance.
+        /// </summary>
+        public static string TbDiscoveryMaintenance {
+            get {
+                return ResourceManager.GetString("TbDiscoveryMaintenance", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Register catalog.
+        /// </summary>
+        public static string TbRegisterCatalog {
+            get {
+                return ResourceManager.GetString("TbRegisterCatalog", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh audit.
+        /// </summary>
+        public static string TbRefreshAudit {
+            get {
+                return ResourceManager.GetString("TbRefreshAudit", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enable / disable.
+        /// </summary>
+        public static string TbToggleEnabled {
+            get {
+                return ResourceManager.GetString("TbToggleEnabled", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Preview update.
+        /// </summary>
+        public static string TbPreviewCatalogUpdate {
+            get {
+                return ResourceManager.GetString("TbPreviewCatalogUpdate", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply update.
+        /// </summary>
+        public static string TbApplyCatalogUpdate {
+            get {
+                return ResourceManager.GetString("TbApplyCatalogUpdate", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rollback selected revision.
+        /// </summary>
+        public static string TbRollbackRevision {
+            get {
+                return ResourceManager.GetString("TbRollbackRevision", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Display name.
+        /// </summary>
+        public static string TbDisplayName {
+            get {
+                return ResourceManager.GetString("TbDisplayName", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Audit summary.
+        /// </summary>
+        public static string TbAuditSummary {
+            get {
+                return ResourceManager.GetString("TbAuditSummary", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update preview.
+        /// </summary>
+        public static string TbUpdatePreview {
+            get {
+                return ResourceManager.GetString("TbUpdatePreview", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Revisions.
+        /// </summary>
+        public static string TbRevisions {
+            get {
+                return ResourceManager.GetString("TbRevisions", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Pin / unpin.
+        /// </summary>
+        public static string TbPinUnpin {
+            get {
+                return ResourceManager.GetString("TbPinUnpin", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Relabel.
+        /// </summary>
+        public static string TbRelabel {
+            get {
+                return ResourceManager.GetString("TbRelabel", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Endpoint history.
+        /// </summary>
+        public static string TbEndpointHistory {
+            get {
+                return ResourceManager.GetString("TbEndpointHistory", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Preview endpoint cleanup.
+        /// </summary>
+        public static string TbPreviewEndpointCleanup {
+            get {
+                return ResourceManager.GetString("TbPreviewEndpointCleanup", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply endpoint cleanup.
+        /// </summary>
+        public static string TbApplyEndpointCleanup {
+            get {
+                return ResourceManager.GetString("TbApplyEndpointCleanup", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Preview lifecycle retention.
+        /// </summary>
+        public static string TbPreviewLifecycleRetention {
+            get {
+                return ResourceManager.GetString("TbPreviewLifecycleRetention", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply lifecycle retention.
+        /// </summary>
+        public static string TbApplyLifecycleRetention {
+            get {
+                return ResourceManager.GetString("TbApplyLifecycleRetention", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh all.
+        /// </summary>
+        public static string TbRefreshAll {
+            get {
+                return ResourceManager.GetString("TbRefreshAll", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string TbDiscoveryStatus {
+            get {
+                return ResourceManager.GetString("TbDiscoveryStatus", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Version.
+        /// </summary>
+        public static string LvVersion {
+            get {
+                return ResourceManager.GetString("LvVersion", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Provider.
+        /// </summary>
+        public static string LvProvider {
+            get {
+                return ResourceManager.GetString("LvProvider", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string LvStatus {
+            get {
+                return ResourceManager.GetString("LvStatus", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Type.
+        /// </summary>
+        public static string LvType {
+            get {
+                return ResourceManager.GetString("LvType", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Time.
+        /// </summary>
+        public static string LvTime {
+            get {
+                return ResourceManager.GetString("LvTime", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply the prepared provider catalog update?.
+        /// </summary>
+        public static string TbConfirmCatalogUpdate {
+            get {
+                return ResourceManager.GetString("TbConfirmCatalogUpdate", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rollback the selected provider catalog revision?.
+        /// </summary>
+        public static string TbConfirmCatalogRollback {
+            get {
+                return ResourceManager.GetString("TbConfirmCatalogRollback", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply the prepared endpoint-pool cleanup plan?.
+        /// </summary>
+        public static string TbConfirmEndpointCleanup {
+            get {
+                return ResourceManager.GetString("TbConfirmEndpointCleanup", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply the prepared lifecycle-retention plan?.
+        /// </summary>
+        public static string TbConfirmLifecycleRetention {
+            get {
+                return ResourceManager.GetString("TbConfirmLifecycleRetention", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unregister catalog.
+        /// </summary>
+        public static string TbUnregisterCatalog {
+            get {
+                return ResourceManager.GetString("TbUnregisterCatalog", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unregister the selected provider catalog?.
+        /// </summary>
+        public static string TbConfirmCatalogUnregister {
+            get {
+                return ResourceManager.GetString("TbConfirmCatalogUnregister", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRetiredCatalogs {
+            get {
+                return ResourceManager.GetString("TbRetiredCatalogs", resourceCulture);
+            }
+        }
+        
+        public static string TbRefreshRetiredCatalogs {
+            get {
+                return ResourceManager.GetString("TbRefreshRetiredCatalogs", resourceCulture);
+            }
+        }
+        
+        public static string TbReRegisterCatalog {
+            get {
+                return ResourceManager.GetString("TbReRegisterCatalog", resourceCulture);
+            }
+        }
+        
+        public static string TbDiscardRetiredHistory {
+            get {
+                return ResourceManager.GetString("TbDiscardRetiredHistory", resourceCulture);
+            }
+        }
+        
+        public static string TbConfirmDiscardRetiredCatalogHistory {
+            get {
+                return ResourceManager.GetString("TbConfirmDiscardRetiredCatalogHistory", resourceCulture);
+            }
+        }
+        
+        public static string TbRetiredCatalogDetails {
+            get {
+                return ResourceManager.GetString("TbRetiredCatalogDetails", resourceCulture);
+            }
+        }
+        
+        public static string TbEndpointTimeline {
+            get {
+                return ResourceManager.GetString("TbEndpointTimeline", resourceCulture);
+            }
+        }
+        
+        public static string TbApproximatePayload {
+            get {
+                return ResourceManager.GetString("TbApproximatePayload", resourceCulture);
+            }
+        }
+
+        
+        public static string TbExportRetiredArchive {
+            get {
+                return ResourceManager.GetString("TbExportRetiredArchive", resourceCulture);
+            }
+        }
+        
+        public static string TbDatabaseCompaction {
+            get {
+                return ResourceManager.GetString("TbDatabaseCompaction", resourceCulture);
+            }
+        }
+        
+        public static string TbPreviewDatabaseCompaction {
+            get {
+                return ResourceManager.GetString("TbPreviewDatabaseCompaction", resourceCulture);
+            }
+        }
+        
+        public static string TbApplyDatabaseCompaction {
+            get {
+                return ResourceManager.GetString("TbApplyDatabaseCompaction", resourceCulture);
+            }
+        }
+        
+        public static string TbConfirmDatabaseCompaction {
+            get {
+                return ResourceManager.GetString("TbConfirmDatabaseCompaction", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote source / signed provenance.
+        /// </summary>
+        public static string TbRemoteCatalogSource {
+            get {
+                return ResourceManager.GetString("TbRemoteCatalogSource", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote fetch is explicit and preview-only until Apply. HTTPS and configured signature policy are enforced by the backend..
+        /// </summary>
+        public static string TbRemoteCatalogSourceDesc {
+            get {
+                return ResourceManager.GetString("TbRemoteCatalogSourceDesc", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Catalog HTTPS URL.
+        /// </summary>
+        public static string TbRemoteCatalogUri {
+            get {
+                return ResourceManager.GetString("TbRemoteCatalogUri", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Detached signature URL.
+        /// </summary>
+        public static string TbRemoteSignatureUri {
+            get {
+                return ResourceManager.GetString("TbRemoteSignatureUri", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Signature policy.
+        /// </summary>
+        public static string TbRemoteSignaturePolicy {
+            get {
+                return ResourceManager.GetString("TbRemoteSignaturePolicy", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Trusted key ID.
+        /// </summary>
+        public static string TbRemoteTrustedKeyId {
+            get {
+                return ResourceManager.GetString("TbRemoteTrustedKeyId", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Trusted public key (SPKI Base64).
+        /// </summary>
+        public static string TbRemoteTrustedPublicKey {
+            get {
+                return ResourceManager.GetString("TbRemoteTrustedPublicKey", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Save remote source.
+        /// </summary>
+        public static string TbSaveRemoteSource {
+            get {
+                return ResourceManager.GetString("TbSaveRemoteSource", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove remote source.
+        /// </summary>
+        public static string TbRemoveRemoteSource {
+            get {
+                return ResourceManager.GetString("TbRemoveRemoteSource", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Fetch preview.
+        /// </summary>
+        public static string TbFetchRemotePreview {
+            get {
+                return ResourceManager.GetString("TbFetchRemotePreview", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Apply remote preview.
+        /// </summary>
+        public static string TbApplyRemotePreview {
+            get {
+                return ResourceManager.GetString("TbApplyRemotePreview", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote source status.
+        /// </summary>
+        public static string TbRemoteSourceStatus {
+            get {
+                return ResourceManager.GetString("TbRemoteSourceStatus", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote fetch preview.
+        /// </summary>
+        public static string TbRemoteFetchPreview {
+            get {
+                return ResourceManager.GetString("TbRemoteFetchPreview", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove this catalog's remote source configuration, cache validators, and signature status? The local catalog file and revision history will not be changed..
+        /// </summary>
+        public static string TbConfirmRemoveRemoteCatalogSource {
+            get {
+                return ResourceManager.GetString("TbConfirmRemoveRemoteCatalogSource", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote sources.
+        /// </summary>
+        public static string TbRemoteSources {
+            get {
+                return ResourceManager.GetString("TbRemoteSources", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Persisted remote-source health only. Refresh rereads local metadata and never contacts remote URLs..
+        /// </summary>
+        public static string TbRemoteSourcesDesc {
+            get {
+                return ResourceManager.GetString("TbRemoteSourcesDesc", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Fleet summary.
+        /// </summary>
+        public static string TbRemoteSourceHealthSummary {
+            get {
+                return ResourceManager.GetString("TbRemoteSourceHealthSummary", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Source details.
+        /// </summary>
+        public static string TbRemoteSourceHealthDetails {
+            get {
+                return ResourceManager.GetString("TbRemoteSourceHealthDetails", resourceCulture);
+            }
+        }
+
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Needs review.
+        /// </summary>
+        public static string TbNeedsReview {
+            get {
+                return ResourceManager.GetString("TbNeedsReview", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteTlsPins {
+            get {
+                return ResourceManager.GetString("TbRemoteTlsPins", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteTlsPinsDesc {
+            get {
+                return ResourceManager.GetString("TbRemoteTlsPinsDesc", resourceCulture);
+            }
+        }
+
+        
+        public static string TbInspectServerSpki {
+            get {
+                return ResourceManager.GetString("TbInspectServerSpki", resourceCulture);
+            }
+        }
+
+        
+        public static string TbAddObservedSpkiPin {
+            get {
+                return ResourceManager.GetString("TbAddObservedSpkiPin", resourceCulture);
+            }
+        }
+
+        
+        public static string TbObservedServerSpki {
+            get {
+                return ResourceManager.GetString("TbObservedServerSpki", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteTrustPortability {
+            get {
+                return ResourceManager.GetString("TbRemoteTrustPortability", resourceCulture);
+            }
+        }
+
+        
+        public static string TbExportRemoteSourceTrust {
+            get {
+                return ResourceManager.GetString("TbExportRemoteSourceTrust", resourceCulture);
+            }
+        }
+
+        
+        public static string TbPreviewRemoteSourceImport {
+            get {
+                return ResourceManager.GetString("TbPreviewRemoteSourceImport", resourceCulture);
+            }
+        }
+
+        
+        public static string TbApplyRemoteSourceImport {
+            get {
+                return ResourceManager.GetString("TbApplyRemoteSourceImport", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteSourceImportPreview {
+            get {
+                return ResourceManager.GetString("TbRemoteSourceImportPreview", resourceCulture);
+            }
+        }
+
+        
+        public static string TbConfirmRemoteSourceImport {
+            get {
+                return ResourceManager.GetString("TbConfirmRemoteSourceImport", resourceCulture);
+            }
+        }
+
+        
+        public static string TbInspectCatalogArchive {
+            get {
+                return ResourceManager.GetString("TbInspectCatalogArchive", resourceCulture);
+            }
+        }
+
+        
+        public static string TbArchiveInspection {
+            get {
+                return ResourceManager.GetString("TbArchiveInspection", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteProvenance {
+            get {
+                return ResourceManager.GetString("TbRemoteProvenance", resourceCulture);
+            }
+        }
+
+        
+        public static string TbRemoteProvenanceDesc {
+            get {
+                return ResourceManager.GetString("TbRemoteProvenanceDesc", resourceCulture);
+            }
+        }
+
+        
+        public static string TbSearchProvenance {
+            get {
+                return ResourceManager.GetString("TbSearchProvenance", resourceCulture);
+            }
+        }
+
+        
+        public static string TbSourceHostFilter {
+            get {
+                return ResourceManager.GetString("TbSourceHostFilter", resourceCulture);
+            }
+        }
+
+        
+        public static string TbTlsSpkiPinFilter {
+            get {
+                return ResourceManager.GetString("TbTlsSpkiPinFilter", resourceCulture);
+            }
+        }
+
+        
+        public static string TbConfirmRemoveTlsPins {
+            get {
+                return ResourceManager.GetString("TbConfirmRemoveTlsPins", resourceCulture);
+            }
+        }
+
+        public static string LvAsn {
+            get {
+                return ResourceManager.GetString("LvAsn", resourceCulture);
+            }
+        }
+
+
+        public static string LvActive {
+            get {
+                return ResourceManager.GetString("LvActive", resourceCulture);
+            }
+        }
+
+
+        public static string LvAfter {
+            get {
+                return ResourceManager.GetString("LvAfter", resourceCulture);
+            }
+        }
+
+
+        public static string LvBefore {
+            get {
+                return ResourceManager.GetString("LvBefore", resourceCulture);
+            }
+        }
+
+
+        public static string LvCatalogId {
+            get {
+                return ResourceManager.GetString("LvCatalogId", resourceCulture);
+            }
+        }
+
+
+        public static string LvConfigured {
+            get {
+                return ResourceManager.GetString("LvConfigured", resourceCulture);
+            }
+        }
+
+
+        public static string TbEndpointPoolCleanup {
+            get {
+                return ResourceManager.GetString("TbEndpointPoolCleanup", resourceCulture);
+            }
+        }
+
+
+        public static string LvFile {
+            get {
+                return ResourceManager.GetString("LvFile", resourceCulture);
+            }
+        }
+
+
+        public static string LvHttpHost {
+            get {
+                return ResourceManager.GetString("LvHttpHost", resourceCulture);
+            }
+        }
+
+
+        public static string LvHttpsSource {
+            get {
+                return ResourceManager.GetString("LvHttpsSource", resourceCulture);
+            }
+        }
+
+
+        public static string LvHistorical {
+            get {
+                return ResourceManager.GetString("LvHistorical", resourceCulture);
+            }
+        }
+
+
+        public static string LvLastAudit {
+            get {
+                return ResourceManager.GetString("LvLastAudit", resourceCulture);
+            }
+        }
+
+
+        public static string LvLastCheck {
+            get {
+                return ResourceManager.GetString("LvLastCheck", resourceCulture);
+            }
+        }
+
+
+        public static string LvLatencyMs {
+            get {
+                return ResourceManager.GetString("LvLatencyMs", resourceCulture);
+            }
+        }
+
+
+        public static string TbLifecycleEvidenceRetention {
+            get {
+                return ResourceManager.GetString("TbLifecycleEvidenceRetention", resourceCulture);
+            }
+        }
+
+
+        public static string LvOriginalProfile {
+            get {
+                return ResourceManager.GetString("LvOriginalProfile", resourceCulture);
+            }
+        }
+
+
+        public static string LvPop {
+            get {
+                return ResourceManager.GetString("LvPop", resourceCulture);
+            }
+        }
+
+
+        public static string LvPinned {
+            get {
+                return ResourceManager.GetString("LvPinned", resourceCulture);
+            }
+        }
+
+
+        public static string LvPromotedProfile {
+            get {
+                return ResourceManager.GetString("LvPromotedProfile", resourceCulture);
+            }
+        }
+
+
+        public static string LvQualified {
+            get {
+                return ResourceManager.GetString("LvQualified", resourceCulture);
+            }
+        }
+
+
+        public static string LvReliability {
+            get {
+                return ResourceManager.GetString("LvReliability", resourceCulture);
+            }
+        }
+
+
+        public static string LvRetired {
+            get {
+                return ResourceManager.GetString("LvRetired", resourceCulture);
+            }
+        }
+
+
+        public static string LvRevision {
+            get {
+                return ResourceManager.GetString("LvRevision", resourceCulture);
+            }
+        }
+
+
+        public static string LvRolledBack {
+            get {
+                return ResourceManager.GetString("LvRolledBack", resourceCulture);
+            }
+        }
+
+
+        public static string LvScore {
+            get {
+                return ResourceManager.GetString("LvScore", resourceCulture);
+            }
+        }
+
+
+        public static string LvSignature {
+            get {
+                return ResourceManager.GetString("LvSignature", resourceCulture);
+            }
+        }
+
+
+        public static string LvSource {
+            get {
+                return ResourceManager.GetString("LvSource", resourceCulture);
+            }
+        }
+
+
+        public static string LvSuccesses {
+            get {
+                return ResourceManager.GetString("LvSuccesses", resourceCulture);
+            }
+        }
+
+
+        public static string LvTlsServerName {
+            get {
+                return ResourceManager.GetString("LvTlsServerName", resourceCulture);
+            }
+        }
+
+
+        public static string LvTrustedKey {
+            get {
+                return ResourceManager.GetString("LvTrustedKey", resourceCulture);
+            }
+        }
+
+        public static string menuReviver {
+            get {
+                return ResourceManager.GetString("menuReviver", resourceCulture);
+            }
+        }
+
+        public static string menuReviveSelectedProfile {
+            get {
+                return ResourceManager.GetString("menuReviveSelectedProfile", resourceCulture);
+            }
+        }
+
+        public static string menuExportReviverSupportBundle {
+            get {
+                return ResourceManager.GetString("menuExportReviverSupportBundle", resourceCulture);
+            }
+        }
+
+        public static string menuCancelReviver {
+            get {
+                return ResourceManager.GetString("menuCancelReviver", resourceCulture);
+            }
+        }
+
+        public static string TbReviverStatus {
+            get {
+                return ResourceManager.GetString("TbReviverStatus", resourceCulture);
+            }
+        }
+
+        public static string TbReviverHelp {
+            get {
+                return ResourceManager.GetString("TbReviverHelp", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryReady {
+            get {
+                return ResourceManager.GetString("TbDiscoveryReady", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryWorking {
+            get {
+                return ResourceManager.GetString("TbDiscoveryWorking", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryOperationFailed {
+            get {
+                return ResourceManager.GetString("TbDiscoveryOperationFailed", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoverySelectCatalog {
+            get {
+                return ResourceManager.GetString("TbDiscoverySelectCatalog", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoverySelectRetiredCatalog {
+            get {
+                return ResourceManager.GetString("TbDiscoverySelectRetiredCatalog", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoverySelectEndpoint {
+            get {
+                return ResourceManager.GetString("TbDiscoverySelectEndpoint", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoverySelectRevision {
+            get {
+                return ResourceManager.GetString("TbDiscoverySelectRevision", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryNoRemoteSource {
+            get {
+                return ResourceManager.GetString("TbDiscoveryNoRemoteSource", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryNoExtraTlsPins {
+            get {
+                return ResourceManager.GetString("TbDiscoveryNoExtraTlsPins", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryInspectSpki {
+            get {
+                return ResourceManager.GetString("TbDiscoveryInspectSpki", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryFetchPreview {
+            get {
+                return ResourceManager.GetString("TbDiscoveryFetchPreview", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryImportPreview {
+            get {
+                return ResourceManager.GetString("TbDiscoveryImportPreview", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointCleanupPreview {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointCleanupPreview", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRetentionPreview {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRetentionPreview", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryCompactionPreview {
+            get {
+                return ResourceManager.GetString("TbDiscoveryCompactionPreview", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPreviewRequired {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPreviewRequired", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPreviewChanged {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPreviewChanged", resourceCulture);
+            }
+        }
+
+        public static string TbReviverDiagnosing {
+            get {
+                return ResourceManager.GetString("TbReviverDiagnosing", resourceCulture);
+            }
+        }
+
+        public static string TbReviverHealthy {
+            get {
+                return ResourceManager.GetString("TbReviverHealthy", resourceCulture);
+            }
+        }
+
+        public static string TbReviverUnsupported {
+            get {
+                return ResourceManager.GetString("TbReviverUnsupported", resourceCulture);
+            }
+        }
+
+        public static string TbReviverNoCandidate {
+            get {
+                return ResourceManager.GetString("TbReviverNoCandidate", resourceCulture);
+            }
+        }
+
+        public static string TbReviverValidatedNotApplied {
+            get {
+                return ResourceManager.GetString("TbReviverValidatedNotApplied", resourceCulture);
+            }
+        }
+
+        public static string TbReviverPromoted {
+            get {
+                return ResourceManager.GetString("TbReviverPromoted", resourceCulture);
+            }
+        }
+
+        public static string TbReviverCancelling {
+            get {
+                return ResourceManager.GetString("TbReviverCancelling", resourceCulture);
+            }
+        }
+
+        public static string TbReviverCancelled {
+            get {
+                return ResourceManager.GetString("TbReviverCancelled", resourceCulture);
+            }
+        }
+
+        public static string TbReviverExported {
+            get {
+                return ResourceManager.GetString("TbReviverExported", resourceCulture);
+            }
+        }
+
+        public static string TbReviverExportUnavailable {
+            get {
+                return ResourceManager.GetString("TbReviverExportUnavailable", resourceCulture);
+            }
+        }
+
+        public static string TbReviverAnalysisFailed {
+            get {
+                return ResourceManager.GetString("TbReviverAnalysisFailed", resourceCulture);
+            }
+        }
+
+        public static string TbReviverConfirmPromotion {
+            get {
+                return ResourceManager.GetString("TbReviverConfirmPromotion", resourceCulture);
+            }
+        }
+
+        public static string TbReviverDiagnosisLine {
+            get {
+                return ResourceManager.GetString("TbReviverDiagnosisLine", resourceCulture);
+            }
+        }
+
+        public static string TbReviverValidationLine {
+            get {
+                return ResourceManager.GetString("TbReviverValidationLine", resourceCulture);
+            }
+        }
+
+        public static string TbReviverMutationLine {
+            get {
+                return ResourceManager.GetString("TbReviverMutationLine", resourceCulture);
+            }
+        }
+
+        public static string TbReviverEmptyValue {
+            get {
+                return ResourceManager.GetString("TbReviverEmptyValue", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRefreshingEndpointPool {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRefreshingEndpointPool", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointPoolRefreshed {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointPoolRefreshed", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPinningEndpoint {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPinningEndpoint", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryUnpinningEndpoint {
+            get {
+                return ResourceManager.GetString("TbDiscoveryUnpinningEndpoint", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointPinned {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointPinned", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointUnpinned {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointUnpinned", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEnablingEndpoint {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEnablingEndpoint", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryDisablingEndpoint {
+            get {
+                return ResourceManager.GetString("TbDiscoveryDisablingEndpoint", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointEnabled {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointEnabled", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointDisabled {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointDisabled", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryUpdatingEndpointLabel {
+            get {
+                return ResourceManager.GetString("TbDiscoveryUpdatingEndpointLabel", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointLabelUpdated {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointLabelUpdated", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRefreshingRepairHistory {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRefreshingRepairHistory", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRepairHistoryRefreshed {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRepairHistoryRefreshed", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPreparingEndpointCleanup {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPreparingEndpointCleanup", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointCleanupPrepared {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointCleanupPrepared", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryApplyingEndpointCleanup {
+            get {
+                return ResourceManager.GetString("TbDiscoveryApplyingEndpointCleanup", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointCleanupApplied {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointCleanupApplied", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryEndpointCleanupResult {
+            get {
+                return ResourceManager.GetString("TbDiscoveryEndpointCleanupResult", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPreparingRetention {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPreparingRetention", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRetentionPrepared {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRetentionPrepared", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryApplyingRetention {
+            get {
+                return ResourceManager.GetString("TbDiscoveryApplyingRetention", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRetentionApplied {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRetentionApplied", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryRetentionResult {
+            get {
+                return ResourceManager.GetString("TbDiscoveryRetentionResult", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryPreparingCompaction {
+            get {
+                return ResourceManager.GetString("TbDiscoveryPreparingCompaction", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryCompactionPrepared {
+            get {
+                return ResourceManager.GetString("TbDiscoveryCompactionPrepared", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryCompactingDatabase {
+            get {
+                return ResourceManager.GetString("TbDiscoveryCompactingDatabase", resourceCulture);
+            }
+        }
+
+        public static string TbDiscoveryCompactionCompleted {
+            get {
+                return ResourceManager.GetString("TbDiscoveryCompactionCompleted", resourceCulture);
+            }
+        }
+
+
     }
 }

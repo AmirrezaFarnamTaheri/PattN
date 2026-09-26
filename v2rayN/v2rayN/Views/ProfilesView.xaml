@@ -38,8 +38,8 @@
 
                 <Button
                     x:Name="btnEditSub"
-                    Width="30"
-                    Height="30"
+                    MinWidth="44"
+                    MinHeight="44"
                     Margin="{StaticResource MarginLeftRight4}"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuSubEdit}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
@@ -48,8 +48,8 @@
                 </Button>
                 <Button
                     x:Name="btnAddSub"
-                    Width="30"
-                    Height="30"
+                    MinWidth="44"
+                    MinHeight="44"
                     Margin="{StaticResource MarginLeftRight4}"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuSubAdd}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
@@ -69,8 +69,8 @@
 
                 <Button
                     x:Name="btnAutofitColumnWidth"
-                    Width="30"
-                    Height="30"
+                    MinWidth="44"
+                    MinHeight="44"
                     Margin="{StaticResource MarginLeftRight4}"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
@@ -80,8 +80,9 @@
 
                 <Button
                     x:Name="btnFastRealPing"
-                    Width="30"
-                    Height="30"
+                    AutomationProperties.Name="{x:Static resx:ResUI.menuFastRealPing}"
+                    MinWidth="44"
+                    MinHeight="44"
                     Margin="{StaticResource MarginLeftRight4}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
                     ToolTip="{x:Static resx:ResUI.menuFastRealPing}">
@@ -89,16 +90,71 @@
                 </Button>
                 <Button
                     x:Name="menuMixedTestServer"
-                    Width="30"
-                    Height="30"
+                    AutomationProperties.Name="{x:Static resx:ResUI.menuMixedTestServer}"
+                    MinWidth="44"
+                    MinHeight="44"
                     Margin="{StaticResource MarginLeftRight4}"
                     Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
                     ToolTip="{x:Static resx:ResUI.menuMixedTestServer}">
                     <materialDesign:PackIcon VerticalAlignment="Center" Kind="Speedometer" />
                 </Button>
             </WrapPanel>
+            <Border
+                DockPanel.Dock="Top"
+                Margin="{StaticResource Margin4}"
+                Padding="{StaticResource Margin8}"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="1">
+                <StackPanel>
+                    <TextBlock
+                        AutomationProperties.Name="{x:Static resx:ResUI.menuReviver}"
+                        Text="{x:Static resx:ResUI.TbReviverHelp}"
+                        TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button
+                            x:Name="btnReviveSelectedProfile"
+                            MinWidth="44"
+                            MinHeight="44"
+                            Margin="0,0,8,0"
+                            AutomationProperties.Name="{x:Static resx:ResUI.menuReviveSelectedProfile}"
+                            Content="{x:Static resx:ResUI.menuReviveSelectedProfile}" />
+                        <Button
+                            x:Name="btnCancelReviver"
+                            MinWidth="44"
+                            MinHeight="44"
+                            Margin="0,0,8,0"
+                            AutomationProperties.Name="{x:Static resx:ResUI.menuCancelReviver}"
+                            Content="{x:Static resx:ResUI.menuCancelReviver}"
+                            Visibility="{Binding ReviverCancelable, Converter={StaticResource BoolToVisConverter}}" />
+                        <Button
+                            x:Name="btnExportReviverSupportBundle"
+                            MinWidth="44"
+                            MinHeight="44"
+                            AutomationProperties.Name="{x:Static resx:ResUI.menuExportReviverSupportBundle}"
+                            Content="{x:Static resx:ResUI.menuExportReviverSupportBundle}"
+                            Visibility="{Binding HasReviverResult, Converter={StaticResource BoolToVisConverter}}" />
+                        <ProgressBar
+                            Width="120"
+                            Height="4"
+                            Margin="12,0,0,0"
+                            VerticalAlignment="Center"
+                            IsIndeterminate="True"
+                            AutomationProperties.Name="{x:Static resx:ResUI.TbReviverStatus}"
+                            Visibility="{Binding ReviverBusy, Converter={StaticResource BoolToVisConverter}}" />
+                    </WrapPanel>
+                    <TextBlock
+                        x:Name="txtReviverStatus"
+                        Margin="0,8,0,0"
+                        AutomationProperties.LiveSetting="Polite"
+                        AutomationProperties.Name="{x:Static resx:ResUI.TbReviverStatus}"
+                        Text="{Binding ReviverStatus}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding ReviverStatusVisible, Converter={StaticResource BoolToVisConverter}}" />
+                </StackPanel>
+            </Border>
             <DataGrid
                 x:Name="lstProfiles"
+                AutomationProperties.Name="{x:Static resx:ResUI.menuServers}"
                 materialDesign:DataGridAssist.CellPadding="2,2"
                 AutoGenerateColumns="False"
                 BorderThickness="1"
@@ -130,6 +186,22 @@
                             Height="{StaticResource MenuItemHeight}"
                             Header="{x:Static resx:ResUI.menuEditServer}"
                             InputGestureText="Ctrl+D" />
+                        <MenuItem
+                            Height="{StaticResource MenuItemHeight}"
+                            Header="{x:Static resx:ResUI.menuReviver}">
+                            <MenuItem
+                                x:Name="menuReviveSelectedProfile"
+                                Height="{StaticResource MenuItemHeight}"
+                                Header="{x:Static resx:ResUI.menuReviveSelectedProfile}" />
+                            <MenuItem
+                                x:Name="menuExportReviverSupportBundle"
+                                Height="{StaticResource MenuItemHeight}"
+                                Header="{x:Static resx:ResUI.menuExportReviverSupportBundle}" />
+                            <MenuItem
+                                x:Name="menuCancelReviver"
+                                Height="{StaticResource MenuItemHeight}"
+                                Header="{x:Static resx:ResUI.menuCancelReviver}" />
+                        </MenuItem>
                         <MenuItem
                             x:Name="menuCopyServer"
                             Height="{StaticResource MenuItemHeight}"
