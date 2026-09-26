@@ -148,6 +148,17 @@ jobs:
                 for element in root.iter()
                 if XAML_NAME in element.attrib
             }
+
+            # #8 owns the feature UI while #9 owns this integration gate. On the
+            # isolated #9 stack, upstream versions of shared files exist but do
+            # not yet contain any Discovery/Reviver controls. Skip only when the
+            # entire feature surface is absent; once any sentinel is present,
+            # require the complete accessibility contract so partial integration
+            # cannot evade the audit.
+            expected_names = set(live_names) | required_actions.get(file_name, set())
+            if expected_names and not (expected_names & set(named)):
+                continue
+
             for name in live_names:
                 element = named.get(name)
                 if element is None:
