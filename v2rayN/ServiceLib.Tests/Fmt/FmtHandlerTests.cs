@@ -310,6 +310,25 @@ public class FmtHandlerTests
     }
 
     [Test]
+    public async Task GetShareUriAndResolveConfig_Hysteria2_ShouldRoundTripFinalmask()
+    {
+        // PattN: Hysteria2 links carry fm like the other links; it replaces the finalmask generated for Hysteria2.
+        var source = CreateHysteria2Profile();
+        source.Finalmask = """
+            {
+              "udp": [ { "type": "salamander", "settings": { "password": "fm-pass" } } ]
+            }
+            """;
+
+        var resolved = await ExportThenImport(source);
+
+        await JsonNode.DeepEquals(JsonNode.Parse(resolved.Finalmask), JsonNode.Parse(source.Finalmask)).Should().BeTrue();
+        await AssertExportContains(source, "fm=");
+        await FmtHandler.GetShareUri(source)!.Contains("%0A", StringComparison.OrdinalIgnoreCase).Should().BeFalse();
+        await FmtHandler.GetShareUri(CreateHysteria2Profile())!.Contains("fm=", StringComparison.Ordinal).Should().BeFalse();
+    }
+
+    [Test]
     public async Task GetShareUriAndResolveConfig_WithoutEchOutbound_ShouldLeaveItEmpty()
     {
         var source = CreateVlessProfile();

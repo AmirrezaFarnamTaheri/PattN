@@ -241,6 +241,11 @@ public class Hysteria2Fmt : BaseFmt
         {
             dicQuery.Add("echOutbound", Utils.UrlEncode(ToShareJson(item.EchOutbound)));
         }
+        // PattN: fm, which ResolveUriQuery reads back, as one line like in the other links (ToUriQuery)
+        if (!item.Finalmask.IsNullOrEmpty())
+        {
+            dicQuery.Add("fm", Utils.UrlEncode(ToShareJson(item.Finalmask)));
+        }
         var protocolExtraItem = item.GetProtocolExtra();
         var isGecko = !protocolExtraItem.GeckoMinPacketSize.IsNullOrEmpty() || !protocolExtraItem.GeckoMaxPacketSize.IsNullOrEmpty();
         if (!protocolExtraItem.SalamanderPass.IsNullOrEmpty())
