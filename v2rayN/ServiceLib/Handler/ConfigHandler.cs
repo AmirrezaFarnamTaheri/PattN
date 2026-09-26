@@ -126,7 +126,6 @@ public static class ConfigHandler
         config.SimpleDNSItem.BlockAAAAQuery ??= false;
         // PattN: FakeIP is on by default
         config.SimpleDNSItem.FakeIP ??= true;
-        config.SimpleDNSItem.FakeIPRange ??= Global.FakeIPRanges.FirstOrDefault();
         config.SimpleDNSItem.GlobalFakeIp ??= true;
         config.SimpleDNSItem.BootstrapDNS ??= Global.DomainPureIPDNSAddress.FirstOrDefault();
         config.SimpleDNSItem.ServeStale ??= false;
