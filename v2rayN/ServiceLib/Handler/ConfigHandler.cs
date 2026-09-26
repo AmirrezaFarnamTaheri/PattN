@@ -2683,6 +2683,27 @@ public static class ConfigHandler
     }
 
     /// <summary>
+    /// PattN: remove the "port 0-65535 -> proxy" rule that custom_routing_white_iran used to end with. It matched every
+    /// connection by its port before an IPIfNonMatch domain strategy could resolve the domain, so the Iran IP rule never
+    /// applied to domains. What no rule matches still goes to the proxy without it: the first outbound, or the final
+    /// balancer rule. A rule that was edited since is left alone.
+    /// </summary>
+    /// <param name="rules">Rules of the stored Iran routing</param>
+    /// <returns>The number of rules removed</returns>
+    public static int RemoveIranProxyCatchAll(List<RulesItem> rules)
+    {
+        return rules.RemoveAll(t => t.Remarks == "سایر موارد - پراکسی"
+            && t.OutboundTag == Global.ProxyTag
+            && t.Port == "0-65535"
+            && string.IsNullOrEmpty(t.Network)
+            && t.InboundTag is null or []
+            && t.Ip is null or []
+            && t.Domain is null or []
+            && t.Protocol is null or []
+            && t.Process is null or []);
+    }
+
+    /// <summary>
     /// Initialize built-in routing rules
     /// Creates default routing configurations (whitelist, blacklist, global)
     /// </summary>
@@ -2714,7 +2735,9 @@ public static class ConfigHandler
         //PattN TODO Temporary code to be removed later: the Iran template shipped an "8.8.8.8 -> direct"
         //rule for domestic DNS; remove it once for updaters, the direct-dns routing rule covers this now.
         //Releases up to 7.25.1-P24 also shipped the Iran direct rule as "geosite:ir" (Chocolate4U only);
-        //rewrite it once to "domain:ir" + "geosite:category-ir" like custom_routing_white_iran has now
+        //rewrite it once to "domain:ir" + "geosite:category-ir" like custom_routing_white_iran has now.
+        //Releases up to 7.25.2-P28 also ended it with a "port 0-65535 -> proxy" rule, which kept an IPIfNonMatch
+        //domain strategy from working; remove it once as well
         var iranTemplateItem = items?.FirstOrDefault(t => t.Remarks == "IR-ایران مستقیم، بقیه پراکسی");
         if (iranTemplateItem != null)
         {
@@ -2722,6 +2745,7 @@ public static class ConfigHandler
             var removedCount = iranRules.RemoveAll(t => t.Remarks == "تبدیل نام دامنه های ایران - مستقیم"
                 && t.OutboundTag == Global.DirectTag
                 && t.Ip is ["8.8.8.8"]);
+            removedCount += RemoveIranProxyCatchAll(iranRules);
             var domainsMigrated = MigrateIranDirectDomains(iranRules);
             if (removedCount > 0 || domainsMigrated)
             {
