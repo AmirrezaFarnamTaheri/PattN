@@ -215,7 +215,6 @@ public static class ConfigHandler
     {
         try
         {
-            //save temp file
             var resPath = Utils.GetConfigPath(_configRes);
             var tempPath = $"{resPath}_temp";
 
@@ -224,9 +223,8 @@ public static class ConfigHandler
             {
                 return -1;
             }
-            await File.WriteAllTextAsync(tempPath, content);
 
-            //rename
+            await File.WriteAllTextAsync(tempPath, content);
             File.Move(tempPath, resPath, true);
         }
         catch (Exception ex)
@@ -339,9 +337,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -352,14 +348,62 @@ public static class ConfigHandler
     /// <returns>0 if successful</returns>
     public static async Task<int> RemoveServers(Config config, List<ProfileItem> indexes)
     {
-        var subid = "TempRemoveSubId";
-        foreach (var item in indexes)
+        ArgumentNullException.ThrowIfNull(indexes);
+
+        var ids = indexes
+            .Select(x => x.IndexId)
+            .Where(x => x.IsNotEmpty())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (ids.Length == 0)
         {
-            item.Subid = subid;
+            return 0;
         }
 
-        await SQLiteHelper.Instance.UpdateAllAsync(indexes);
-        await RemoveServersViaSubid(config, subid, false);
+        // Resolve the persisted rows first. The previous implementation temporarily rewrote every
+        // requested row to one global sentinel Subid and then deleted by that value. Concurrent
+        // removals could therefore delete each other's profiles, and callers could not distinguish
+        // a real deletion from the unconditional success return.
+        var persisted = new List<ProfileItem>(ids.Length);
+        foreach (var id in ids)
+        {
+            var item = await AppManager.Instance.GetProfileItem(id);
+            if (item is not null)
+            {
+                persisted.Add(item);
+            }
+        }
+        if (persisted.Count == 0)
+        {
+            return 0;
+        }
+
+        await SQLiteHelper.Instance.RunInTransactionAsync(db =>
+        {
+            foreach (var item in persisted)
+            {
+                if (db.Delete(item) <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to delete profile '{item.IndexId}' from the database.");
+                }
+            }
+        });
+
+        // Custom/outbound files are secondary artifacts. Database deletion is the authoritative
+        // profile removal; a stale file must not make callers believe the profile row still exists.
+        foreach (var item in persisted.Where(
+                     x => x.ConfigType == EConfigType.Custom || x.ConfigType == EConfigType.Outbound))
+        {
+            try
+            {
+                File.Delete(Utils.GetConfigPath(item.Address));
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog($"Failed to remove orphaned custom profile file for '{item.IndexId}'.", ex);
+            }
+        }
 
         return 0;
     }
@@ -422,9 +466,14 @@ public static class ConfigHandler
             return -1;
         }
 
+        var previous = config.IndexId;
         config.IndexId = indexId;
 
-        await SaveConfig(config);
+        if (await SaveConfig(config) != 0)
+        {
+            config.IndexId = previous;
+            return -1;
+        }
 
         return 0;
     }
@@ -591,9 +640,7 @@ public static class ConfigHandler
             profileItem.Remarks = $"import custom@{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}";
         }
 
-        await AddServerCommon(config, profileItem, true);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, true);
     }
 
     public static async Task<int> AddCustomOutboundServer(Config config, ProfileItem profileItem, bool blDelete, bool toFile = true)
@@ -628,9 +675,7 @@ public static class ConfigHandler
             profileItem.Remarks = $"import custom outbound@{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}";
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -698,9 +743,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -717,9 +760,7 @@ public static class ConfigHandler
 
         profileItem.Address = profileItem.Address.TrimEx();
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -736,9 +777,7 @@ public static class ConfigHandler
 
         profileItem.Address = profileItem.Address.TrimEx();
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -764,9 +803,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -843,9 +880,7 @@ public static class ConfigHandler
             });
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -888,9 +923,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -940,9 +973,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -969,8 +1000,7 @@ public static class ConfigHandler
         {
             return -1;
         }
-        await AddServerCommon(config, profileItem, toFile);
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -1002,8 +1032,7 @@ public static class ConfigHandler
         {
             return -1;
         }
-        await AddServerCommon(config, profileItem, toFile);
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -1155,9 +1184,7 @@ public static class ConfigHandler
             return -1;
         }
 
-        await AddServerCommon(config, profileItem, toFile);
-
-        return 0;
+        return await AddServerCommon(config, profileItem, toFile);
     }
 
     /// <summary>
@@ -1237,8 +1264,9 @@ public static class ConfigHandler
             profileItem.Network = Global.DefaultNetwork;
         }
 
+        var generatedId = profileItem.IndexId.IsNullOrEmpty();
         var maxSort = -1;
-        if (profileItem.IndexId.IsNullOrEmpty())
+        if (generatedId)
         {
             profileItem.IndexId = Utils.GetGuid(false);
             maxSort = ProfileExManager.Instance.GetMaxSort();
@@ -1247,16 +1275,24 @@ public static class ConfigHandler
         {
             maxSort = ProfileExManager.Instance.GetMaxSort();
         }
-        if (maxSort > 0)
-        {
-            ProfileExManager.Instance.SetSort(profileItem.IndexId, maxSort + 1);
-        }
 
         if (toFile)
         {
             //profileItem.SetProtocolExtra();
             profileItem.SetProtocolExtra(profileItem.GetProtocolExtra());
-            await SQLiteHelper.Instance.ReplaceAsync(profileItem);
+            if (await SQLiteHelper.Instance.ReplaceAsync(profileItem) <= 0)
+            {
+                if (generatedId)
+                {
+                    profileItem.IndexId = string.Empty;
+                }
+                return -1;
+            }
+        }
+
+        if (maxSort > 0)
+        {
+            ProfileExManager.Instance.SetSort(profileItem.IndexId, maxSort + 1);
         }
         return 0;
     }
@@ -2309,11 +2345,16 @@ public static class ConfigHandler
         var customProfile = await SQLiteHelper.Instance.TableAsync<ProfileItem>().Where(t => t.Subid == subid && (t.ConfigType == EConfigType.Custom || t.ConfigType == EConfigType.Outbound)).ToListAsync();
         if (isSub)
         {
-            await SQLiteHelper.Instance.ExecuteAsync($"delete from ProfileItem where isSub = 1 and subid = '{subid}'");
+            await SQLiteHelper.Instance.ExecuteAsync(
+                "delete from ProfileItem where isSub = ? and subid = ?",
+                1,
+                subid);
         }
         else
         {
-            await SQLiteHelper.Instance.ExecuteAsync($"delete from ProfileItem where subid = '{subid}'");
+            await SQLiteHelper.Instance.ExecuteAsync(
+                "delete from ProfileItem where subid = ?",
+                subid);
         }
         foreach (var item in customProfile)
         {
