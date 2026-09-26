@@ -1,0 +1,524 @@
+<Window
+    x:Class="v2rayN.Desktop.Views.DiscoveryManagementWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
+    Title="{x:Static resx:ResUI.menuDiscoveryManagement}"
+    Width="1240"
+    Height="820"
+    MinWidth="920"
+    MinHeight="640"
+    x:DataType="vms:DiscoveryManagementViewModel"
+    x:CompileBindings="False"
+    ShowInTaskbar="False"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    <DockPanel Margin="{StaticResource Margin8}">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock
+                Margin="{StaticResource Margin4}"
+                Text="{x:Static resx:ResUI.TbDiscoveryManagementDesc}"
+                TextWrapping="Wrap" />
+            <StackPanel Margin="{StaticResource Margin4}" Orientation="Horizontal" Spacing="8">
+                <Button MinHeight="44"
+                    x:Name="btnRefreshAll"
+                    automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRefreshAll}"
+                    Content="{x:Static resx:ResUI.TbRefreshAll}" />
+                <Button MinHeight="44"
+                    x:Name="btnClose"
+                    automation:AutomationProperties.Name="{x:Static resx:ResUI.menuClose}"
+                    Content="{x:Static resx:ResUI.menuClose}" />
+            </StackPanel>
+        </StackPanel>
+
+        <Border
+            DockPanel.Dock="Bottom"
+            Margin="{StaticResource Margin4}"
+            Padding="{StaticResource Margin8}"
+            BorderBrush="Gray"
+            BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*,120">
+                <TextBlock
+                    Grid.Column="0"
+                    FontWeight="SemiBold"
+                    Text="{x:Static resx:ResUI.TbDiscoveryStatus}" />
+                <TextBlock
+                    x:Name="txtStatus"
+                    Grid.Column="1"
+                    Margin="{StaticResource MarginLr8}"
+                    automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDiscoveryStatus}"
+                    automation:AutomationProperties.LiveSetting="Polite"
+                    TextWrapping="Wrap" />
+                <ProgressBar
+                    x:Name="busyProgress"
+                    Grid.Column="2"
+                    Height="4"
+                    VerticalAlignment="Center"
+                    IsIndeterminate="True"
+                    IsVisible="False"
+                    automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDiscoveryStatus}" />
+            </Grid>
+        </Border>
+
+        <TabControl x:Name="mainTabs" HorizontalContentAlignment="Stretch" automation:AutomationProperties.Name="{x:Static resx:ResUI.menuDiscoveryManagement}">
+            <TabItem Header="{x:Static resx:ResUI.TbProviderCatalogs}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                        <MenuItem MinHeight="44" x:Name="btnRegisterCatalog" Header="{x:Static resx:ResUI.TbRegisterCatalog}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRegisterCatalog}" />
+                        <MenuItem MinHeight="44" x:Name="btnRefreshCatalog" Header="{x:Static resx:ResUI.TbRefreshAudit}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRefreshAudit}" />
+                        <MenuItem MinHeight="44" x:Name="btnToggleCatalog" Header="{x:Static resx:ResUI.TbToggleEnabled}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbToggleEnabled}" />
+                        <MenuItem MinHeight="44" x:Name="btnUnregisterCatalog" Header="{x:Static resx:ResUI.TbUnregisterCatalog}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbUnregisterCatalog}" />
+                        <Separator />
+                        <MenuItem MinHeight="44" x:Name="btnPreviewCatalogUpdate" Header="{x:Static resx:ResUI.TbPreviewCatalogUpdate}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewCatalogUpdate}" />
+                        <MenuItem MinHeight="44" x:Name="btnApplyCatalogUpdate" Header="{x:Static resx:ResUI.TbApplyCatalogUpdate}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyCatalogUpdate}" />
+                        <MenuItem MinHeight="44" x:Name="btnRollbackRevision" Header="{x:Static resx:ResUI.TbRollbackRevision}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRollbackRevision}" />
+                    </Menu>
+
+                    <Grid RowDefinitions="2*,Auto,Auto,1.15*">
+                        <DataGrid
+                            x:Name="lstCatalogs"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbProviderCatalogs}"
+                            Grid.Row="0"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="1.3*" Binding="{Binding DisplayName}" Header="{x:Static resx:ResUI.LvRemarks}" />
+                                <DataGridTextColumn Width="1.2*" Binding="{Binding CatalogId}" Header="{x:Static resx:ResUI.LvCatalogId}" />
+                                <DataGridTextColumn Width="100" Binding="{Binding CatalogVersion}" Header="{x:Static resx:ResUI.LvVersion}" />
+                                <DataGridCheckBoxColumn Width="80" Binding="{Binding Enabled}" Header="{x:Static resx:ResUI.LvEnabled}" />
+                                <DataGridTextColumn Width="160" Binding="{Binding LastAuditedAt}" Header="{x:Static resx:ResUI.LvLastAudit}" />
+                                <DataGridTextColumn Width="1.3*" Binding="{Binding FilePath}" Header="{x:Static resx:ResUI.LvFile}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Grid Grid.Row="1" Margin="{StaticResource Margin4}" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbDisplayName}" />
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDisplayName}" x:Name="txtCatalogDisplayName" Grid.Row="0" Grid.Column="1" Margin="{StaticResource Margin4}" />
+                            <Button MinHeight="44" x:Name="btnRenameCatalog" Grid.Row="0" Grid.Column="2" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbRelabel}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRelabel}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Top" Text="{x:Static resx:ResUI.TbAuditSummary}" />
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbAuditSummary}" x:Name="txtCatalogAudit" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="55" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Top" Text="{x:Static resx:ResUI.TbUpdatePreview}" />
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbUpdatePreview}" x:Name="txtCatalogUpdatePreview" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" MinHeight="55" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                        </Grid>
+
+                        <Expander
+                            Grid.Row="2"
+                            Margin="{StaticResource Margin4}"
+                            Header="{x:Static resx:ResUI.TbRemoteCatalogSource}"
+                            IsExpanded="False">
+                            <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="{StaticResource Margin4}">
+                                <TextBlock
+                                    Margin="{StaticResource Margin4}"
+                                    Text="{x:Static resx:ResUI.TbRemoteCatalogSourceDesc}"
+                                    TextWrapping="Wrap" />
+
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,*">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbRemoteCatalogUri}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteCatalogUri}" x:Name="txtRemoteCatalogUri" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Margin="{StaticResource Margin4}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbRemoteSignatureUri}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSignatureUri}" x:Name="txtRemoteSignatureUri" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Margin="{StaticResource Margin4}" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbRemoteSignaturePolicy}" />
+                                    <ComboBox MinHeight="44" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSignaturePolicy}" x:Name="cmbRemoteSignaturePolicy" Grid.Row="2" Grid.Column="1" Margin="{StaticResource Margin4}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbRemoteTrustedKeyId}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteTrustedKeyId}" x:Name="txtRemoteTrustedKeyId" Grid.Row="2" Grid.Column="3" Margin="{StaticResource Margin4}" />
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Top" Text="{x:Static resx:ResUI.TbRemoteTrustedPublicKey}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteTrustedPublicKey}"
+                                        x:Name="txtRemoteTrustedPublicKey"
+                                        Grid.Row="3"
+                                        Grid.Column="1"
+                                        Grid.ColumnSpan="3"
+                                        MinHeight="52"
+                                        Margin="{StaticResource Margin4}"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                </Grid>
+
+                                <GroupBox Margin="{StaticResource Margin4}" Header="{x:Static resx:ResUI.TbRemoteTlsPins}">
+                                    <StackPanel Margin="{StaticResource Margin4}">
+                                        <TextBlock Margin="{StaticResource Margin4}" Text="{x:Static resx:ResUI.TbRemoteTlsPinsDesc}" TextWrapping="Wrap" />
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteTlsPins}"
+                                            x:Name="txtRemoteTlsSpkiPins"
+                                            MinHeight="68"
+                                            Margin="{StaticResource Margin4}"
+                                            AcceptsReturn="True"
+                                            TextWrapping="NoWrap"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                        <TextBlock x:Name="txtRemoteTlsPinStatus"
+                                automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteTlsPins}" automation:AutomationProperties.LiveSetting="Polite" Margin="{StaticResource Margin4}" TextWrapping="Wrap" />
+                                        <StackPanel Margin="{StaticResource Margin4}" Orientation="Horizontal">
+                                            <Button MinHeight="44" x:Name="btnInspectRemoteTlsSpki" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbInspectServerSpki}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbInspectServerSpki}" />
+                                            <Button MinHeight="44" x:Name="btnAddObservedRemoteTlsPin" Content="{x:Static resx:ResUI.TbAddObservedSpkiPin}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbAddObservedSpkiPin}" />
+                                        </StackPanel>
+                                        <TextBlock Margin="{StaticResource Margin4}" Text="{x:Static resx:ResUI.TbObservedServerSpki}" />
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbObservedServerSpki}" x:Name="txtRemoteObservedTlsSpki" Margin="{StaticResource Margin4}" IsReadOnly="True"  />
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbObservedServerSpki}"
+                                            x:Name="txtRemoteObservedTlsDetails"
+                                            MinHeight="58"
+                                            Margin="{StaticResource Margin4}"
+                                            IsReadOnly="True"
+                                            TextWrapping="Wrap"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <GroupBox Margin="{StaticResource Margin4}" Header="{x:Static resx:ResUI.TbRemoteTrustPortability}">
+                                    <StackPanel Margin="{StaticResource Margin4}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button MinHeight="44" x:Name="btnExportRemoteSourceConfig" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbExportRemoteSourceTrust}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbExportRemoteSourceTrust}" />
+                                            <Button MinHeight="44" x:Name="btnPreviewRemoteSourceImport" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbPreviewRemoteSourceImport}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewRemoteSourceImport}" />
+                                            <Button MinHeight="44" x:Name="btnApplyRemoteSourceImport" Content="{x:Static resx:ResUI.TbApplyRemoteSourceImport}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyRemoteSourceImport}" />
+                                        </StackPanel>
+                                        <TextBlock Margin="{StaticResource Margin4}" Text="{x:Static resx:ResUI.TbRemoteSourceImportPreview}" />
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSourceImportPreview}"
+                                            x:Name="txtRemoteSourceImportPreview"
+                                            MinHeight="58"
+                                            Margin="{StaticResource Margin4}"
+                                            IsReadOnly="True"
+                                            TextWrapping="Wrap"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <StackPanel Margin="{StaticResource Margin4}" Orientation="Horizontal">
+                                    <Button MinHeight="44" x:Name="btnSaveRemoteSource" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbSaveRemoteSource}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSaveRemoteSource}" />
+                                    <Button MinHeight="44" x:Name="btnRemoveRemoteSource" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbRemoveRemoteSource}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoveRemoteSource}" />
+                                    <Button MinHeight="44" x:Name="btnFetchRemotePreview" Margin="{StaticResource MarginRight8}" Content="{x:Static resx:ResUI.TbFetchRemotePreview}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbFetchRemotePreview}" />
+                                    <Button MinHeight="44" x:Name="btnApplyRemotePreview" Content="{x:Static resx:ResUI.TbApplyRemotePreview}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyRemotePreview}" />
+                                </StackPanel>
+
+                                <Grid Margin="{StaticResource Margin4}" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Top" Text="{x:Static resx:ResUI.TbRemoteSourceStatus}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSourceStatus}" x:Name="txtRemoteSourceStatus" Grid.Row="0" Grid.Column="1" MinHeight="48" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Top" Text="{x:Static resx:ResUI.TbRemoteFetchPreview}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteFetchPreview}" x:Name="txtRemoteFetchPreview" Grid.Row="1" Grid.Column="1" MinHeight="64" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                </Grid>
+                            </StackPanel>
+                            </ScrollViewer>
+                        </Expander>
+
+                        <GroupBox Grid.Row="3" Header="{x:Static resx:ResUI.TbRevisions}">
+                            <Grid RowDefinitions="*,Auto">
+                                <DataGrid
+                                    x:Name="lstCatalogRevisions"
+                                    automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRevisions}"
+                                    Grid.Row="0"
+                                    AutoGenerateColumns="False"
+                                    CanUserResizeColumns="True"
+                                    GridLinesVisibility="All"
+                                    HeadersVisibility="Column"
+                                    IsReadOnly="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Width="170" Binding="{Binding AppliedAt}" Header="{x:Static resx:ResUI.LvTime}" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding BeforeCatalogVersion}" Header="{x:Static resx:ResUI.LvBefore}" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding AfterCatalogVersion}" Header="{x:Static resx:ResUI.LvAfter}" />
+                                        <DataGridCheckBoxColumn Width="80" Binding="{Binding Active}" Header="{x:Static resx:ResUI.LvActive}" />
+                                        <DataGridTextColumn Width="170" Binding="{Binding RolledBackAt}" Header="{x:Static resx:ResUI.LvRolledBack}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRevisions}"
+                                    x:Name="txtCatalogRevisionDetails"
+                                    Grid.Row="1"
+                                    MinHeight="72"
+                                    Margin="{StaticResource Margin4}"
+                                    IsReadOnly="True"
+                                    TextWrapping="Wrap"
+                                    ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static resx:ResUI.TbRemoteSources}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <TextBlock DockPanel.Dock="Top" Margin="{StaticResource Margin4}" Text="{x:Static resx:ResUI.TbRemoteSourcesDesc}" TextWrapping="Wrap" />
+                    <TabControl>
+                        <TabItem Header="{x:Static resx:ResUI.LvStatus}">
+                            <DockPanel>
+                                <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                                    <MenuItem MinHeight="44" x:Name="btnRefreshRemoteSourceHealth" Header="{x:Static resx:ResUI.TbRefreshAll}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRefreshAll}" />
+                                </Menu>
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <TextBlock x:Name="txtRemoteSourceHealthSummary"
+                                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSources}" automation:AutomationProperties.LiveSetting="Polite" Grid.Row="0" Margin="{StaticResource Margin4}" TextWrapping="Wrap" />
+                                    <DataGrid
+                                        x:Name="lstRemoteSourceHealth"
+                                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSources}"
+                                        Grid.Row="1"
+                                        AutoGenerateColumns="False"
+                                        CanUserResizeColumns="True"
+                                        GridLinesVisibility="All"
+                                        HeadersVisibility="Column"
+                                        IsReadOnly="True">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="1.15*" Binding="{Binding DisplayName}" Header="{x:Static resx:ResUI.LvRemarks}" />
+                                            <DataGridTextColumn Width="100" Binding="{Binding CatalogVersion}" Header="{x:Static resx:ResUI.LvVersion}" />
+                                            <DataGridCheckBoxColumn Width="80" Binding="{Binding Configured}" Header="{x:Static resx:ResUI.LvConfigured}" />
+                                            <DataGridTextColumn Width="1.5*" Binding="{Binding SourceUri}" Header="{x:Static resx:ResUI.LvHttpsSource}" />
+                                            <DataGridTextColumn Width="100" Binding="{Binding SignaturePolicy}" Header="{x:Static resx:ResUI.LvSignature}" />
+                                            <DataGridTextColumn Width="165" Binding="{Binding LastCheckedAt}" Header="{x:Static resx:ResUI.LvLastCheck}" />
+                                            <DataGridTextColumn Width="110" Binding="{Binding HealthClass}" Header="{x:Static resx:ResUI.LvStatus}" />
+                                            <DataGridCheckBoxColumn Width="95" Binding="{Binding NeedsReview}" Header="{x:Static resx:ResUI.TbNeedsReview}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <GroupBox Grid.Row="2" Header="{x:Static resx:ResUI.TbRemoteSourceHealthDetails}">
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteSourceHealthDetails}" x:Name="txtRemoteSourceHealthDetails" MinHeight="90" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                    </GroupBox>
+                                </Grid>
+                            </DockPanel>
+                        </TabItem>
+
+                        <TabItem Header="{x:Static resx:ResUI.TbRemoteProvenance}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Margin="{StaticResource Margin4}" Text="{x:Static resx:ResUI.TbRemoteProvenanceDesc}" TextWrapping="Wrap" />
+                                <Grid DockPanel.Dock="Top" Margin="{StaticResource Margin4}" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto">
+                                    <TextBlock Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSourceHostFilter}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSourceHostFilter}" x:Name="txtRemoteProvenanceSourceHost" Grid.Column="1" Margin="{StaticResource Margin4}" />
+                                    <TextBlock Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbRemoteTrustedKeyId}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteTrustedKeyId}" x:Name="txtRemoteProvenanceTrustedKey" Grid.Column="3" Margin="{StaticResource Margin4}" />
+                                    <TextBlock Grid.Column="4" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbTlsSpkiPinFilter}" />
+                                    <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbTlsSpkiPinFilter}" x:Name="txtRemoteProvenanceTlsPin" Grid.Column="5" Margin="{StaticResource Margin4}" />
+                                    <Button MinHeight="44" x:Name="btnSearchRemoteProvenance" Grid.Column="6" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbSearchProvenance}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSearchProvenance}" />
+                                </Grid>
+                                <Grid RowDefinitions="Auto,*,Auto">
+                                    <TextBlock x:Name="txtRemoteProvenanceSummary"
+                                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteProvenance}" automation:AutomationProperties.LiveSetting="Polite" Grid.Row="0" Margin="{StaticResource Margin4}" TextWrapping="Wrap" />
+                                    <DataGrid
+                                        x:Name="lstRemoteProvenance"
+                                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteProvenance}"
+                                        Grid.Row="1"
+                                        AutoGenerateColumns="False"
+                                        CanUserResizeColumns="True"
+                                        GridLinesVisibility="All"
+                                        HeadersVisibility="Column"
+                                        IsReadOnly="True">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="1.1*" Binding="{Binding RevisionId}" Header="{x:Static resx:ResUI.LvRevision}" />
+                                            <DataGridTextColumn Width="1.5*" Binding="{Binding SourceUri}" Header="{x:Static resx:ResUI.LvSource}" />
+                                            <DataGridTextColumn Width="1*" Binding="{Binding TrustedKeyId}" Header="{x:Static resx:ResUI.LvTrustedKey}" />
+                                            <DataGridTextColumn Width="1*" Binding="{Binding SignatureValidation.Status}" Header="{x:Static resx:ResUI.LvSignature}" />
+                                            <DataGridTextColumn Width="170" Binding="{Binding AppliedAt}" Header="{x:Static resx:ResUI.LvTime}" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <GroupBox Grid.Row="2" Header="{x:Static resx:ResUI.TbRemoteProvenance}">
+                                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRemoteProvenance}" x:Name="txtRemoteProvenanceDetails" MinHeight="90" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                    </GroupBox>
+                                </Grid>
+                            </DockPanel>
+                        </TabItem>
+                    </TabControl>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static resx:ResUI.TbRetiredCatalogs}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                        <MenuItem MinHeight="44" x:Name="btnRefreshRetiredCatalogs" Header="{x:Static resx:ResUI.TbRefreshRetiredCatalogs}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRefreshRetiredCatalogs}" />
+                        <MenuItem MinHeight="44" x:Name="btnReRegisterRetiredCatalog" Header="{x:Static resx:ResUI.TbReRegisterCatalog}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbReRegisterCatalog}" />
+                        <MenuItem MinHeight="44" x:Name="btnExportRetiredArchive" Header="{x:Static resx:ResUI.TbExportRetiredArchive}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbExportRetiredArchive}" />
+                        <MenuItem MinHeight="44" x:Name="btnInspectCatalogArchive" Header="{x:Static resx:ResUI.TbInspectCatalogArchive}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbInspectCatalogArchive}" />
+                        <Separator />
+                        <MenuItem MinHeight="44" x:Name="btnDiscardRetiredHistory" Header="{x:Static resx:ResUI.TbDiscardRetiredHistory}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDiscardRetiredHistory}" />
+                    </Menu>
+                    <Grid RowDefinitions="1.3*,1*,Auto,Auto">
+                        <DataGrid
+                            x:Name="lstRetiredCatalogs"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRetiredCatalogs}"
+                            Grid.Row="0"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="1.2*" Binding="{Binding DisplayName}" Header="{x:Static resx:ResUI.LvRemarks}" />
+                                <DataGridTextColumn Width="1.1*" Binding="{Binding CatalogId}" Header="{x:Static resx:ResUI.LvCatalogId}" />
+                                <DataGridTextColumn Width="100" Binding="{Binding CatalogVersion}" Header="{x:Static resx:ResUI.LvVersion}" />
+                                <DataGridTextColumn Width="170" Binding="{Binding UnregisteredAt}" Header="{x:Static resx:ResUI.LvRetired}" />
+                                <DataGridTextColumn Width="1.5*" Binding="{Binding FilePath}" Header="{x:Static resx:ResUI.LvFile}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <DataGrid automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRevisions}"
+                            x:Name="lstRetiredCatalogRevisions"
+                            Grid.Row="1"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="170" Binding="{Binding AppliedAt}" Header="{x:Static resx:ResUI.LvTime}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding BeforeCatalogVersion}" Header="{x:Static resx:ResUI.LvBefore}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding AfterCatalogVersion}" Header="{x:Static resx:ResUI.LvAfter}" />
+                                <DataGridTextColumn Width="170" Binding="{Binding RolledBackAt}" Header="{x:Static resx:ResUI.LvRolledBack}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <GroupBox Grid.Row="2" Header="{x:Static resx:ResUI.TbRetiredCatalogDetails}">
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRetiredCatalogDetails}"
+                                x:Name="txtRetiredCatalogDetails"
+                                MinHeight="90"
+                                Margin="{StaticResource Margin4}"
+                                IsReadOnly="True"
+                                TextWrapping="Wrap"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                        </GroupBox>
+                        <GroupBox Grid.Row="3" Header="{x:Static resx:ResUI.TbArchiveInspection}">
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbArchiveInspection}"
+                                x:Name="txtArchiveInspectionSummary"
+                                MinHeight="80"
+                                Margin="{StaticResource Margin4}"
+                                IsReadOnly="True"
+                                TextWrapping="Wrap"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                        </GroupBox>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static resx:ResUI.TbEndpointPool}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                        <MenuItem MinHeight="44" x:Name="btnRefreshEndpoints" Header="{x:Static resx:ResUI.TbDNSHealthRefresh}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthRefresh}" />
+                        <MenuItem MinHeight="44" x:Name="btnToggleEndpointPinned" Header="{x:Static resx:ResUI.TbPinUnpin}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPinUnpin}" />
+                        <MenuItem MinHeight="44" x:Name="btnToggleEndpointEnabled" Header="{x:Static resx:ResUI.TbToggleEnabled}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbToggleEnabled}" />
+                    </Menu>
+                    <Grid RowDefinitions="*,Auto,Auto">
+                        <DataGrid
+                            x:Name="lstEndpoints"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbEndpointPool}"
+                            Grid.Row="0"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="1.1*" Binding="{Binding Label}" Header="{x:Static resx:ResUI.LvRemarks}" />
+                                <DataGridTextColumn Width="1.1*" Binding="{Binding LogicalHost}" Header="{x:Static resx:ResUI.LvTlsServerName}" />
+                                <DataGridTextColumn Width="1.1*" Binding="{Binding HttpHost}" Header="{x:Static resx:ResUI.LvHttpHost}" />
+                                <DataGridTextColumn Width="1.1*" Binding="{Binding Address}" Header="{x:Static resx:ResUI.LvAddress}" />
+                                <DataGridTextColumn Width="70" Binding="{Binding Port}" Header="{x:Static resx:ResUI.LvPort}" />
+                                <DataGridCheckBoxColumn Width="70" Binding="{Binding Enabled}" Header="{x:Static resx:ResUI.LvEnabled}" />
+                                <DataGridCheckBoxColumn Width="60" Binding="{Binding Pinned}" Header="{x:Static resx:ResUI.LvPinned}" />
+                                <DataGridTextColumn Width="95" Binding="{Binding CurrentObservationState}" Header="{x:Static resx:ResUI.LvStatus}" />
+                                <DataGridCheckBoxColumn Width="105" Binding="{Binding HistoricallyGood}" Header="{x:Static resx:ResUI.LvHistorical}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding Provider}" Header="{x:Static resx:ResUI.LvProvider}" />
+                                <DataGridTextColumn Width="100" Binding="{Binding Asn}" Header="{x:Static resx:ResUI.LvAsn}" />
+                                <DataGridTextColumn Width="90" Binding="{Binding Pop}" Header="{x:Static resx:ResUI.LvPop}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Grid.Row="1" Margin="{StaticResource Margin4}" Orientation="Horizontal">
+                            <TextBlock Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbDisplayName}" />
+                            <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDisplayName}" x:Name="txtEndpointLabel" Width="360" Margin="{StaticResource Margin4}" />
+                            <Button MinHeight="44" x:Name="btnRelabelEndpoint" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbRelabel}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRelabel}" />
+                        </StackPanel>
+                        <GroupBox Grid.Row="2" Header="{x:Static resx:ResUI.TbEndpointHistory}">
+                            <Grid Margin="{StaticResource Margin4}" RowDefinitions="Auto,*">
+                                <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbEndpointHistory}" x:Name="txtEndpointHistory" Grid.Row="0" MinHeight="70" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                                <DataGrid
+                                    x:Name="lstEndpointTimeline"
+                                    automation:AutomationProperties.Name="{x:Static resx:ResUI.TbEndpointHistory}"
+                                    Grid.Row="1"
+                                    MinHeight="150"
+                                    Margin="0,8,0,0"
+                                    AutoGenerateColumns="False"
+                                    CanUserResizeColumns="True"
+                                    GridLinesVisibility="All"
+                                    HeadersVisibility="Column"
+                                    IsReadOnly="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Width="165" Binding="{Binding ObservedAt}" Header="{x:Static resx:ResUI.LvTime}" />
+                                        <DataGridCheckBoxColumn Width="85" Binding="{Binding Qualified}" Header="{x:Static resx:ResUI.LvQualified}" />
+                                        <DataGridTextColumn Width="90" Binding="{Binding Reliability}" Header="{x:Static resx:ResUI.LvReliability}" />
+                                        <DataGridTextColumn Width="100" Binding="{Binding MedianLatencyMs}" Header="{x:Static resx:ResUI.LvLatencyMs}" />
+                                        <DataGridTextColumn Width="90" Binding="{Binding Successes}" Header="{x:Static resx:ResUI.LvSuccesses}" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Source}" Header="{x:Static resx:ResUI.LvSource}" />
+                                        <DataGridTextColumn Width="100" Binding="{Binding Asn}" Header="{x:Static resx:ResUI.LvAsn}" />
+                                        <DataGridTextColumn Width="90" Binding="{Binding Pop}" Header="{x:Static resx:ResUI.LvPop}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static resx:ResUI.TbRepairHistory}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                        <MenuItem MinHeight="44" x:Name="btnRefreshRepairHistory" Header="{x:Static resx:ResUI.TbDNSHealthRefresh}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbDNSHealthRefresh}" />
+                    </Menu>
+                    <TextBlock x:Name="txtRepairHistorySummary"
+                                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRepairHistory}" automation:AutomationProperties.LiveSetting="Polite" DockPanel.Dock="Top" Margin="{StaticResource Margin4}" TextWrapping="Wrap" />
+                    <Grid RowDefinitions="*,Auto">
+                        <DataGrid
+                            x:Name="lstRepairHistory"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRepairHistory}"
+                            Grid.Row="0"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="100" Binding="{Binding EventKind}" Header="{x:Static resx:ResUI.LvType}" />
+                                <DataGridTextColumn Width="170" Binding="{Binding ObservedAt}" Header="{x:Static resx:ResUI.LvTime}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding OriginalProfileId}" Header="{x:Static resx:ResUI.LvOriginalProfile}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding PromotedProfileId}" Header="{x:Static resx:ResUI.LvPromotedProfile}" />
+                                <DataGridTextColumn Width="80" Binding="{Binding Score}" Header="{x:Static resx:ResUI.LvScore}" />
+                                <DataGridTextColumn Width="100" Binding="{Binding OutcomeVerdict}" Header="{x:Static resx:ResUI.LvStatus}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRepairHistory}" x:Name="txtRepairEventDetails" Grid.Row="1" MinHeight="85" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static resx:ResUI.TbDiscoveryMaintenance}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="{StaticResource Margin4}">
+                        <GroupBox Header="{x:Static resx:ResUI.TbEndpointPoolCleanup}">
+                            <StackPanel Margin="{StaticResource Margin4}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button MinHeight="44" x:Name="btnPreviewEndpointMaintenance" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbPreviewEndpointCleanup}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewEndpointCleanup}" />
+                                    <Button MinHeight="44" x:Name="btnApplyEndpointMaintenance" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbApplyEndpointCleanup}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyEndpointCleanup}" />
+                                </StackPanel>
+                                <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewEndpointCleanup}" x:Name="txtEndpointMaintenancePreview" MinHeight="130" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Margin="0,12,0,0" Header="{x:Static resx:ResUI.TbDatabaseCompaction}">
+                            <StackPanel Margin="{StaticResource Margin4}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button MinHeight="44" x:Name="btnPreviewDatabaseCompaction" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbPreviewDatabaseCompaction}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewDatabaseCompaction}" />
+                                    <Button MinHeight="44" x:Name="btnApplyDatabaseCompaction" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbApplyDatabaseCompaction}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyDatabaseCompaction}" />
+                                </StackPanel>
+                                <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewDatabaseCompaction}" x:Name="txtDatabaseCompactionPreview" MinHeight="110" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Margin="0,12,0,0" Header="{x:Static resx:ResUI.TbLifecycleEvidenceRetention}">
+                            <StackPanel Margin="{StaticResource Margin4}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button MinHeight="44" x:Name="btnPreviewRetention" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbPreviewLifecycleRetention}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewLifecycleRetention}" />
+                                    <Button MinHeight="44" x:Name="btnApplyRetention" Margin="{StaticResource Margin4}" Content="{x:Static resx:ResUI.TbApplyLifecycleRetention}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbApplyLifecycleRetention}" />
+                                </StackPanel>
+                                <TextBox automation:AutomationProperties.Name="{x:Static resx:ResUI.TbPreviewLifecycleRetention}" x:Name="txtRetentionPreview" MinHeight="130" Margin="{StaticResource Margin4}" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"  />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

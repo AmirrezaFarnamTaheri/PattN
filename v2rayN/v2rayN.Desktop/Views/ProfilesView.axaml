@@ -2,6 +2,7 @@
     x:Class="v2rayN.Desktop.Views.ProfilesView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
     xmlns:conv="using:v2rayN.Desktop.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:dd="clr-namespace:v2rayN.Desktop.DesignData"
@@ -22,6 +23,7 @@
             <WrapPanel Margin="2" DockPanel.Dock="Top">
                 <ListBox
                     x:Name="lstGroup"
+                    automation:AutomationProperties.Name="{x:Static resx:ResUI.menuSubscription}"
                     Margin="{StaticResource MarginLr4}"
                     DisplayMemberBinding="{Binding Remarks}"
                     ItemsSource="{Binding SubItems}"
@@ -44,6 +46,9 @@
                 <StackPanel Orientation="Horizontal">
                     <Button
                         x:Name="btnEditSub"
+                        MinWidth="44"
+                        MinHeight="44"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuSubEdit}"
                         Margin="{StaticResource MarginLr4}"
                         Classes="IconButton Success"
                         ToolTip.Tip="{x:Static resx:ResUI.menuSubEdit}">
@@ -53,6 +58,9 @@
                     </Button>
                     <Button
                         x:Name="btnAddSub"
+                        MinWidth="44"
+                        MinHeight="44"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuSubAdd}"
                         Margin="{StaticResource MarginLr4}"
                         Classes="IconButton Success"
                         ToolTip.Tip="{x:Static resx:ResUI.menuSubAdd}">
@@ -63,6 +71,7 @@
 
                     <TextBox
                         x:Name="txtServerFilter"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.MsgServerTitle}"
                         Width="200"
                         Margin="{StaticResource MarginLr4}"
                         VerticalContentAlignment="Center"
@@ -70,6 +79,9 @@
 
                     <Button
                         x:Name="btnAutofitColumnWidth"
+                        MinWidth="44"
+                        MinHeight="44"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}"
                         Margin="{StaticResource MarginLr4}"
                         Classes="IconButton Success"
                         ToolTip.Tip="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}">
@@ -80,6 +92,9 @@
 
                     <Button
                         x:Name="btnFastRealPing"
+                        MinWidth="44"
+                        MinHeight="44"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuFastRealPing}"
                         Margin="{StaticResource MarginLr4}"
                         Classes="IconButton Success"
                         ToolTip.Tip="{x:Static resx:ResUI.menuFastRealPing}">
@@ -89,6 +104,9 @@
                     </Button>
                     <Button
                         x:Name="menuMixedTestServer"
+                        MinWidth="44"
+                        MinHeight="44"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuMixedTestServer}"
                         Margin="{StaticResource MarginLr4}"
                         Classes="IconButton Success"
                         ToolTip.Tip="{x:Static resx:ResUI.menuMixedTestServer}">
@@ -99,8 +117,61 @@
                 </StackPanel>
 
             </WrapPanel>
+            <Border
+                DockPanel.Dock="Top"
+                Margin="{StaticResource Margin4}"
+                Padding="{StaticResource Margin8}"
+                BorderBrush="Gray"
+                BorderThickness="1">
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.menuReviver}"
+                        Text="{x:Static resx:ResUI.TbReviverHelp}"
+                        TextWrapping="Wrap" />
+                    <WrapPanel>
+                        <Button
+                            x:Name="btnReviveSelectedProfile"
+                            MinWidth="44"
+                            MinHeight="44"
+                            Margin="0,0,8,0"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.menuReviveSelectedProfile}"
+                            Content="{x:Static resx:ResUI.menuReviveSelectedProfile}" />
+                        <Button
+                            x:Name="btnCancelReviver"
+                            MinWidth="44"
+                            MinHeight="44"
+                            Margin="0,0,8,0"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.menuCancelReviver}"
+                            Content="{x:Static resx:ResUI.menuCancelReviver}"
+                            IsVisible="{Binding ReviverCancelable}" />
+                        <Button
+                            x:Name="btnExportReviverSupportBundle"
+                            MinWidth="44"
+                            MinHeight="44"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.menuExportReviverSupportBundle}"
+                            Content="{x:Static resx:ResUI.menuExportReviverSupportBundle}"
+                            IsVisible="{Binding HasReviverResult}" />
+                        <ProgressBar
+                            Width="120"
+                            Height="4"
+                            Margin="12,0,0,0"
+                            VerticalAlignment="Center"
+                            IsIndeterminate="True"
+                            IsVisible="{Binding ReviverBusy}"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbReviverStatus}" />
+                    </WrapPanel>
+                    <TextBlock
+                        x:Name="txtReviverStatus"
+                        automation:AutomationProperties.LiveSetting="Polite"
+                        automation:AutomationProperties.Name="{x:Static resx:ResUI.TbReviverStatus}"
+                        IsVisible="{Binding ReviverStatusVisible}"
+                        Text="{Binding ReviverStatus}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
             <DataGrid
                 x:Name="lstProfiles"
+                automation:AutomationProperties.Name="{x:Static resx:ResUI.menuServers}"
                 AutoGenerateColumns="False"
                 BorderThickness="1"
                 CanUserReorderColumns="True"
@@ -124,6 +195,17 @@
                             x:Name="menuEditServer"
                             Header="{x:Static resx:ResUI.menuEditServer}"
                             InputGesture="Ctrl+D" />
+                        <MenuItem Header="{x:Static resx:ResUI.menuReviver}">
+                            <MenuItem
+                                x:Name="menuReviveSelectedProfile"
+                                Header="{x:Static resx:ResUI.menuReviveSelectedProfile}" />
+                            <MenuItem
+                                x:Name="menuExportReviverSupportBundle"
+                                Header="{x:Static resx:ResUI.menuExportReviverSupportBundle}" />
+                            <MenuItem
+                                x:Name="menuCancelReviver"
+                                Header="{x:Static resx:ResUI.menuCancelReviver}" />
+                        </MenuItem>
                         <MenuItem x:Name="menuCopyServer" Header="{x:Static resx:ResUI.menuCopyServer}" />
                         <MenuItem
                             x:Name="menuRemoveServer"

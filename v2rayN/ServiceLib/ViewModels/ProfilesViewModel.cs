@@ -95,6 +95,7 @@ public partial class ProfilesViewModel : MyReactiveObject
     public ProfilesViewModel()
     {
         _config = AppManager.Instance.Config;
+        InitializeReviverCommands();
 
         #region WhenAnyValue && ReactiveCommand
 

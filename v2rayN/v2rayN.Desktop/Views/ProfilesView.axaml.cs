@@ -77,6 +77,14 @@ public partial class ProfilesView : ReactiveUserControl<ProfilesViewModel>
             this.BindCommand(ViewModel, vm => vm.RemoveInvalidServerResultCmd, v => v.menuRemoveInvalidServerResult).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.FastRealPingCmd, v => v.btnFastRealPing).DisposeWith(disposables);
 
+            //bounded profile repair
+            this.BindCommand(ViewModel, vm => vm.ReviveSelectedProfileCmd, v => v.btnReviveSelectedProfile).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.CancelReviverCmd, v => v.btnCancelReviver).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.ExportReviverSupportBundleCmd, v => v.btnExportReviverSupportBundle).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.ReviveSelectedProfileCmd, v => v.menuReviveSelectedProfile).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.CancelReviverCmd, v => v.menuCancelReviver).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.ExportReviverSupportBundleCmd, v => v.menuExportReviverSupportBundle).DisposeWith(disposables);
+
             //servers export
             this.BindCommand(ViewModel, vm => vm.Export2ClientConfigCmd, v => v.menuExport2ClientConfig).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.Export2ClientConfigClipboardCmd, v => v.menuExport2ClientConfigClipboard).DisposeWith(disposables);
@@ -89,6 +97,12 @@ public partial class ProfilesView : ReactiveUserControl<ProfilesViewModel>
                 var message = interaction.Input;
                 var result = await UI.ShowYesNo(message);
                 interaction.SetOutput(result == ButtonResult.Yes);
+            }).DisposeWith(disposables);
+
+            ViewModel.SaveSupportBundleInteraction.RegisterHandler(async interaction =>
+            {
+                var fileName = await UI.SaveFileDialog("JSON files (*.json)|*.json", interaction.Input);
+                interaction.SetOutput(fileName);
             }).DisposeWith(disposables);
 
             ViewModel.SaveFileDialogInteraction.RegisterHandler(async interaction =>

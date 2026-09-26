@@ -61,6 +61,35 @@ public partial class DNSSettingWindow
             this.BindCommand(ViewModel, vm => vm.ImportDefConfig4V2rayCompatibleCmd, v => v.btnImportDefConfig4V2rayCompatible).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.ImportDefConfig4SingboxCompatibleCmd, v => v.btnImportDefConfig4SingboxCompatible).DisposeWith(disposables);
 
+            this.BindCommand(ViewModel, vm => vm.RefreshDnsHealthCmd, v => v.btnRefreshDnsHealth).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthSummary, v => v.txtDnsHealthSummary.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsCatalogStatus, v => v.txtDnsCatalogStatus.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthLastUpdated, v => v.txtDnsHealthLastUpdated.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthError, v => v.txtDnsHealthError.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverDetails, v => v.txtDnsResolverDetails.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverOptions, v => v.cmbDnsRepairResolver.ItemsSource).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.SelectedDnsResolver, v => v.cmbDnsRepairResolver.SelectedItem).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairPreview, v => v.txtDnsRepairPreview.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairStatus, v => v.txtDnsRepairStatus.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairBusy, v => v.dnsRepairProgress.Visibility, busy => busy ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverTrendDetails, v => v.txtDnsResolverTrendDetails.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsOperationHistory, v => v.txtDnsOperationHistory.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHistoryLastUpdated, v => v.txtDnsHistoryLastUpdated.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHistoryError, v => v.txtDnsHistoryError.Text).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.PreviewDnsRepairCmd, v => v.btnPreviewDnsRepair).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.ApplyDnsRepairCmd, v => v.btnApplyDnsRepair).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.RollbackDnsRepairCmd, v => v.btnRollbackDnsRepair).DisposeWith(disposables);
+
+            ViewModel.ConfirmInteraction.RegisterHandler(interaction =>
+            {
+                interaction.SetOutput(UI.ShowYesNo(interaction.Input) == MessageBoxResult.Yes);
+            }).DisposeWith(disposables);
+
+            this.WhenAnyValue(x => x.ViewModel.DnsHealthBusy)
+                .Select(busy => !busy)
+                .BindTo(this, x => x.btnRefreshDnsHealth.IsEnabled)
+                .DisposeWith(disposables);
+
             this.WhenAnyValue(x => x.ViewModel.IsSimpleDNSEnabled)
                 .Select(b => b ? Visibility.Collapsed : Visibility.Visible)
                 .BindTo(this, x => x.txtBasicDNSSettingsInvalid.Visibility)
