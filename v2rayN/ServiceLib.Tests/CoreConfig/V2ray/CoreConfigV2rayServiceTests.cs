@@ -629,6 +629,53 @@ public class CoreConfigV2rayServiceTests
     }
 
     [Test]
+    public async Task GenerateClientConfigContent_FakeIP_ShouldLeaveFakeDnsPoolsToXrayDefaults()
+    {
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
+        config.SimpleDNSItem.FakeIP = true;
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+
+        var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, "n-main", "main");
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray) with
+        {
+            RoutingItem = new RoutingItem
+            {
+                Id = "r-dns-fakeip",
+                Remarks = "dns-fakeip",
+                RuleSet = JsonUtils.Serialize(new List<RulesItem>
+                {
+                    new()
+                    {
+                        Enabled = true, RuleType = ERuleType.DNS, OutboundTag = Global.ProxyTag, Domain = ["geosite:google"],
+                    }
+                }),
+                DomainStrategy = Global.AsIs,
+                DomainStrategy4Singbox = string.Empty,
+            }
+        };
+
+        var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue();
+        // PattN: no "fakedns" block, so Xray-core applies its default fake IP pools
+        var root = JsonUtils.ParseJson(result.Data!.ToString())!.AsObject();
+        await root.ContainsKey("fakedns").Should().BeFalse();
+
+        var cfg = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString())!;
+        var dns = JsonUtils.Deserialize<Dns4Ray>(JsonUtils.Serialize(cfg.dns))!;
+        var dnsServers = dns.servers
+            .Select(s => JsonUtils.Deserialize<DnsServer4Ray>(JsonUtils.Serialize(s)))
+            .Where(s => s is not null)
+            .Cast<DnsServer4Ray>()
+            .ToList();
+
+        var hasFakeDnsServer = dnsServers.Any(s =>
+            s.address == "fakedns"
+            && s.domains?.Contains("geosite:google") == true);
+        await hasFakeDnsServer.Should().BeTrue();
+    }
+
+    [Test]
     public async Task GenerateClientConfigContent_RawDnsEnabled_ShouldUseCustomDnsConfig()
     {
         var config = CoreConfigTestFactory.CreateConfig(ECoreType.Xray);
