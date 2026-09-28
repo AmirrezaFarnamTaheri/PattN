@@ -671,7 +671,7 @@ jobs:
         run_cmd "dhclient \$IFACE || true"
         run_cmd "printf 'nameserver 10.0.2.3\nnameserver 1.1.1.1\n' >/etc/resolv.conf"
         run_cmd "dnf -y makecache || dnf -y makecache || dnf -y makecache"
-        run_cmd "dnf -y install sudo git rpm-build rpmdevtools dnf-plugins-core rsync findutils tar gzip unzip which curl jq file ca-certificates fuse3 --nogpgcheck"
+        run_cmd "dnf -y install sudo git rpm-build rpmdevtools dnf-plugins-core rsync findutils tar gzip unzip which curl jq file ca-certificates fuse3"
         run_cmd "rm -rf /root/v2rayN-src"
         run_cmd "rsync -a --info=progress2 /workspace/repo/ /root/v2rayN-src/"
         run_cmd "cd /root/v2rayN-src && git config --global --add safe.directory /root/v2rayN-src"
