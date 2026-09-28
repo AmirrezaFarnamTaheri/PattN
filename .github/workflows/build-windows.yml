@@ -9,6 +9,13 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    paths:
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/package-zip.yml'
+      - 'pattn-discovery/**'
+      - 'v2rayN/**'
 
 permissions:
   contents: write
@@ -23,7 +30,7 @@ jobs:
       project: ./v2rayN/v2rayN.csproj
 
   release-zip:
-    if: inputs.release_tag != ''
+    if: github.event_name == 'pull_request' || inputs.release_tag != ''
     needs: build
     uses: ./.github/workflows/package-zip.yml
     with:
