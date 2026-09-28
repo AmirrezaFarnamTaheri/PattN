@@ -58,6 +58,13 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
     [Reactive] public partial string SpeedPingTestUrl { get; set; }
     [Reactive] public partial string UdpTestTarget { get; set; }
     [Reactive] public partial int MixedConcurrencyCount { get; set; }
+    [Reactive] public partial int RetryEachProxyCount { get; set; }
+    [Reactive] public partial int RetryFailedAfterBatchCount { get; set; }
+    [Reactive] public partial int TestHistoryRetentionDays { get; set; }
+    [Reactive] public partial int HistoryPolicyFailureCount { get; set; }
+    [Reactive] public partial int HistoryPolicyWindowCount { get; set; }
+    [Reactive] public partial int HistoryPolicyConsecutiveFailures { get; set; }
+    [Reactive] public partial bool HistoryPolicyAutoRemove { get; set; }
     [Reactive] public partial bool EnableHWA { get; set; }
     [Reactive] public partial string SubConvertUrl { get; set; }
     [Reactive] public partial int MainGirdOrientation { get; set; }
@@ -189,6 +196,13 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         SpeedTestTimeout = _config.SpeedTestItem.SpeedTestTimeout;
         SpeedTestUrl = _config.SpeedTestItem.SpeedTestUrl;
         MixedConcurrencyCount = _config.SpeedTestItem.MixedConcurrencyCount;
+        RetryEachProxyCount = _config.SpeedTestItem.RetryEachProxyCount;
+        RetryFailedAfterBatchCount = _config.SpeedTestItem.RetryFailedAfterBatchCount;
+        TestHistoryRetentionDays = Math.Max(0, _config.SpeedTestItem.TestHistoryRetentionDays);
+        HistoryPolicyFailureCount = _config.SpeedTestItem.HistoryPolicyFailureCount;
+        HistoryPolicyWindowCount = _config.SpeedTestItem.HistoryPolicyWindowCount;
+        HistoryPolicyConsecutiveFailures = _config.SpeedTestItem.HistoryPolicyConsecutiveFailures;
+        HistoryPolicyAutoRemove = _config.SpeedTestItem.HistoryPolicyAutoRemove;
         SpeedPingTestUrl = _config.SpeedTestItem.SpeedPingTestUrl;
         UdpTestTarget = _config.SpeedTestItem.UdpTestTarget;
         EnableHWA = _config.GuiItem.EnableHWA;
@@ -305,6 +319,26 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
             NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
             return;
         }
+        var hasWindowPolicy = HistoryPolicyFailureCount > 0 || HistoryPolicyWindowCount > 0;
+        var hasAnyHistoryPolicy = hasWindowPolicy || HistoryPolicyConsecutiveFailures > 0;
+        if (MixedConcurrencyCount <= 0
+            || SpeedTestTimeout <= 0
+            || RetryEachProxyCount < 0
+            || RetryFailedAfterBatchCount < 0
+            || TestHistoryRetentionDays < 0
+            || HistoryPolicyFailureCount < 0
+            || HistoryPolicyWindowCount < 0
+            || HistoryPolicyConsecutiveFailures < 0
+            || (hasWindowPolicy
+                && (HistoryPolicyFailureCount <= 0
+                    || HistoryPolicyWindowCount <= 0
+                    || HistoryPolicyFailureCount > HistoryPolicyWindowCount))
+            || (HistoryPolicyAutoRemove && !hasAnyHistoryPolicy))
+        {
+            NoticeManager.Instance.Enqueue(ResUI.FillSpeedTestParameterError);
+            return;
+        }
+
         var needReboot = EnableStatistics != _config.GuiItem.EnableStatistics
                           || DisplayRealTimeSpeed != _config.GuiItem.DisplayRealTimeSpeed
                         || EnableDragDropSort != _config.UiItem.EnableDragDropSort
@@ -363,6 +397,13 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         _config.UiItem.CurrentFontFamily = CurrentFontFamily;
         _config.SpeedTestItem.SpeedTestTimeout = SpeedTestTimeout;
         _config.SpeedTestItem.MixedConcurrencyCount = MixedConcurrencyCount;
+        _config.SpeedTestItem.RetryEachProxyCount = RetryEachProxyCount;
+        _config.SpeedTestItem.RetryFailedAfterBatchCount = RetryFailedAfterBatchCount;
+        _config.SpeedTestItem.TestHistoryRetentionDays = TestHistoryRetentionDays;
+        _config.SpeedTestItem.HistoryPolicyFailureCount = HistoryPolicyFailureCount;
+        _config.SpeedTestItem.HistoryPolicyWindowCount = HistoryPolicyWindowCount;
+        _config.SpeedTestItem.HistoryPolicyConsecutiveFailures = HistoryPolicyConsecutiveFailures;
+        _config.SpeedTestItem.HistoryPolicyAutoRemove = HistoryPolicyAutoRemove;
         _config.SpeedTestItem.SpeedTestUrl = SpeedTestUrl;
         _config.SpeedTestItem.SpeedPingTestUrl = SpeedPingTestUrl;
         _config.SpeedTestItem.UdpTestTarget = UdpTestTarget;

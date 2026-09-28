@@ -95,6 +95,8 @@ public partial class ProfilesViewModel : MyReactiveObject
     public ProfilesViewModel()
     {
         _config = AppManager.Instance.Config;
+        InitializeReviverCommands();
+        InitializeHistoryCommands();
 
         #region WhenAnyValue && ReactiveCommand
 
@@ -246,6 +248,11 @@ public partial class ProfilesViewModel : MyReactiveObject
             .AsObservable()
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .SubscribeAsync(async result => await UpdateStatistics(result));
+
+        AppEvents.ProfilesChangedRequested
+            .AsObservable()
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .SubscribeAsync(async _ => await RefreshServers());
 
         #endregion AppEvents
 

@@ -1,4 +1,5 @@
 using v2rayN.Desktop.Base;
+using v2rayN.Desktop.Common;
 
 namespace v2rayN.Desktop.Views;
 
@@ -11,7 +12,6 @@ public partial class DNSSettingWindow : WindowBase<DNSSettingViewModel>
         InitializeComponent();
 
         _config = AppManager.Instance.Config;
-        Loaded += Window_Loaded;
         btnCancel.Click += (s, e) => Close();
 
         cmbDirectDNSStrategy.ItemsSource = Global.DomainStrategy;
@@ -65,6 +65,36 @@ public partial class DNSSettingWindow : WindowBase<DNSSettingViewModel>
             this.BindCommand(ViewModel, vm => vm.ImportDefConfig4V2rayCompatibleCmd, v => v.btnImportDefConfig4V2rayCompatible).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.ImportDefConfig4SingboxCompatibleCmd, v => v.btnImportDefConfig4SingboxCompatible).DisposeWith(disposables);
 
+            this.BindCommand(ViewModel, vm => vm.RefreshDnsHealthCmd, v => v.btnRefreshDnsHealth).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthSummary, v => v.txtDnsHealthSummary.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsCatalogStatus, v => v.txtDnsCatalogStatus.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthLastUpdated, v => v.txtDnsHealthLastUpdated.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHealthError, v => v.txtDnsHealthError.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverDetails, v => v.txtDnsResolverDetails.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverOptions, v => v.cmbDnsRepairResolver.ItemsSource).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.SelectedDnsResolver, v => v.cmbDnsRepairResolver.SelectedItem).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairPreview, v => v.txtDnsRepairPreview.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairStatus, v => v.txtDnsRepairStatus.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsRepairBusy, v => v.dnsRepairProgress.IsVisible).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsResolverTrendDetails, v => v.txtDnsResolverTrendDetails.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsOperationHistory, v => v.txtDnsOperationHistory.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHistoryLastUpdated, v => v.txtDnsHistoryLastUpdated.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.DnsHistoryError, v => v.txtDnsHistoryError.Text).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.PreviewDnsRepairCmd, v => v.btnPreviewDnsRepair).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.ApplyDnsRepairCmd, v => v.btnApplyDnsRepair).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.RollbackDnsRepairCmd, v => v.btnRollbackDnsRepair).DisposeWith(disposables);
+
+            ViewModel.ConfirmInteraction.RegisterHandler(async interaction =>
+            {
+                var result = await UI.ShowYesNo(interaction.Input);
+                interaction.SetOutput(result == ButtonResult.Yes);
+            }).DisposeWith(disposables);
+
+            this.WhenAnyValue(x => x.ViewModel.DnsHealthBusy)
+                .Select(busy => !busy)
+                .BindTo(this, x => x.btnRefreshDnsHealth.IsEnabled)
+                .DisposeWith(disposables);
+
             this.WhenAnyValue(x => x.ViewModel.IsSimpleDNSEnabled)
                 .Select(b => !b)
                 .BindTo(txtBasicDNSSettingsInvalid, t => t.IsVisible);
@@ -86,8 +116,4 @@ public partial class DNSSettingWindow : WindowBase<DNSSettingViewModel>
         ProcUtils.ProcessStart("https://sing-box.sagernet.org/zh/configuration/dns/");
     }
 
-    private void Window_Loaded(object? sender, RoutedEventArgs e)
-    {
-        btnCancel.Focus();
-    }
 }
