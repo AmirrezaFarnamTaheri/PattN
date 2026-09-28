@@ -15,10 +15,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Submit v2ray package to Windows Package Manager Community Repository
+        env:
+          PT_WINGET: ${{ secrets.PT_WINGET }}
         run: |
 
           $wingetPackage = "2dust.v2rayN"
-          $gitToken = "${{ secrets.PT_WINGET }}"
+          $gitToken = $env:PT_WINGET
 
           $github = Invoke-RestMethod -uri "https://api.github.com/repos/2dust/v2rayN/releases" 
 

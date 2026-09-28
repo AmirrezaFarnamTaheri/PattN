@@ -9,6 +9,13 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    paths:
+      - '.github/workflows/build-windows-desktop.yml'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/package-zip.yml'
+      - 'pattn-discovery/**'
+      - 'v2rayN/**'
 
 permissions:
   contents: write
@@ -22,7 +29,7 @@ jobs:
       target: windows
 
   release-zip:
-    if: inputs.release_tag != ''
+    if: github.event_name == 'pull_request' || inputs.release_tag != ''
     needs: build
     uses: ./.github/workflows/package-zip.yml
     with:

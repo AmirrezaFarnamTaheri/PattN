@@ -768,7 +768,14 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+</Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
@@ -1002,7 +1009,15 @@
                             Grid.Column="1"
                             Width="200"
                             Margin="{StaticResource Margin8}"
+                            IsEditable="True"
                             Style="{StaticResource DefComboBox}" />
+                        <TextBlock
+                            Grid.Row="16"
+                            Grid.Column="2"
+                            Margin="{StaticResource Margin4}"
+                            VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}"
+                            Text="{x:Static resx:ResUI.TbSettingsSpeedTestCustomValueTip}"
+                            TextWrapping="Wrap" />
 
                         <TextBlock
                             Grid.Row="17"
@@ -1017,7 +1032,15 @@
                             Grid.Column="1"
                             Width="200"
                             Margin="{StaticResource Margin8}"
+                            IsEditable="True"
                             Style="{StaticResource DefComboBox}" />
+                        <TextBlock
+                            Grid.Row="17"
+                            Grid.Column="2"
+                            Margin="{StaticResource Margin4}"
+                            VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}"
+                            Text="{x:Static resx:ResUI.TbSettingsSpeedTestCustomValueTip}"
+                            TextWrapping="Wrap" />
 
                         <TextBlock
                             Grid.Row="18"
@@ -1186,6 +1209,28 @@
                             Style="{StaticResource ToolbarTextBlock}"
                             Text="{x:Static resx:ResUI.TbSettingsChinaUserTip}"
                             TextWrapping="Wrap" />
+
+                        <TextBlock Grid.Row="28" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsRetryEachProxyCount}" />
+                        <TextBox x:Name="txtRetryEachProxyCount" Grid.Row="28" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="29" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsRetryFailedAfterBatchCount}" />
+                        <TextBox x:Name="txtRetryFailedAfterBatchCount" Grid.Row="29" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="30" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsTestHistoryRetentionDays}" />
+                        <TextBox x:Name="txtTestHistoryRetentionDays" Grid.Row="30" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="31" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyFailureCount}" />
+                        <TextBox x:Name="txtHistoryPolicyFailureCount" Grid.Row="31" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="32" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyWindowCount}" />
+                        <TextBox x:Name="txtHistoryPolicyWindowCount" Grid.Row="32" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="33" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyConsecutiveFailures}" />
+                        <TextBox x:Name="txtHistoryPolicyConsecutiveFailures" Grid.Row="33" Grid.Column="1" Width="200" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" Style="{StaticResource DefTextBox}" />
+
+                        <TextBlock Grid.Row="34" Grid.Column="0" Margin="{StaticResource Margin8}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyAutoRemove}" />
+                        <ToggleButton x:Name="togHistoryPolicyAutoRemove" Grid.Row="34" Grid.Column="1" Margin="{StaticResource Margin8}" HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="34" Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyAutoRemoveTip}" TextWrapping="Wrap" />
                     </Grid>
                 </ScrollViewer>
             </TabItem>

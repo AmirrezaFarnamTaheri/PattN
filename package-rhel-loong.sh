@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+LOCK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=release-assets.lock.sh
+source "$LOCK_DIR/release-assets.lock.sh"
+
 VERSION_ARG=""
 WITH_CORE="both"
 FORCE_NETCORE=0
@@ -8,7 +12,6 @@ BUILD_FROM=""
 XRAY_VER="${XRAY_VER:-}"
 SING_VER="${SING_VER:-}"
 
-MIN_KERNEL="6.12"
 PKGROOT="v2rayN-publish"
 PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 RPM_TOPDIR="${HOME}/rpmbuild"
@@ -25,6 +28,7 @@ HOST_ARCH=""
 SCRIPT_DIR=""
 PROJECT=""
 VERSION=""
+PUBLISH_ROOT=""
 
 declare -a BUILT_RPMS=()
 
@@ -62,9 +66,6 @@ parse_args() {
 }
 
 detect_environment() {
-  local current_kernel=""
-  local lowest=""
-
   . /etc/os-release
 
   OS_ID="${ID:-}"
@@ -87,11 +88,6 @@ This script only supports: RHEL / Rocky / AlmaLinux / Fedora / CentOS."
     *) die "Only supports loongarch64" ;;
   esac
 
-  current_kernel="$(uname -r)"
-  lowest="$(printf '%s\n%s\n' "$MIN_KERNEL" "$current_kernel" | sort -V | head -n1)"
-
-  [[ "$lowest" == "$MIN_KERNEL" ]] || die "Kernel $current_kernel is below $MIN_KERNEL"
-  echo "[OK] Kernel $current_kernel verified."
 }
 
 install_dependencies() {
@@ -100,7 +96,7 @@ install_dependencies() {
 
   if command -v dnf >/dev/null 2>&1; then
     sudo dnf -y --nogpgcheck install \
-      rpm-build rpmdevtools curl unzip tar jq rsync git python3 \
+      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang \
       glibc-devel kernel-headers libatomic file ca-certificates libicu \
       && install_ok=1
 
@@ -125,6 +121,7 @@ install_dependencies() {
 
 prepare_workspace() {
   SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  PUBLISH_ROOT="$SCRIPT_DIR/.pattn-package-publish"
   cd "$SCRIPT_DIR"
 
   if [[ -f .gitmodules ]]; then
@@ -281,7 +278,7 @@ bundle_url_for_rid() {
   local rid="$1"
 
   case "$rid" in
-    linux-loongarch64) echo "https://raw.githubusercontent.com/2dust/v2rayN-core-bin/refs/heads/master/v2rayN-linux-loong64.zip" ;;
+    linux-loongarch64) echo "https://raw.githubusercontent.com/2dust/v2rayN-core-bin/${PATTN_CORE_BIN_COMMIT}/v2rayN-linux-loong64.zip" ;;
     *)                 return 1 ;;
   esac
 }
@@ -289,25 +286,24 @@ bundle_url_for_rid() {
 download_xray() {
   local outdir="$1"
   local rid="$2"
-  local ver="${XRAY_VER:-}"
+  local ver="${XRAY_VER:-$PATTN_XRAY_VERSION}"
   local url=""
   local tmp=""
+  local expected=""
 
   mkdir -p "$outdir"
 
-  if [[ -z "$ver" ]]; then
-    # PattN: resolve the latest tag from the release redirect (the anonymous GitHub API is rate-limited on CI runners)
-    ver="$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/patterniha/Xray-core/releases/latest | sed -E 's#.*/releases/tag/v##')" || true
-    [[ "$ver" =~ ^[0-9] ]] || ver=""
-  fi
-
-  [[ -n "$ver" ]] || { echo "[xray] Failed to get version"; return 1; }
+  [[ "$ver" == "$PATTN_XRAY_VERSION" ]] || {
+    echo "[xray] Version $ver is not present in release-assets.lock.sh; update the lock deliberately." >&2
+    return 1
+  }
+  expected="$(pattn_xray_sha256 "$rid")" || { echo "[xray] No locked digest for $rid"; return 1; }
   url="$(xray_url_for_rid "$rid" "$ver")" || { echo "[xray] Unsupported RID: $rid"; return 1; }
 
   echo "[+] Download xray: $url"
 
   tmp="$(mktemp -d)"
-  curl -fL "$url" -o "$tmp/xray.zip" || { rm -rf "$tmp"; return 1; }
+  pattn_download_sha256 "$url" "$tmp/xray.zip" "$expected" || { rm -rf "$tmp"; return 1; }
   unzip -q "$tmp/xray.zip" -d "$tmp" || { rm -rf "$tmp"; return 1; }
   install -m 755 "$tmp/xray" "$outdir/xray" || { rm -rf "$tmp"; return 1; }
   rm -rf "$tmp"
@@ -316,28 +312,26 @@ download_xray() {
 download_singbox() {
   local outdir="$1"
   local rid="$2"
-  local ver="${SING_VER:-}"
+  local ver="${SING_VER:-$PATTN_SINGBOX_VERSION}"
   local url=""
   local tmp=""
+  local expected=""
   local bin=""
   local cronet=""
 
   mkdir -p "$outdir"
 
-  if [[ -z "$ver" ]]; then
-    ver="$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest \
-      | grep -Eo '"tag_name":\s*"v[^"]+"' \
-      | sed -E 's/.*"v([^"]+)".*/\1/' \
-      | head -n1)" || true
-  fi
-
-  [[ -n "$ver" ]] || { echo "[sing-box] Failed to get version"; return 1; }
+  [[ "$ver" == "$PATTN_SINGBOX_VERSION" ]] || {
+    echo "[sing-box] Version $ver is not present in release-assets.lock.sh; update the lock deliberately." >&2
+    return 1
+  }
+  expected="$(pattn_singbox_sha256 "$rid")" || { echo "[sing-box] No locked digest for $rid"; return 1; }
   url="$(singbox_url_for_rid "$rid" "$ver")" || { echo "[sing-box] Unsupported RID: $rid"; return 1; }
 
   echo "[+] Download sing-box: $url"
 
   tmp="$(mktemp -d)"
-  curl -fL "$url" -o "$tmp/singbox.tar.gz" || { rm -rf "$tmp"; return 1; }
+  pattn_download_sha256 "$url" "$tmp/singbox.tar.gz" "$expected" || { rm -rf "$tmp"; return 1; }
   tar -C "$tmp" -xzf "$tmp/singbox.tar.gz" || { rm -rf "$tmp"; return 1; }
 
   bin="$(find "$tmp" -type f -name 'sing-box' | head -n1 || true)"
@@ -376,46 +370,48 @@ download_geo_assets() {
   local bin_dir="$outroot/bin"
   local srss_dir="$bin_dir/srss"
   local f=""
+  local expected=""
 
   mkdir -p "$bin_dir" "$srss_dir"
 
-  echo "[+] Download Xray Geo to ${bin_dir}"
-  curl -fsSL -o "$bin_dir/geosite.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geosite.dat"
-  curl -fsSL -o "$bin_dir/geoip.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geoip.dat"
-  curl -fsSL -o "$bin_dir/geoip-only-cn-private.dat" "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/geoip-only-cn-private.dat"
-  curl -fsSL -o "$bin_dir/Country.mmdb" "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country.mmdb"
-
-  echo "[+] Download sing-box rule DB & rule-sets"
-  curl -fsSL -o "$bin_dir/geoip.metadb" "https://github.com/MetaCubeX/meta-rules-dat/releases/latest/download/geoip.metadb"
+  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geosite.dat" "$bin_dir/geosite.dat" "$PATTN_IRAN_GEOSITE_SHA256"
+  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geoip.dat" "$bin_dir/geoip.dat" "$PATTN_IRAN_GEOIP_SHA256"
+  expected="$(pattn_raw_rule_blob_sha1 loyal geoip-only-cn-private.dat)"
+  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/geoip-only-cn-private.dat" "$bin_dir/geoip-only-cn-private.dat" "$expected"
+  expected="$(pattn_raw_rule_blob_sha1 loyal Country.mmdb)"
+  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/Country.mmdb" "$bin_dir/Country.mmdb" "$expected"
+  pattn_download_sha256 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/${PATTN_METACUBEX_GEOIP_METADB_RELEASE}/geoip.metadb" "$bin_dir/geoip.metadb" "$PATTN_METACUBEX_GEOIP_METADB_SHA256"
 
   for f in geoip-private.srs geoip-cn.srs geoip-facebook.srs geoip-fastly.srs geoip-google.srs geoip-netflix.srs geoip-telegram.srs geoip-twitter.srs; do
-    curl -fsSL -o "$srss_dir/$f" "https://raw.githubusercontent.com/2dust/sing-box-rules/refs/heads/rule-set-geoip/$f"
+    expected="$(pattn_raw_rule_blob_sha1 geoip "$f")"
+    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOIP_COMMIT}/$f" "$srss_dir/$f" "$expected"
   done
-
   for f in geosite-cn.srs geosite-gfw.srs geosite-google.srs geosite-greatfire.srs geosite-geolocation-cn.srs geosite-category-ads-all.srs geosite-private.srs; do
-    curl -fsSL -o "$srss_dir/$f" "https://raw.githubusercontent.com/2dust/sing-box-rules/refs/heads/rule-set-geosite/$f"
+    expected="$(pattn_raw_rule_blob_sha1 geosite "$f")"
+    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOSITE_COMMIT}/$f" "$srss_dir/$f" "$expected"
   done
-
   for f in geosite-category-ir.srs geoip-ir.srs; do
-    curl -fsSL -o "$srss_dir/$f" "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/rule-set/$f"
+    expected="$(pattn_raw_rule_blob_sha1 iran "$f")"
+    pattn_download_git_blob "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/${PATTN_IRAN_SING_RULES_COMMIT}/$f" "$srss_dir/$f" "$expected"
   done
 
   unify_geo_layout "$outroot"
 }
-
 populate_assets_zip_mode() {
   local outroot="$1"
   local rid="$2"
   local url=""
   local tmp=""
   local nested_dir=""
+  local expected=""
 
   url="$(bundle_url_for_rid "$rid")" || { echo "[!] Bundle unsupported RID: $rid"; return 1; }
 
-  echo "[+] Try v2rayN bundle archive: $url"
+  expected="$(pattn_core_bundle_blob_sha1 "$rid")" || { echo "[!] No locked bundle digest for $rid"; return 1; }
+  echo "[+] Try verified v2rayN bundle archive: $url"
 
   tmp="$(mktemp -d)"
-  curl -fL "$url" -o "$tmp/v2rayn.zip" || { echo "[!] Bundle download failed"; rm -rf "$tmp"; return 1; }
+  pattn_download_git_blob "$url" "$tmp/v2rayn.zip" "$expected" || { echo "[!] Bundle verification failed"; rm -rf "$tmp"; return 1; }
   unzip -q "$tmp/v2rayn.zip" -d "$tmp" || { echo "[!] Bundle unzip failed"; rm -rf "$tmp"; return 1; }
 
   if [[ -d "$tmp/bin" ]]; then
@@ -448,14 +444,14 @@ populate_assets_netcore_mode() {
   mkdir -p "$outroot/bin/xray" "$outroot/bin/sing_box"
 
   if [[ "$WITH_CORE" == "xray" || "$WITH_CORE" == "both" ]]; then
-    download_xray "$outroot/bin/xray" "$rid" || echo "[!] xray download failed (skipped)"
+    download_xray "$outroot/bin/xray" "$rid" || return 1
   fi
 
   if [[ "$WITH_CORE" == "sing-box" || "$WITH_CORE" == "both" ]]; then
-    download_singbox "$outroot/bin/sing_box" "$rid" || echo "[!] sing-box download failed (skipped)"
+    download_singbox "$outroot/bin/sing_box" "$rid" || return 1
   fi
 
-  download_geo_assets "$outroot" || echo "[!] Geo rules download failed (skipped)"
+  download_geo_assets "$outroot" || return 1
 }
 
 stage_runtime_assets() {
@@ -469,7 +465,7 @@ stage_runtime_assets() {
       # PattN: the core-bin bundle ships upstream Xray; replace it with patterniha/Xray-core
       download_xray "$outroot/bin/xray" "$rid" || { echo "[!] PattN: failed to fetch patterniha/Xray-core, aborting"; return 1; }
       # PattN: replace bundled geo files with Chocolate4U + Iran rule-sets
-      download_geo_assets "$outroot" || echo "[!] Geo rules download failed (kept bundle defaults)"
+      download_geo_assets "$outroot" || { echo "[!] Verified geo download failed, aborting"; return 1; }
       echo "[*] Using v2rayN bundle archive."
     else
       echo "[*] Bundle failed, fallback to separate core + rules."
@@ -492,11 +488,93 @@ describe_target() {
 
 publish_binary() {
   local rid="$1"
+  local pubdir="$PUBLISH_ROOT/$rid"
 
+  rm -rf "$pubdir"
+  mkdir -p "$pubdir"
   dotnet clean "$PROJECT" -c Release
-  rm -rf "$(dirname "$PROJECT")/bin/Release/net10.0" || true
   dotnet restore "$PROJECT"
-  dotnet publish "$PROJECT" -c Release -r "$rid" -p:PublishSingleFile=false -p:SelfContained=true ${VERSION_ARG:+-p:Version=${VERSION_ARG#v}}
+  dotnet publish "$PROJECT" -c Release -r "$rid" -p:PublishSingleFile=false -p:SelfContained=true -o "$pubdir" ${VERSION_ARG:+-p:Version=${VERSION_ARG#v}}
+}
+
+host_can_execute_target() {
+  local short="$1"
+  local host
+  host="$(uname -m)"
+  case "$short:$host" in
+    x64:x86_64|arm64:aarch64|riscv64:riscv64|loongarch64:loongarch64) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+stage_discovery_helper() {
+  local outroot="$1"
+  local rid="$2"
+  local goarch=""
+  local helper="$outroot/bin/pattn-discovery/pattn-discovery"
+
+  case "$rid" in
+    linux-x64)         goarch=amd64 ;;
+    linux-arm64)       goarch=arm64 ;;
+    linux-riscv64)     goarch=riscv64 ;;
+    linux-loongarch64) goarch=loong64 ;;
+    *) echo "Unsupported pattn-discovery RID: $rid" >&2; return 1 ;;
+  esac
+
+  mkdir -p "$(dirname "$helper")"
+  if [[ -n "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+    [[ -s "$PATTN_DISCOVERY_PREBUILT" ]] || {
+      echo "PATTN_DISCOVERY_PREBUILT is missing or empty: $PATTN_DISCOVERY_PREBUILT" >&2
+      return 1
+    }
+    install -m 0755 "$PATTN_DISCOVERY_PREBUILT" "$helper"
+  else
+    command -v go >/dev/null 2>&1 || {
+      echo "Go 1.23+ or PATTN_DISCOVERY_PREBUILT is required to package pattn-discovery" >&2
+      return 1
+    }
+    (
+      cd "$SCRIPT_DIR/pattn-discovery"
+      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
+    )
+    chmod 0755 "$helper"
+  fi
+
+  [[ -s "$helper" && -x "$helper" ]] || {
+    echo "pattn-discovery helper was not staged as an executable: $helper" >&2
+    return 1
+  }
+}
+
+smoke_discovery_helper() {
+  local helper="$1"
+  local output
+  output="$(printf '%s\n' '{"v":1,"id":"package-smoke","method":"engine.version"}' | "$helper")"
+  grep -F '"id":"package-smoke"' <<<"$output" >/dev/null
+  grep -F '"engine":"pattn-discovery"' <<<"$output" >/dev/null
+}
+
+verify_discovery_rpm() {
+  local package="$1"
+  local short="$2"
+  local tmp helper
+  command -v rpm2cpio >/dev/null 2>&1 || { echo "rpm2cpio is required for package verification" >&2; return 1; }
+  command -v cpio >/dev/null 2>&1 || { echo "cpio is required for package verification" >&2; return 1; }
+  tmp="$(mktemp -d)"
+  (cd "$tmp" && rpm2cpio "$package" | cpio -idm --quiet)
+  helper="$tmp/opt/v2rayN/bin/pattn-discovery/pattn-discovery"
+  [[ -s "$helper" && -x "$helper" ]] || {
+    rm -rf "$tmp"
+    echo "final RPM is missing executable pattn-discovery: $package" >&2
+    return 1
+  }
+  if host_can_execute_target "$short"; then
+    smoke_discovery_helper "$helper"
+    echo "[OK] Final RPM pattn-discovery handshake passed for $short."
+  else
+    echo "[OK] Final RPM contains pattn-discovery for $short; execution deferred to matching architecture."
+  fi
+  rm -rf "$tmp"
 }
 
 write_spec_file() {
@@ -546,6 +624,7 @@ cp -a * %{buildroot}/opt/v2rayN/
 find %{buildroot}/opt/v2rayN -type d -exec chmod 0755 {} +
 find %{buildroot}/opt/v2rayN -type f -exec chmod 0644 {} +
 [ -f %{buildroot}/opt/v2rayN/PattN ] && chmod 0755 %{buildroot}/opt/v2rayN/PattN || :
+[ -f %{buildroot}/opt/v2rayN/bin/pattn-discovery/pattn-discovery ] && chmod 0755 %{buildroot}/opt/v2rayN/bin/pattn-discovery/pattn-discovery || :
 
 install -dm0755 %{buildroot}%{_bindir}
 install -m0755 /dev/stdin %{buildroot}%{_bindir}/v2rayn << 'EOF'
@@ -613,7 +692,7 @@ package_binary() {
   local icon_candidate=""
   local f=""
 
-  pubdir="$(dirname "$PROJECT")/bin/Release/net10.0/${rid}/publish"
+  pubdir="$PUBLISH_ROOT/$rid"
   [[ -d "$pubdir" ]] || { echo "Publish directory not found: $pubdir"; return 1; }
 
   workdir="$(mktemp -d)"
@@ -628,6 +707,7 @@ package_binary() {
   cp "$icon_candidate" "$workdir/$PKGROOT/v2rayn.png"
 
   stage_runtime_assets "$workdir/$PKGROOT" "$rid"
+  stage_discovery_helper "$workdir/$PKGROOT" "$rid"
 
   rpmdev-setuptree
   sourcedir="${RPM_TOPDIR}/SOURCES"
@@ -643,6 +723,7 @@ package_binary() {
   echo "Build done for $short. RPM at:"
   for f in "${RPM_TOPDIR}/RPMS/${archdir}/v2rayN-${VERSION}-1"*.rpm; do
     [[ -e "$f" ]] || continue
+    verify_discovery_rpm "$f" "$short"
     echo "  $f"
     BUILT_RPMS+=("$f")
   done
