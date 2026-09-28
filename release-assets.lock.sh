@@ -21,11 +21,16 @@ PATTN_SING_RULE_GEOIP_COMMIT="619da1453857ca3ba37ffc567ce56a82e4fa7790"
 PATTN_SING_RULE_GEOSITE_COMMIT="553443a98bf3c2064e04c1a1125e699ddfcf8ea4"
 PATTN_IRAN_SING_RULES_COMMIT="5a5dbd60f033c0d777162835e9bd0a2c89a9316a"
 
+PATTN_DOTNET_SDK_VERSION="10.0.111"
+PATTN_DOTNET_SDK_LINUX_X64_SHA512="aae221be96a3b510d5b6fffefc69d8ad2fa595a1430299419316bb71c65f260a457ca9af24d044e1709b28a9118798caafec535ccfe58f7767c5acb735c00392"
+PATTN_DOTNET_SDK_LINUX_ARM64_SHA512="1e115ddb850950d4514d6a3b32b2d17b240a4f0f40b37202df4e5bdf6832a0e546722e6bf9b9ed7df7cccb34df5f5e48bcb075322fb01815bffc6e9c23999f0e"
+
 PATTN_RISCV_DOTNET_VERSION="10.0.111"
 PATTN_RISCV_DOTNET_SHA256="118c4e1abdb3dbd365faf5963ba35fc0a97ff32421b2f6e358303e2be0e99420"
 
-PATTN_DOTNET_INSTALL_COMMIT="e5cf1dd2d1540ed05ac84f8eb8c5cdec2807621e"
-PATTN_DOTNET_INSTALL_BLOB_SHA1="bd13ffa6656fe776c95b561fe4df640918867523"
+PATTN_LOONG_DOTNET_VERSION="10.0.111"
+PATTN_LOONG_DOTNET_TAG="v10.0.111-loongarch64"
+PATTN_LOONG_DOTNET_SHA256="a037a316e30d455d04e151ad5e5a27671a71e44a368b129986600e784fe906a9"
 
 PATTN_LOONG_QEMU_VERSION="10.2.4"
 PATTN_LOONG_QEMU_ARM64_V82_SHA256="83abea1dfa89cd65b8423272838e8683cb589e3bed9967117968a88227e1e2c1"
@@ -105,6 +110,14 @@ pattn_sha256_file() {
   fi
 }
 
+pattn_sha512_file() {
+  if command -v sha512sum >/dev/null 2>&1; then
+    sha512sum "$1" | awk '{print $1}'
+  else
+    shasum -a 512 "$1" | awk '{print $1}'
+  fi
+}
+
 pattn_git_blob_sha1() {
   local file="$1" size
   size="$(wc -c <"$file" | tr -d '[:space:]')"
@@ -124,6 +137,15 @@ pattn_verify_sha256() {
   }
 }
 
+pattn_verify_sha512() {
+  local file="$1" expected="$2" actual
+  actual="$(pattn_sha512_file "$file")"
+  [[ "$actual" == "$expected" ]] || {
+    echo "SHA-512 mismatch for $file: expected $expected, got $actual" >&2
+    return 1
+  }
+}
+
 pattn_verify_git_blob() {
   local file="$1" expected="$2" actual
   actual="$(pattn_git_blob_sha1 "$file")"
@@ -137,6 +159,12 @@ pattn_download_sha256() {
   local url="$1" output="$2" expected="$3"
   curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"
   pattn_verify_sha256 "$output" "$expected"
+}
+
+pattn_download_sha512() {
+  local url="$1" output="$2" expected="$3"
+  curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"
+  pattn_verify_sha512 "$output" "$expected"
 }
 
 pattn_download_git_blob() {
