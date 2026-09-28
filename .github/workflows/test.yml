@@ -80,12 +80,18 @@ jobs:
         trap 'rm -f "$tmp"' EXIT
         printf 'pattn-release-integrity-self-test\n' > "$tmp"
         good_sha="$(pattn_sha256_file "$tmp")"
+        good_sha512="$(pattn_sha512_file "$tmp")"
         good_blob="$(pattn_git_blob_sha1 "$tmp")"
         pattn_verify_sha256 "$tmp" "$good_sha"
+        pattn_verify_sha512 "$tmp" "$good_sha512"
         pattn_verify_git_blob "$tmp" "$good_blob"
 
         if pattn_verify_sha256 "$tmp" "0000000000000000000000000000000000000000000000000000000000000000"; then
           echo "::error::SHA-256 negative self-test unexpectedly passed"
+          exit 1
+        fi
+        if pattn_verify_sha512 "$tmp" "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"; then
+          echo "::error::SHA-512 negative self-test unexpectedly passed"
           exit 1
         fi
         if pattn_verify_git_blob "$tmp" "0000000000000000000000000000000000000000"; then
