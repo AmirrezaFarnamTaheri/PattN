@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # PattN release-asset integrity lock.
 # Update this file deliberately when bumping third-party release/runtime assets.
-# Release assets are pinned by SHA-256. Raw GitHub content is pinned to an
-# immutable commit and verified against the expected Git blob object id.
+# Release archives/toolchains use repository-locked SHA-256 or SHA-512 digests.
+# Raw GitHub content is pinned to an immutable commit and verified against the
+# expected Git blob object id when a publisher SHA-2 digest is unavailable.
 
 PATTN_CORE_BIN_COMMIT="5dab9a302a08001779a397e9e61ec78a9b56f884"
 
