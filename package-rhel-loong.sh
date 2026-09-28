@@ -95,7 +95,7 @@ install_dependencies() {
   local tmp_dotnet=""
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y --nogpgcheck install \
+    sudo dnf -y install \
       rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang \
       glibc-devel kernel-headers libatomic file ca-certificates libicu \
       && install_ok=1
