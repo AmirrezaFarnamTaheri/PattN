@@ -573,9 +573,13 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             await clientSocket.ConnectAsync(endPoint, linkedCts.Token).ConfigureAwait(false);
             responseTime = (int)timer.ElapsedMilliseconds;
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch
         {
-            // Match upstream: a failed connect is represented by the default result.
+            // A failed connect is represented by the default result.
         }
         finally
         {
