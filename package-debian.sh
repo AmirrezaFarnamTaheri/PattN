@@ -90,6 +90,10 @@ This script only supports: Debian."
 install_dependencies() {
   local install_ok=0
   local foreign_arch=""
+  local sdk_rid=""
+  local sdk_hash=""
+  local sdk_archive=""
+  local sdk_tmp=""
 
   mkdir -p "$OUTPUT_DIR"
 
@@ -114,9 +118,22 @@ install_dependencies() {
       "zlib1g:${foreign_arch}" \
       "libfontconfig1:${foreign_arch}"
 
-    pattn_download_git_blob       "https://raw.githubusercontent.com/dotnet/install-scripts/${PATTN_DOTNET_INSTALL_COMMIT}/src/dotnet-install.sh"       dotnet-install.sh       "$PATTN_DOTNET_INSTALL_BLOB_SHA1"
-    chmod +x dotnet-install.sh
-    ./dotnet-install.sh --channel 10.0.1xx --install-dir "$HOME/.dotnet"
+    case "$HOST_ARCH" in
+      x86_64)
+        sdk_rid="linux-x64"
+        sdk_hash="$PATTN_DOTNET_SDK_LINUX_X64_SHA512"
+        ;;
+      aarch64)
+        sdk_rid="linux-arm64"
+        sdk_hash="$PATTN_DOTNET_SDK_LINUX_ARM64_SHA512"
+        ;;
+    esac
+    sdk_archive="dotnet-sdk-${PATTN_DOTNET_SDK_VERSION}-${sdk_rid}.tar.gz"
+    sdk_tmp="$(mktemp -d)"
+    mkdir -p "$HOME/.dotnet"
+    pattn_download_sha512       "https://builds.dotnet.microsoft.com/dotnet/Sdk/${PATTN_DOTNET_SDK_VERSION}/${sdk_archive}"       "$sdk_tmp/$sdk_archive"       "$sdk_hash"
+    tar -C "$HOME/.dotnet" -xzf "$sdk_tmp/$sdk_archive"
+    rm -rf "$sdk_tmp"
 
     export PATH="$HOME/.dotnet:$PATH"
     export DOTNET_ROOT="$HOME/.dotnet"
