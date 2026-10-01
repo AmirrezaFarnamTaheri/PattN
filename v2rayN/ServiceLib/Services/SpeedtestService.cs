@@ -13,7 +13,9 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     private readonly TimeSpan _delayInterval = TimeSpan.FromSeconds(config.SpeedTestItem.SpeedTestDelayInterval ?? 1);
     private readonly ProxyTestHistoryService _historyService = new();
     private int MixedConcurrencyCount => Math.Clamp(_config.SpeedTestItem.MixedConcurrencyCount, 1, 128);
-    private int TestTimeoutSeconds => Math.Clamp(_config.SpeedTestItem.SpeedTestTimeout, 1, 600);\n    private int RetryEachProxyCount => Math.Clamp(_config.SpeedTestItem.RetryEachProxyCount, 0, 20);\n    private int RetryFailedAfterBatchCount => Math.Clamp(_config.SpeedTestItem.RetryFailedAfterBatchCount, 0, 20);
+    private int TestTimeoutSeconds => Math.Clamp(_config.SpeedTestItem.SpeedTestTimeout, 1, 600);
+    private int RetryEachProxyCount => Math.Clamp(_config.SpeedTestItem.RetryEachProxyCount, 0, 20);
+    private int RetryFailedAfterBatchCount => Math.Clamp(_config.SpeedTestItem.RetryFailedAfterBatchCount, 0, 20);
 
     public Task RunLoop(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
