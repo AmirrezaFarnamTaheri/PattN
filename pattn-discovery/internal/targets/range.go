@@ -43,6 +43,12 @@ func Parse(value string) (Range, error) {
 			return Range{}, fmt.Errorf("parse CIDR %q: %w", value, err)
 		}
 		prefix = prefix.Masked()
+		// prefixLast unmaps, so a mapped prefix (::ffff:a.b.c.d/n) must be converted to its native
+		// IPv4 form here too; otherwise Start stays 128-bit while End is 32-bit and Count() is 0.
+		// After Masked(), Is4In6 implies n >= 96 (shorter prefixes clear part of the ::ffff marker).
+		if prefix.Addr().Is4In6() {
+			prefix = netip.PrefixFrom(prefix.Addr().Unmap(), prefix.Bits()-96)
+		}
 		return Range{Start: prefix.Addr(), End: prefixLast(prefix)}, nil
 	}
 	if i := strings.Index(value, "-"); i > 0 {
