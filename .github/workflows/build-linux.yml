@@ -72,7 +72,7 @@ jobs:
         apt-get update
         apt-get install -y sudo git rsync findutils tar gzip unzip which curl jq wget file ca-certificates desktop-file-utils xdg-utils fakeroot dpkg-dev libc6 libgcc-s1 libstdc++6 zlib1g libicu-dev libssl-dev
     - name: Checkout repo (for scripts)
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with: { submodules: 'recursive', fetch-depth: '0' }
     - name: Trust checked-out workspace
       shell: bash
@@ -90,7 +90,7 @@ jobs:
         echo "==== Dist tree ===="
         ls -R "$GITHUB_WORKSPACE/dist/deb" || true
     - name: Upload DEB artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-deb, path: "dist/deb/**/*.deb", if-no-files-found: error }
 
   rpm:
@@ -136,7 +136,7 @@ jobs:
         dnf -y install sudo git rpm-build rpmdevtools dnf-plugins-core rsync findutils tar gzip unzip which
         dnf repolist | grep -i epel || true
     - name: Checkout repo (for scripts)
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with: { submodules: 'recursive', fetch-depth: '0' }
     - name: Trust checked-out workspace
       shell: bash
@@ -154,7 +154,7 @@ jobs:
         echo "==== Dist tree ===="
         ls -R "$GITHUB_WORKSPACE/dist/rpm" || true
     - name: Upload RPM artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-rpm, path: "dist/rpm/**/*.rpm", if-no-files-found: error }
 
   final-package-smoke:
@@ -183,13 +183,13 @@ jobs:
         sudo apt-get install -y rpm2cpio cpio
 
     - name: Download final DEB packages
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
       with:
         name: release-deb
         path: packages/deb
 
     - name: Download final RPM packages
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
       with:
         name: release-rpm
         path: packages/rpm
@@ -275,10 +275,10 @@ jobs:
         } > "$GITHUB_WORKSPACE/dist/rpm-riscv64/execution-evidence.txt"
         cp "$RUNNER_TEMP/rpm-riscv64-build.log" "$GITHUB_WORKSPACE/dist/rpm-riscv64/package-build.log"
     - name: Upload RPM artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-rpm-riscv64, path: "dist/rpm-riscv64/**/*.rpm", if-no-files-found: error }
     - name: Upload RISC-V RPM execution evidence
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: evidence-rpm-riscv64-${{ github.run_id }}
         path: |
@@ -348,10 +348,10 @@ jobs:
         } > "$GITHUB_WORKSPACE/dist/deb-riscv64/execution-evidence.txt"
         cp "$RUNNER_TEMP/deb-riscv64-build.log" "$GITHUB_WORKSPACE/dist/deb-riscv64/package-build.log"
     - name: Upload DEB artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-deb-riscv64, path: "dist/deb-riscv64/**/*.deb", if-no-files-found: error }
     - name: Upload RISC-V DEB execution evidence
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: evidence-deb-riscv64-${{ github.run_id }}
         path: |
@@ -379,7 +379,7 @@ jobs:
         sudo ln -sf /usr/libexec/virtiofsd /usr/local/bin/virtiofsd
         virtiofsd --version || virtiofsd --help | head
     - name: Checkout exact workflow source
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         path: repo
         fetch-depth: 1
@@ -536,10 +536,10 @@ jobs:
           sha256sum "$package"
         } > "$GITHUB_WORKSPACE/dist/deb-loong64/execution-evidence.txt"
     - name: Upload DEB artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-deb-loong64, path: "dist/deb-loong64/**/*.deb", if-no-files-found: error }
     - name: Upload LoongArch DEB execution evidence
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: evidence-deb-loong64-${{ github.run_id }}
         path: |
@@ -567,7 +567,7 @@ jobs:
         sudo ln -sf /usr/libexec/virtiofsd /usr/local/bin/virtiofsd
         virtiofsd --version || virtiofsd --help | head
     - name: Checkout exact workflow source
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         path: repo
         fetch-depth: 1
@@ -724,10 +724,10 @@ jobs:
           sha256sum "$package"
         } > "$GITHUB_WORKSPACE/dist/rpm-loong64/execution-evidence.txt"
     - name: Upload RPM artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with: { name: release-rpm-loong64, path: "dist/rpm-loong64/**/*.rpm", if-no-files-found: error }
     - name: Upload LoongArch RPM execution evidence
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: evidence-rpm-loong64-${{ github.run_id }}
         path: |
