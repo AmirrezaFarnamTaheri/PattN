@@ -44,6 +44,8 @@ type DenialEvidence struct {
 }
 
 const (
+	MaxNSEC3Iterations uint16 = 2500
+
 	DenialNODATA       = "nodata-evidence"
 	DenialNameCovered  = "name-nonexistence-evidence"
 	DenialNotApplicable = "not-applicable"
@@ -160,6 +162,9 @@ func EvaluateNSEC3(queryName string, queryType uint16, value NSEC3) DenialEviden
 func NSEC3Hash(name string, algorithm uint8, iterations uint16, saltHex string) (string, error) {
 	if algorithm != 1 {
 		return "", fmt.Errorf("unsupported NSEC3 hash algorithm %d", algorithm)
+	}
+	if iterations > MaxNSEC3Iterations {
+		return "", fmt.Errorf("NSEC3 iteration count %d exceeds policy maximum %d", iterations, MaxNSEC3Iterations)
 	}
 	wire, err := canonicalNameWire(name)
 	if err != nil {
