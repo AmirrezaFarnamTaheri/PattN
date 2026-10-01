@@ -21,9 +21,17 @@ public class ArchivePathGuardTests
     {
         var root = Path.Combine(Path.GetTempPath(), "pattn-updater-root");
 
-        var action = () => ArchivePathGuard.ResolveUnderRoot(root, "../../outside.exe");
+        var rejected = false;
+        try
+        {
+            ArchivePathGuard.ResolveUnderRoot(root, "../../outside.exe");
+        }
+        catch (InvalidDataException)
+        {
+            rejected = true;
+        }
 
-        await action.Should().ThrowAsync<InvalidDataException>();
+        await rejected.Should().BeTrue();
     }
 
     [Test]
@@ -32,8 +40,16 @@ public class ArchivePathGuardTests
         var root = Path.Combine(Path.GetTempPath(), "pattn-updater-root");
         var rooted = Path.GetFullPath(Path.Combine(root, "..", "outside.exe"));
 
-        var action = () => ArchivePathGuard.ResolveUnderRoot(root, rooted);
+        var rejected = false;
+        try
+        {
+            ArchivePathGuard.ResolveUnderRoot(root, rooted);
+        }
+        catch (InvalidDataException)
+        {
+            rejected = true;
+        }
 
-        await action.Should().ThrowAsync<InvalidDataException>();
+        await rejected.Should().BeTrue();
     }
 }
