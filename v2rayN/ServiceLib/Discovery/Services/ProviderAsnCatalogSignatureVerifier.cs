@@ -97,7 +97,9 @@ public static class ProviderAsnCatalogSignatureVerifier
             Status = valid ? "valid" : "signature-invalid",
             KeyId = envelope.KeyId,
             CatalogSha256 = envelope.CatalogSha256,
+            Revision = envelope.Revision,
             SignedAt = envelope.SignedAt,
+            ExpiresAt = envelope.ExpiresAt,
         };
     }
 
@@ -109,7 +111,9 @@ public static class ProviderAsnCatalogSignatureVerifier
             "catalogId=" + envelope.CatalogId.Trim() + "\n" +
             "catalogVersion=" + envelope.CatalogVersion.Trim() + "\n" +
             "catalogSha256=" + envelope.CatalogSha256.Trim().ToLowerInvariant() + "\n" +
-            "signedAt=" + envelope.SignedAt.ToUniversalTime().ToString("O") + "\n";
+            "revision=" + envelope.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" +
+            "signedAt=" + envelope.SignedAt.ToUniversalTime().ToString("O") + "\n" +
+            "expiresAt=" + envelope.ExpiresAt.ToUniversalTime().ToString("O") + "\n";
         return Encoding.UTF8.GetBytes(text);
     }
 
@@ -194,9 +198,21 @@ public static class ProviderAsnCatalogSignatureVerifier
         {
             return "signature-catalog-hash-mismatch";
         }
+        if (envelope.Revision <= 0)
+        {
+            return "signature-revision-invalid";
+        }
         if (envelope.SignedAt == default)
         {
             return "signature-time-missing";
+        }
+        if (envelope.ExpiresAt == default)
+        {
+            return "signature-expiry-missing";
+        }
+        if (envelope.ExpiresAt <= envelope.SignedAt)
+        {
+            return "signature-expiry-invalid";
         }
         return null;
     }
