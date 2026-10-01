@@ -1,4 +1,5 @@
 using ServiceLib.Reviver.Models;
+using ServiceLib.Reviver.Normalization;
 using ServiceLib.Reviver.Services;
 using ServiceLib.Services;
 
@@ -31,6 +32,23 @@ public sealed class RepairPromotionService(
         if (candidate.State != ERepairCandidateState.RuntimeValidated || candidate.Validation is null)
         {
             throw new InvalidOperationException("Only runtime-validated repair candidates can be promoted.");
+        }
+        if (!candidate.Validation.MeetsQuorum(candidate.RequiredRuntimeSuccesses))
+        {
+            throw new InvalidOperationException(
+                "Runtime validation evidence no longer satisfies the quorum used to validate this repair candidate.");
+        }
+
+        var baseline = session.Original.CreateWorkingCopy();
+        var declaredFields = candidate.Mutations
+            .Select(x => x.Field)
+            .Where(x => x.IsNotEmpty())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (!ProfileMutationGuard.ChangesOnly(baseline, candidate.Profile, declaredFields))
+        {
+            throw new InvalidOperationException(
+                "Repair candidate contains profile changes that are not declared by its mutation list.");
         }
 
         var child = JsonUtils.DeepCopy(candidate.Profile)
