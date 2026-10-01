@@ -26,7 +26,9 @@ public class ProviderAsnCatalogRemoteApplyProvenanceItem
     public string SignatureStatus { get; set; } = string.Empty;
     public string SignatureKeyId { get; set; } = string.Empty;
     public string SignatureCatalogSha256 { get; set; } = string.Empty;
+    public long? SignatureRevision { get; set; }
     public long? SignatureSignedAtUnixMs { get; set; }
+    public long? SignatureExpiresAtUnixMs { get; set; }
 
     public long CheckedAtUnixMs { get; set; }
     public long AppliedAtUnixMs { get; set; }
