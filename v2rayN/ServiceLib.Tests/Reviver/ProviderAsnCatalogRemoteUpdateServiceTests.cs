@@ -392,6 +392,49 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
     }
 
     [Test]
+    public async Task Configure_ShouldPreserveSignatureContinuityWhenSigningKeyIsUnchanged()
+    {
+        await using var fixture = await RemoteFixture.CreateAsync("1");
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var spki = Convert.ToBase64String(signer.ExportSubjectPublicKeyInfo());
+        var source = Source(fixture.Registry.Id, "old-sha");
+        source.Uri = "https://catalog.example/old.json";
+        source.SignatureUri = "https://catalog.example/old.json.sig";
+        source.SignaturePolicy = (int)ProviderAsnCatalogSignaturePolicy.Required;
+        source.TrustedKeyId = "release-key-1";
+        source.TrustedPublicKeySpkiBase64 = spki;
+        source.LastSignatureValid = true;
+        source.LastSignatureStatus = "valid";
+        source.LastSignatureKeyId = "release-key-1";
+        source.LastSignatureCatalogSha256 = "signed-sha";
+        source.LastSignatureSignedAtUnixMs = DateTimeOffset.Parse("2026-09-24T09:00:00Z").ToUnixTimeMilliseconds();
+
+        var sourceStore = new FakeSourceStore(source);
+        var service = fixture.CreateService(sourceStore, new QueueTransport([]));
+
+        await service.ConfigureAsync(
+            fixture.Registry.Id,
+            new ProviderAsnCatalogRemoteSourceConfig
+            {
+                Uri = "https://catalog.example/new.json",
+                SignatureUri = "https://catalog.example/new.json.sig",
+                SignaturePolicy = ProviderAsnCatalogSignaturePolicy.Required,
+                TrustedKeyId = "release-key-1",
+                TrustedPublicKeySpkiBase64 = spki,
+            });
+
+        await sourceStore.Item.Should().NotBeNull();
+        await sourceStore.Item!.LastSignatureValid.Should().BeTrue();
+        await sourceStore.Item.LastSignatureStatus.Should().BeEqualTo("valid");
+        await sourceStore.Item.LastSignatureKeyId.Should().BeEqualTo("release-key-1");
+        await sourceStore.Item.LastSignatureCatalogSha256.Should().BeEqualTo("signed-sha");
+        await sourceStore.Item.LastSignatureSignedAtUnixMs.Should().BeEqualTo(
+            DateTimeOffset.Parse("2026-09-24T09:00:00Z").ToUnixTimeMilliseconds());
+        await sourceStore.Item.RemoteContentSha256.Should().BeEmpty();
+        await sourceStore.Item.ETag.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task Configure_ShouldHonorCrossProcessRemoteOperationLease()
     {
         await using var fixture = await RemoteFixture.CreateAsync("1");
