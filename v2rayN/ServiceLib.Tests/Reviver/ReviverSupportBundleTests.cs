@@ -118,14 +118,18 @@ public class ReviverSupportBundleTests
         await bundle.Candidates[0].Mutations[0].To.Should().BeEqualTo(bundle.ResolvedAddressTokens[0]);
         await bundle.Evidence[0].Data["latencyMs"].Should().BeEqualTo("12.5");
         await bundle.Evidence[0].Data["latencyMs#2"].Should().BeEqualTo("13.5");
-        await bundle.Evidence[0].Data["numericToken"].StartsWith("tok:", StringComparison.Ordinal).Should().BeTrue();
+        await bundle.Evidence[0].Data.ContainsKey("numericToken").Should().BeFalse();
+        await bundle.Evidence[0].Data
+            .Count(x => x.Key.StartsWith("key:", StringComparison.Ordinal)
+                        && x.Value.StartsWith("tok:", StringComparison.Ordinal))
+            .Should().BeEqualTo(3);
         await bundle.Candidates[0].Mutations[1].Field.StartsWith("tok:", StringComparison.Ordinal).Should().BeTrue();
 
         foreach (var secret in new[]
                  {
                      host, ip, password, publicKey, path, "profile-private-id", "subscription-private-id",
                      "customer private remarks", "private-user", "private-grpc-service",
-                     "another-private-value", "token=secret", "fingerprint-secret.example",
+                     "another-private-value", "token=secret", "numericToken", "fingerprint-secret.example",
                      "secret.example/private", "customer-secret-key.example",
                      "1234567890123456", "9876543210987654",
                  })
