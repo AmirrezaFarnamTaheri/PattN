@@ -44,11 +44,11 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
             {
                 return !process.HasExited;
             }
-            catch (InvalidOperationException)
+            catch (ObjectDisposedException)
             {
                 return false;
             }
-            catch (ObjectDisposedException)
+            catch (InvalidOperationException)
             {
                 return false;
             }
