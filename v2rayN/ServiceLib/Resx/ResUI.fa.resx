@@ -2017,4 +2017,121 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRollbackApplied" xml:space="preserve">
     <value>نسخه فهرست بازگردانی شد.</value>
   </data>
+  <data name="TbDNSNoResolverTelemetry" xml:space="preserve">
+    <value>هنوز داده‌ای از پایش حل‌کننده‌های DNS موجود نیست.</value>
+  </data>
+  <data name="TbDNSCatalogStatusNotLoaded" xml:space="preserve">
+    <value>وضعیت فهرست حل‌کننده‌ها هنوز بارگذاری نشده است.</value>
+  </data>
+  <data name="TbDNSNever" xml:space="preserve">
+    <value>هرگز</value>
+  </data>
+  <data name="TbDNSRepairPreviewInitial" xml:space="preserve">
+    <value>سلامت DNS را تازه‌سازی کنید، یک حل‌کننده را انتخاب کنید، سپس تغییرات دقیق را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDNSNoResolverHistory" xml:space="preserve">
+    <value>هنوز سابقه‌ای برای حل‌کننده‌ها وجود ندارد. برای جمع‌آوری داده، سلامت DNS را تازه‌سازی کنید.</value>
+  </data>
+  <data name="TbDNSNoOperationHistory" xml:space="preserve">
+    <value>هنوز هیچ اقدام DNS یا تعمیر ثبت نشده است.</value>
+  </data>
+  <data name="TbDNSSelectResolverAfterRefresh" xml:space="preserve">
+    <value>پس از تازه‌سازی زندهٔ سلامت DNS یک حل‌کننده را انتخاب کنید.</value>
+  </data>
+  <data name="TbDNSSelectedResolverPreviewFormat" xml:space="preserve">
+    <value>{0} انتخاب شد. پیش از اعمال، پیش‌نمایش را بررسی کنید.</value>
+  </data>
+  <data name="TbDNSRollbackAvailableFormat" xml:space="preserve">
+    <value>تعمیر DNS مربوط به فهرست {0} را می‌توان بازگرداند، مشروط به اینکه تنظیمات اعمال‌شده تغییری نکرده باشند.</value>
+  </data>
+  <data name="TbDNSHealthSummaryFormat" xml:space="preserve">
+    <value>{0} سالم · {1} تحت نظر · {2} ضعیف</value>
+  </data>
+  <data name="TbDNSCatalogAuditNotRun" xml:space="preserve">
+    <value>ممیزی فهرست هنوز اجرا نشده است.</value>
+  </data>
+  <data name="TbDNSCatalogFreshnessUnauditedFormat" xml:space="preserve">
+    <value>فهرست {0} · دادهٔ پایش در حافظه است؛ تازگی فهرست هنوز ممیزی نشده است</value>
+  </data>
+  <data name="TbDNSFresh" xml:space="preserve">
+    <value>تازه</value>
+  </data>
+  <data name="TbDNSStaleFormat" xml:space="preserve">
+    <value>{0} قدیمی</value>
+  </data>
+  <data name="TbDNSValid" xml:space="preserve">
+    <value>معتبر</value>
+  </data>
+  <data name="TbDNSInvalid" xml:space="preserve">
+    <value>نامعتبر</value>
+  </data>
+  <data name="TbDNSUnknownTime" xml:space="preserve">
+    <value>زمان نامشخص</value>
+  </data>
+  <data name="TbDNSCatalogAuditSummaryFormat" xml:space="preserve">
+    <value>فهرست {0} · {1} · {2} (حداکثر سن {3} روز) · ممیزی‌شده در {4}</value>
+  </data>
+  <data name="TbDNSResolverDiagnosticsHint" xml:space="preserve">
+    <value>برای اجرای عیب‌یابی غیرمسدودکنندهٔ حل‌کننده‌ها، تازه‌سازی را اجرا کنید.</value>
+  </data>
+  <data name="TbDNSChooseResolverFirst" xml:space="preserve">
+    <value>ابتدا یک حل‌کننده را انتخاب کنید.</value>
+  </data>
+  <data name="TbDNSRepairPreviewResolverFormat" xml:space="preserve">
+    <value>حل‌کننده: {0}</value>
+  </data>
+  <data name="TbDNSRepairPreviewPolicyFormat" xml:space="preserve">
+    <value>سیاست: {0}</value>
+  </data>
+  <data name="TbDNSRepairPreviewHealthFormat" xml:space="preserve">
+    <value>سلامت فعلی: {0} / {1}</value>
+  </data>
+  <data name="TbDNSRepairPreviewCatalogFormat" xml:space="preserve">
+    <value>فهرست: {0}</value>
+  </data>
+  <data name="TbDNSRepairPreviewRemoteFormat" xml:space="preserve">
+    <value>RemoteDNS: {0} → {1}</value>
+  </data>
+  <data name="TbDNSRepairPreviewBootstrapFormat" xml:space="preserve">
+    <value>BootstrapDNS: {0} → {1}</value>
+  </data>
+  <data name="TbDNSRepairPreviewChangedFieldsFormat" xml:space="preserve">
+    <value>فیلدهای تغییرکرده: {0}</value>
+  </data>
+  <data name="TbDNSRepairBlockedCatalog" xml:space="preserve">
+    <value>اعمال مسدود است: ممیزی فهرست حل‌کننده‌ها موجود نیست، نامعتبر است یا قدیمی شده است.</value>
+  </data>
+  <data name="TbDNSRepairBlockedTelemetry" xml:space="preserve">
+    <value>اعمال مسدود است: دادهٔ پایش فعلی حل‌کننده، معیار ایمنی زنده را برآورده نمی‌کند.</value>
+  </data>
+  <data name="TbDNSRepairBlockedSimpleDns" xml:space="preserve">
+    <value>اعمال مسدود است: Simple DNS در حال حاضر به‌دلیل تنظیمات DNS سفارشی غیرفعال است.</value>
+  </data>
+  <data name="TbDNSRepairPreviewReady" xml:space="preserve">
+    <value>پیش‌نمایش آماده است. «اعمال» فوراً ذخیره می‌کند؛ «لغو» آن را برنمی‌گرداند. در صورت نیاز از «بازگردانی» استفاده کنید.</value>
+  </data>
+  <data name="TbDNSRepairPreviewBlocked" xml:space="preserve">
+    <value>پیش‌نمایش آماده است، اما اعمال به‌دلیل معیار ایمنی فعلی مسدود است.</value>
+  </data>
+  <data name="TbDNSRepairPreviewFirst" xml:space="preserve">
+    <value>پیش از اعمال، حل‌کنندهٔ فعلی را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDNSApplySafetyBlocked" xml:space="preserve">
+    <value>تا زمانی که Simple DNS فعال نباشد و یک فهرست تازه و معتبر همراه با پایش زندهٔ ایمنِ حل‌کننده در دسترس نباشد، اعمال مسدود است.</value>
+  </data>
+  <data name="TbDNSPreviewChangedDuringConfirm" xml:space="preserve">
+    <value>پیش‌نمایش تعمیر DNS هنگام تأیید تغییر کرد. پیش از اعمال دوباره پیش‌نمایش بگیرید.</value>
+  </data>
+  <data name="TbDNSAppliedResolverFormat" xml:space="preserve">
+    <value>{0} اعمال شد. تصویر قبلی Simple DNS برای بازگردانی در دسترس است.</value>
+  </data>
+  <data name="TbDNSNoRepairToRollback" xml:space="preserve">
+    <value>هیچ تعمیر DNS اعمال‌شده‌ای برای بازگردانی وجود ندارد.</value>
+  </data>
+  <data name="TbDNSRollbackExact" xml:space="preserve">
+    <value>تعمیر DNS دقیقاً به تصویر قبلی Simple DNS بازگردانده شد.</value>
+  </data>
+  <data name="TbDNSRollbackEarlierAvailable" xml:space="preserve">
+    <value>تعمیر DNS یک مرحله بازگردانده شد. یک تعمیر DNS قدیمی‌تر هنوز برای بازگردانی در دسترس است.</value>
+  </data>
 </root>
