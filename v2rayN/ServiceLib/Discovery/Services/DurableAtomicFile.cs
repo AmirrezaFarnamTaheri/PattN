@@ -220,7 +220,7 @@ internal static class BoundedFileRead
         CancellationToken cancellationToken = default)
     {
         var bytes = await ReadAllBytesAsync(path, maximumBytes, cancellationToken);
-        return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+        return new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
             .GetString(bytes);
     }
 }
