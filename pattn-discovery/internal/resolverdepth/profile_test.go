@@ -1,6 +1,6 @@
 package resolverdepth
 
-import "testing"
+import (\n\t"bytes"\n\t"strings"\n\t"testing"\n)
 
 func TestDecodeTXTMultipleSegments(t *testing.T) {
 	got := decodeTXT([]byte{3, 'o', 'n', 'e', 3, 't', 'w', 'o'})
@@ -102,3 +102,23 @@ func TestEncryptedInternalDivergenceDoesNotCreateCrossTransportBaseline(t *testi
 		t.Fatalf("reasons=%v", result.InterceptionReasons)
 	}
 }
+
+func TestReadBoundedDoHMessageRejectsOversizedResponse(t *testing.T) {
+	payload := bytes.Repeat([]byte{0x2a}, maxDoHMessageBytes+1)
+	_, err := readBoundedDoHMessage(bytes.NewReader(payload))
+	if err == nil || !strings.Contains(err.Error(), "DoH response exceeds") {
+		t.Fatalf("expected explicit oversize error, got %v", err)
+	}
+}
+
+func TestReadBoundedDoHMessageAcceptsMaximumSizedResponse(t *testing.T) {
+	payload := bytes.Repeat([]byte{0x2a}, maxDoHMessageBytes)
+	got, err := readBoundedDoHMessage(bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("read maximum-sized response: %v", err)
+	}
+	if len(got) != len(payload) {
+		t.Fatalf("got %d bytes, want %d", len(got), len(payload))
+	}
+}
+
