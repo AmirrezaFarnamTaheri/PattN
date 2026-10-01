@@ -13,7 +13,8 @@ public sealed class RepairPromotionService(
     IRepairPromotionHistoryStore? historyStore = null,
     Func<string, Task<ProfileItem?>>? profileLoader = null,
     Func<Config, List<ProfileItem>, Task<int>>? removeServers = null,
-    Func<Config, Task<int>>? saveConfig = null)
+    Func<Config, Task<int>>? saveConfig = null,
+    Func<Config, ProfileItem, Task<int>>? addServer = null)
 {
     private readonly Func<string, Task<ProfileItem?>> _profileLoader =
         profileLoader ?? (id => AppManager.Instance.GetProfileItem(id));
@@ -21,6 +22,9 @@ public sealed class RepairPromotionService(
         removeServers ?? ((config, profiles) => ConfigHandler.RemoveServers(config, profiles));
     private readonly Func<Config, Task<int>> _saveConfig =
         saveConfig ?? (config => ConfigHandler.SaveConfig(config));
+    private readonly Func<Config, ProfileItem, Task<int>> _addServer =
+        addServer ?? ((config, profile) => ConfigHandler.AddServer(config, profile));
+
     public RepairPromotionPlan Prepare(RepairSession session, RepairCandidate candidate)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -106,7 +110,7 @@ public sealed class RepairPromotionService(
             throw new InvalidOperationException("Promotion plan was already consumed or modified: child already has an ID.");
         }
 
-        var result = await ConfigHandler.AddServer(config, child);
+        var result = await _addServer(config, child);
         if (result != 0 || child.IndexId.IsNullOrEmpty())
         {
             throw new InvalidOperationException("PattN failed to persist the repaired child profile.");
@@ -180,6 +184,10 @@ public sealed class RepairPromotionService(
             catch (Exception ex)
             {
                 Logging.SaveLog($"Repair promotion history write failed: {ex}");
+                throw new InvalidOperationException(
+                    "Repair promotion completed, but promotion history could not be persisted; " +
+                    "the promoted profile remains installed and state reconciliation is required.",
+                    ex);
             }
         }
 
@@ -300,6 +308,10 @@ public sealed class RepairPromotionService(
             catch (Exception ex)
             {
                 Logging.SaveLog($"Repair rollback history write failed: {ex}");
+                throw new InvalidOperationException(
+                    "Repair rollback completed, but rollback history could not be persisted; " +
+                    "the profile state is already changed and history reconciliation is required.",
+                    ex);
             }
         }
     }
