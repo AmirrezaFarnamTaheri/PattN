@@ -44,6 +44,10 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
             {
                 return !process.HasExited;
             }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
             catch (InvalidOperationException)
             {
                 return false;
