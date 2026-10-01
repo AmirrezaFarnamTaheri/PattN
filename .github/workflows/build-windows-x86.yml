@@ -13,7 +13,7 @@ on:
       - 'v2rayN/**'
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 jobs:
@@ -41,6 +41,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Purge SDKs
         shell: pwsh
@@ -61,7 +62,7 @@ jobs:
       - name: Setup .NET 10.0.1xx
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.1xx
+          dotnet-version: 10.0.111
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -294,7 +295,10 @@ jobs:
 
   release-x86:
     name: sign and upload windows x86
-    if: inputs.release_tag != ''
+    if: github.event_name != 'pull_request' && inputs.release_tag != ''
+    permissions:
+      contents: write
+      actions: read
     needs: package-x86
     strategy:
       fail-fast: false
