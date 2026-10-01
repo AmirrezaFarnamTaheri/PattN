@@ -33,6 +33,8 @@ public class ProviderAsnCatalogSignatureVerifierTests
         await result.Status.Should().BeEqualTo("valid");
         await result.KeyId.Should().BeEqualTo("release-key-1");
         await result.CatalogSha256.Should().BeEqualTo(catalog.Sha256);
+        await result.Revision.Should().BeEqualTo(1);
+        await result.ExpiresAt.Should().BeEqualTo(DateTimeOffset.Parse("2026-10-24T09:00:00Z"));
     }
 
     [Test]
@@ -79,6 +81,30 @@ public class ProviderAsnCatalogSignatureVerifierTests
             source);
         await tamperedSignature.Valid.Should().BeFalse();
         await tamperedSignature.Status.Should().BeEqualTo("signature-invalid");
+    }
+
+    [Test]
+    public async Task Verify_ShouldRejectMissingRevisionAndInvalidExpiry()
+    {
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var catalog = JsonProviderAsnEndpointCatalog.FromBytes(CatalogBytes("1"));
+        var source = new ProviderAsnCatalogRemoteSourceConfig
+        {
+            Uri = "https://catalog.example/catalog.json",
+            SignatureUri = "https://catalog.example/catalog.json.sig",
+            SignaturePolicy = ProviderAsnCatalogSignaturePolicy.Required,
+            TrustedKeyId = "release-key-1",
+            TrustedPublicKeySpkiBase64 = Convert.ToBase64String(signer.ExportSubjectPublicKeyInfo()),
+        };
+        var signedAt = DateTimeOffset.Parse("2026-09-24T09:00:00Z");
+
+        var missingRevision = Envelope(catalog, source.TrustedKeyId, signedAt) with { Revision = 0 };
+        var missingRevisionResult = ProviderAsnCatalogSignatureVerifier.Verify(catalog, missingRevision, source);
+        await missingRevisionResult.Status.Should().BeEqualTo("signature-revision-invalid");
+
+        var invalidExpiry = Envelope(catalog, source.TrustedKeyId, signedAt) with { ExpiresAt = signedAt };
+        var invalidExpiryResult = ProviderAsnCatalogSignatureVerifier.Verify(catalog, invalidExpiry, source);
+        await invalidExpiryResult.Status.Should().BeEqualTo("signature-expiry-invalid");
     }
 
     [Test]
@@ -145,7 +171,9 @@ public class ProviderAsnCatalogSignatureVerifierTests
             CatalogId = catalog.Document.Id,
             CatalogVersion = catalog.Document.Version,
             CatalogSha256 = catalog.Sha256,
+            Revision = 1,
             SignedAt = signedAt,
+            ExpiresAt = signedAt.AddDays(30),
         };
 
     private static byte[] CatalogBytes(string version)
