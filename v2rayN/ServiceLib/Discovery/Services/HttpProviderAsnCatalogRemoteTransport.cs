@@ -9,6 +9,8 @@ namespace ServiceLib.Discovery.Services;
 public sealed class HttpProviderAsnCatalogRemoteTransport : IProviderAsnCatalogRemoteTransport
 {
     private const int MaximumRedirects = 5;
+    private static readonly TimeSpan TotalFetchTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan IdleReadTimeout = TimeSpan.FromSeconds(10);
     private static readonly HttpClient SharedClient = CreateDefaultClient();
     private readonly HttpClient _client;
 
@@ -42,8 +44,11 @@ public sealed class HttpProviderAsnCatalogRemoteTransport : IProviderAsnCatalogR
         var pins = ProviderAsnCatalogTransportPinning.NormalizePins(request.TlsSpkiPinsSha256);
         using var pinnedClient = pins.Count > 0 ? CreatePinnedClient(pins) : null;
         var client = pinnedClient ?? _client;
+        using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        totalCts.CancelAfter(TotalFetchTimeout);
+        var fetchToken = totalCts.Token;
 
-        using var response = await SendWithRedirectPolicyAsync(client, request, cancellationToken);
+        using var response = await SendWithRedirectPolicyAsync(client, request, fetchToken);
         var finalUri = response.RequestMessage?.RequestUri ?? request.Uri;
         ValidateHttps(finalUri);
         EnsureSameAuthority(request.Uri, finalUri);
@@ -74,12 +79,14 @@ public sealed class HttpProviderAsnCatalogRemoteTransport : IProviderAsnCatalogR
                 $"Provider catalog response exceeds the {request.MaximumBytes}-byte limit.");
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(fetchToken);
         using var memory = new MemoryStream();
         var buffer = new byte[64 * 1024];
         while (true)
         {
-            var read = await stream.ReadAsync(buffer, cancellationToken);
+            using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(fetchToken);
+            idleCts.CancelAfter(IdleReadTimeout);
+            var read = await stream.ReadAsync(buffer, idleCts.Token);
             if (read == 0)
             {
                 break;
@@ -89,7 +96,7 @@ public sealed class HttpProviderAsnCatalogRemoteTransport : IProviderAsnCatalogR
                 throw new InvalidOperationException(
                     $"Provider catalog response exceeds the {request.MaximumBytes}-byte limit.");
             }
-            await memory.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            await memory.WriteAsync(buffer.AsMemory(0, read), fetchToken);
         }
 
         return new ProviderAsnCatalogRemoteTransportResponse
