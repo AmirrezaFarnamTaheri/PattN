@@ -276,6 +276,53 @@ public class RepairPromotionServiceTests
     }
 
     [Test]
+    public async Task Rollback_ShouldRejectEmptyPreviousDefaultBeforeMutation()
+    {
+        var promoted = new ProfileItem { IndexId = "promoted", Address = "203.0.113.10", Port = 443 };
+        var config = new Config { IndexId = promoted.IndexId };
+        var saveCount = 0;
+        var removeCount = 0;
+
+        var service = new RepairPromotionService(
+            profileLoader: id => Task.FromResult<ProfileItem?>(id == promoted.IndexId ? promoted : null),
+            removeServers: (_, _) =>
+            {
+                removeCount++;
+                return Task.FromResult(0);
+            },
+            saveConfig: _ =>
+            {
+                saveCount++;
+                return Task.FromResult(0);
+            });
+
+        var receipt = new RepairPromotionReceipt
+        {
+            SessionId = "session",
+            CandidateId = "candidate",
+            OriginalProfileId = "original",
+            PromotedProfileId = promoted.IndexId,
+            PreviousDefaultProfileId = string.Empty,
+            BecameDefault = true,
+        };
+
+        var threw = false;
+        try
+        {
+            await service.RollbackAsync(config, receipt);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("no previous default", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+        await config.IndexId.Should().BeEqualTo(promoted.IndexId);
+        await saveCount.Should().BeEqualTo(0);
+        await removeCount.Should().BeEqualTo(0);
+    }
+
+    [Test]
     public async Task Prepare_ShouldRejectRuntimeValidatedCandidateBelowItsRecordedQuorum()
     {
         var profile = new ProfileItem { IndexId = "original", Address = "example.com", Port = 443 };
