@@ -1,5 +1,6 @@
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Services;
+using ServiceLib.Services;
 
 namespace ServiceLib.Reviver.Promotion;
 
@@ -47,6 +48,8 @@ public sealed class RepairPromotionService(
             SessionId = session.Id,
             CandidateId = candidate.Id,
             OriginalProfileId = session.Original.IndexId,
+            OriginalProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(
+                session.Original.CreateWorkingCopy()),
             ChildProfile = child,
             Mutations = candidate.Mutations.ToArray(),
             BaselineValidation = session.BaselineValidation,
@@ -65,6 +68,18 @@ public sealed class RepairPromotionService(
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(plan);
         cancellationToken.ThrowIfCancellationRequested();
+
+        var source = await _profileLoader(plan.OriginalProfileId)
+            ?? throw new InvalidOperationException("The source profile no longer exists; promotion was cancelled.");
+        if (plan.OriginalProfileFingerprint.IsNotEmpty()
+            && !string.Equals(
+                ProxyTestHistoryService.ComputeProfileFingerprint(source),
+                plan.OriginalProfileFingerprint,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "The source profile changed after repair validation; promotion was cancelled.");
+        }
 
         var previousDefault = config.IndexId;
         var child = plan.ChildProfile;
@@ -162,6 +177,12 @@ public sealed class RepairPromotionService(
         var promoted = await _profileLoader(receipt.PromotedProfileId);
         var wasDefault = string.Equals(config.IndexId, receipt.PromotedProfileId, StringComparison.Ordinal);
         var previousDefault = receipt.PreviousDefaultProfileId ?? string.Empty;
+
+        if (wasDefault && !receipt.BecameDefault)
+        {
+            throw new InvalidOperationException(
+                "The promoted profile was selected after promotion; rollback will not overwrite that newer user choice.");
+        }
 
         // Validate the replacement before touching durable state. A stale receipt must never make
         // the config point at a profile that no longer exists, nor may it name the child being removed.
