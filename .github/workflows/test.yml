@@ -75,6 +75,8 @@ jobs:
         pattn_xray_sha256 macos-arm64 >/dev/null
         pattn_core_bundle_blob_sha1 macos-64 >/dev/null
         pattn_core_bundle_blob_sha1 macos-arm64 >/dev/null
+        pattn_xray_sha256 windows-32 >/dev/null
+        pattn_singbox_sha256 windows-386 >/dev/null
 
         tmp="$(mktemp)"
         trap 'rm -f "$tmp"' EXIT
@@ -114,6 +116,27 @@ jobs:
 
         if grep -nE           'refs/heads/(master|main|release|rule-set)|releases/latest/download|dot\.net/v1/dotnet-install|bin/Release/net10\.0|MIN_KERNEL='           package-*.sh; then
           echo "::error::release packager reintroduced a mutable asset URL, hardcoded TFM path, or kernel heuristic"
+          exit 1
+        fi
+
+        if grep -nE 'refs/heads/(master|main|release|rule-set)|releases/latest/download' \
+          .github/workflows/build-windows-x86.yml; then
+          echo "::error::Windows x86 packaging reintroduced a mutable, unverified asset URL"
+          exit 1
+        fi
+
+        release_workflows=(
+          .github/workflows/abrupt-loss-durability.yml
+          .github/workflows/build-linux.yml
+          .github/workflows/build-osx.yml
+          .github/workflows/build-windows-x86.yml
+          .github/workflows/build.yml
+          .github/workflows/package-zip.yml
+          .github/workflows/test.yml
+          .github/workflows/upload-sign.yml
+        )
+        if grep -nE 'uses:[[:space:]]+(actions/|EnricoMi/)[^@]+@v[0-9]+' "${release_workflows[@]}"; then
+          echo "::error::release workflow reintroduced a mutable action major-version tag"
           exit 1
         fi
 
