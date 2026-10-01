@@ -36,22 +36,23 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
         get
         {
             var process = Volatile.Read(ref _process);
-            if (process is null)
-            {
-                return false;
-            }
-            try
-            {
-                return !process.HasExited;
-            }
-            catch (ObjectDisposedException)
-            {
-                return false;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
+            return process is not null && !HasExitedOrUnavailable(process);
+        }
+    }
+
+    private static bool HasExitedOrUnavailable(Process process)
+    {
+        try
+        {
+            return process.HasExited;
+        }
+        catch (ObjectDisposedException)
+        {
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return true;
         }
     }
 
@@ -805,7 +806,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
     {
         var process = Volatile.Read(ref _process);
         if (process is null
-            || process.HasExited
+            || HasExitedOrUnavailable(process)
             || (expectedProcess is not null && !ReferenceEquals(process, expectedProcess)))
         {
             return;
@@ -830,7 +831,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
     {
         var process = Volatile.Read(ref _process);
         if (process is null
-            || process.HasExited
+            || HasExitedOrUnavailable(process)
             || (expectedProcess is not null && !ReferenceEquals(process, expectedProcess)))
         {
             return;
