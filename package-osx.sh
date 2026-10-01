@@ -60,8 +60,13 @@ for f in geosite-category-ir.srs geoip-ir.srs; do
 done
 
 helper="$OutputPath/bin/pattn-discovery/pattn-discovery"
-[[ -s "$helper" && -x "$helper" ]] ||
-  die "Build artifact is missing executable pattn-discovery: $helper"
+[[ -s "$helper" ]] ||
+  die "Build artifact is missing pattn-discovery: $helper"
+# GitHub artifact extraction does not guarantee preservation of Unix executable mode.
+# Restore the expected mode only after confirming the helper payload exists.
+chmod 0755 "$helper"
+[[ -x "$helper" ]] ||
+  die "Build artifact pattn-discovery could not be made executable: $helper"
 
 PackagePath="v2rayN-Package-${Arch}"
 rm -rf "$PackagePath"
