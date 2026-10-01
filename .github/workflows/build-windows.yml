@@ -18,7 +18,7 @@ on:
       - 'v2rayN/**'
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 jobs:
@@ -31,9 +31,13 @@ jobs:
 
   release-zip:
     if: github.event_name == 'pull_request' || inputs.release_tag != ''
+    permissions:
+      contents: write
+      actions: read
     needs: build
     uses: ./.github/workflows/package-zip.yml
     with:
       target: windows
       release_tag: ${{ inputs.release_tag }}
-    secrets: inherit
+    secrets:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}

@@ -92,8 +92,8 @@ func ParseMessage(packet []byte, wantID uint16, wantName string, wantType uint16
 	if err != nil {
 		return Message{}, err
 	}
-	if offset > len(packet) {
-		return Message{}, fmt.Errorf("dns message overflow")
+	if offset != len(packet) {
+		return Message{}, fmt.Errorf("dns message has %d trailing bytes", len(packet)-offset)
 	}
 	return message, nil
 }

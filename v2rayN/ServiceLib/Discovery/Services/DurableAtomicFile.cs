@@ -21,7 +21,8 @@ internal static class DurableAtomicFile
         string destinationPath,
         ReadOnlyMemory<byte> bytes,
         Func<CancellationToken, Task>? beforeReplace = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action? afterReplace = null)
     {
         destinationPath = Path.GetFullPath(destinationPath);
         var directory = Path.GetDirectoryName(destinationPath)
@@ -57,6 +58,7 @@ internal static class DurableAtomicFile
             cancellationToken.ThrowIfCancellationRequested();
 
             Replace(temp, destinationPath);
+            afterReplace?.Invoke();
             FlushParentDirectory(directory);
         }
         finally

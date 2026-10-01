@@ -483,3 +483,17 @@ func TestResolverCatalogAuditRejectsAbsurdAgeWindow(t *testing.T) {
 		t.Fatalf("error=%+v", res.Error)
 	}
 }
+
+
+func TestDnsTraceRejectsTimeoutDurationOverflow(t *testing.T) {
+	params := json.RawMessage(`{"domain":"example.com","queryType":1,"timeoutMs":9223372036854775807}`)
+	res := New().Handle(context.Background(), protocol.Request{
+		Version: protocol.Version,
+		ID:      "timeout-overflow",
+		Method:  "dns.trace",
+		Params:  params,
+	})
+	if res.Error == nil || res.Error.Code != "invalid_params" {
+		t.Fatalf("error=%+v", res.Error)
+	}
+}

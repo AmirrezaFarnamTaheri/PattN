@@ -101,7 +101,9 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
             CatalogId = remote.Document.Id,
             CatalogVersion = remote.Document.Version,
             CatalogSha256 = remote.Sha256,
+            Revision = 2,
             SignedAt = DateTimeOffset.Parse("2026-09-24T09:00:00Z"),
+            ExpiresAt = DateTimeOffset.Parse("2026-10-24T09:00:00Z"),
             SignatureBase64 = Convert.ToBase64String(new byte[64]),
         };
         var signatureBytes = Encoding.UTF8.GetBytes(JsonUtils.Serialize(envelope, false));
@@ -389,6 +391,139 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
         }
 
         await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Configure_ShouldPreserveSignatureContinuityWhenSigningKeyIsUnchanged()
+    {
+        await using var fixture = await RemoteFixture.CreateAsync("1");
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var spki = Convert.ToBase64String(signer.ExportSubjectPublicKeyInfo());
+        var source = Source(fixture.Registry.Id, "old-sha");
+        source.Uri = "https://catalog.example/old.json";
+        source.SignatureUri = "https://catalog.example/old.json.sig";
+        source.SignaturePolicy = (int)ProviderAsnCatalogSignaturePolicy.Required;
+        source.TrustedKeyId = "release-key-1";
+        source.TrustedPublicKeySpkiBase64 = spki;
+        source.LastSignatureValid = true;
+        source.LastSignatureStatus = "valid";
+        source.LastSignatureKeyId = "release-key-1";
+        source.LastSignatureCatalogSha256 = "signed-sha";
+        source.LastSignatureSignedAtUnixMs = DateTimeOffset.Parse("2026-09-24T09:00:00Z").ToUnixTimeMilliseconds();
+        source.LastSignatureRevision = 7;
+        source.LastSignatureExpiresAtUnixMs = DateTimeOffset.Parse("2026-10-24T09:00:00Z").ToUnixTimeMilliseconds();
+        source.SignatureRevisionHighWatermark = 7;
+        source.SignatureRevisionHighWatermarkCatalogSha256 = "signed-sha";
+
+        var sourceStore = new FakeSourceStore(source);
+        var service = fixture.CreateService(sourceStore, new QueueTransport([]));
+
+        await service.ConfigureAsync(
+            fixture.Registry.Id,
+            new ProviderAsnCatalogRemoteSourceConfig
+            {
+                Uri = "https://catalog.example/new.json",
+                SignatureUri = "https://catalog.example/new.json.sig",
+                SignaturePolicy = ProviderAsnCatalogSignaturePolicy.Required,
+                TrustedKeyId = "release-key-1",
+                TrustedPublicKeySpkiBase64 = spki,
+            });
+
+        await sourceStore.Item.Should().NotBeNull();
+        await sourceStore.Item!.LastSignatureValid.Should().BeTrue();
+        await sourceStore.Item.LastSignatureStatus.Should().BeEqualTo("valid");
+        await sourceStore.Item.LastSignatureKeyId.Should().BeEqualTo("release-key-1");
+        await sourceStore.Item.LastSignatureCatalogSha256.Should().BeEqualTo("signed-sha");
+        await sourceStore.Item.LastSignatureSignedAtUnixMs.Should().BeEqualTo(
+            DateTimeOffset.Parse("2026-09-24T09:00:00Z").ToUnixTimeMilliseconds());
+        await sourceStore.Item.LastSignatureRevision.Should().BeEqualTo(7);
+        await sourceStore.Item.SignatureRevisionHighWatermark.Should().BeEqualTo(7);
+        await sourceStore.Item.SignatureRevisionHighWatermarkCatalogSha256.Should().BeEqualTo("signed-sha");
+        await sourceStore.Item.RemoteContentSha256.Should().BeEmpty();
+        await sourceStore.Item.ETag.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task FetchPreview_ShouldRejectLowerRevisionAfterSigningKeyRotation()
+    {
+        await using var fixture = await RemoteFixture.CreateAsync("1");
+        using var oldSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var newSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        var source = Source(fixture.Registry.Id, string.Empty);
+        source.SignaturePolicy = (int)ProviderAsnCatalogSignaturePolicy.Required;
+        source.SignatureUri = "https://catalog.example/catalog.json.sig";
+        source.TrustedKeyId = "old-key";
+        source.TrustedPublicKeySpkiBase64 = Convert.ToBase64String(oldSigner.ExportSubjectPublicKeyInfo());
+        source.SignatureRevisionHighWatermark = 10;
+        source.SignatureRevisionHighWatermarkCatalogSha256 = new string('a', 64);
+
+        var remoteBytes = CatalogBytes("2");
+        var remote = JsonProviderAsnEndpointCatalog.FromBytes(remoteBytes);
+        var signedAt = DateTimeOffset.Parse("2026-09-24T12:00:00Z");
+        var envelope = new ProviderAsnCatalogSignatureEnvelope
+        {
+            KeyId = "new-key",
+            CatalogId = remote.Document.Id,
+            CatalogVersion = remote.Document.Version,
+            CatalogSha256 = remote.Sha256,
+            Revision = 9,
+            SignedAt = signedAt,
+            ExpiresAt = signedAt.AddDays(30),
+        };
+        var signature = newSigner.SignData(
+            ProviderAsnCatalogSignatureVerifier.BuildSignedPayload(envelope),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        envelope = envelope with { SignatureBase64 = Convert.ToBase64String(signature) };
+
+        var sourceStore = new FakeSourceStore(source);
+        var transport = new QueueTransport(
+        [
+            new ProviderAsnCatalogRemoteTransportResponse
+            {
+                StatusCode = 200,
+                FinalUri = new Uri(source.Uri),
+                Bytes = remoteBytes,
+            },
+            new ProviderAsnCatalogRemoteTransportResponse
+            {
+                StatusCode = 200,
+                FinalUri = new Uri(source.SignatureUri),
+                Bytes = Encoding.UTF8.GetBytes(JsonUtils.Serialize(envelope, false)),
+            },
+        ]);
+        var service = fixture.CreateService(sourceStore, transport);
+
+        await service.ConfigureAsync(
+            fixture.Registry.Id,
+            new ProviderAsnCatalogRemoteSourceConfig
+            {
+                Uri = source.Uri,
+                SignatureUri = source.SignatureUri,
+                SignaturePolicy = ProviderAsnCatalogSignaturePolicy.Required,
+                TrustedKeyId = "new-key",
+                TrustedPublicKeySpkiBase64 = Convert.ToBase64String(newSigner.ExportSubjectPublicKeyInfo()),
+            },
+            now: DateTimeOffset.Parse("2026-09-24T11:00:00Z"));
+
+        await sourceStore.Item!.SignatureRevisionHighWatermark.Should().BeEqualTo(10);
+
+        var threw = false;
+        try
+        {
+            await service.FetchPreviewAsync(
+                fixture.Registry.Id,
+                DateTimeOffset.Parse("2026-09-24T13:00:00Z"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("high-water", StringComparison.OrdinalIgnoreCase)
+                    || ex.Message.Contains("rollback", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+        await sourceStore.Item.SignatureRevisionHighWatermark.Should().BeEqualTo(10);
     }
 
     [Test]

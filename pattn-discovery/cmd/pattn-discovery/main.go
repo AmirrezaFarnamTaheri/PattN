@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,10 +38,27 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 	defer stopServer()
 
 	const maxConcurrentUnary = 8
+	const maxConcurrentStreams = 2
 	unarySlots := make(chan struct{}, maxConcurrentUnary)
+	streamSlots := make(chan struct{}, maxConcurrentStreams)
 	var workers sync.WaitGroup
 	var activeMu sync.Mutex
 	activeUnary := make(map[string]context.CancelFunc)
+	// Handlers report request-level failures as responses and return non-nil only when emitting
+	// to the client fails. The first such failure stops all in-flight work and becomes run's result.
+	var runErrMu sync.Mutex
+	var runErr error
+	recordRunErr := func(err error) {
+		if err == nil || (errors.Is(err, context.Canceled) && ctx.Err() == nil) {
+			return
+		}
+		runErrMu.Lock()
+		if runErr == nil {
+			runErr = err
+			stopServer()
+		}
+		runErrMu.Unlock()
+	}
 
 	cancelUnary := func(requestID string) bool {
 		activeMu.Lock()
@@ -81,10 +99,25 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 			continue
 		}
 		if engine.IsStreamingMethod(req.Method) {
+			select {
+			case streamSlots <- struct{}{}:
+			default:
+				if err := emit(protocol.Response{
+					Version: protocol.Version,
+					ID: req.ID,
+					Error: &protocol.Error{Code: "server_busy", Message: "too many concurrent streaming requests"},
+				}); err != nil {
+					return err
+				}
+				continue
+			}
 			workers.Add(1)
 			go func(request protocol.Request) {
 				defer workers.Done()
-				_ = eng.HandleStream(serverCtx, request, emit)
+				defer func() { <-streamSlots }()
+				if err := eng.HandleStream(serverCtx, request, emit); err != nil {
+					recordRunErr(err)
+				}
 			}(req)
 			continue
 		}
@@ -132,7 +165,9 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 				delete(activeUnary, request.ID)
 				activeMu.Unlock()
 			}()
-			_ = eng.HandleStream(requestCtx, request, emit)
+			if err := eng.HandleStream(requestCtx, request, emit); err != nil {
+				recordRunErr(err)
+			}
 		}(req, requestCtx, cancel)
 	}
 	if err := scanner.Err(); err != nil {
@@ -142,5 +177,8 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 	}
 	stopServer()
 	workers.Wait()
-	return nil
+	runErrMu.Lock()
+	err := runErr
+	runErrMu.Unlock()
+	return err
 }

@@ -3,6 +3,14 @@ namespace ServiceLib.ViewModels;
 public partial class ProfilesViewModel
 {
     private readonly ProxyTestHistoryService _proxyTestHistoryService = new();
+    private int _historyOperationActive;
+
+    /// <summary>
+    /// True while any history refresh/preview/apply/rank operation runs. The four commands share
+    /// one gate so a destructive apply can never interleave with a rank or a second preview.
+    /// </summary>
+    [Reactive]
+    public partial bool HistoryBusy { get; set; }
 
     [Reactive]
     public partial string HistoryInsight { get; set; }
@@ -19,14 +27,40 @@ public partial class ProfilesViewModel
     {
         HistoryInsight = ResUI.TbProxyTestHistoryEmpty;
         HistoryPolicyPreview = ResUI.TbProxyTestHistoryPolicyPreviewEmpty;
-        RefreshTestHistoryCmd = ReactiveCommand.CreateFromTask(RefreshTestHistoryAsync);
-        PreviewTestHistoryPolicyCmd = ReactiveCommand.CreateFromTask(PreviewTestHistoryPolicyAsync);
-        ApplyTestHistoryPolicyCmd = ReactiveCommand.CreateFromTask(ApplyTestHistoryPolicyAsync);
-        RankByTestHistoryCmd = ReactiveCommand.CreateFromTask(RankByTestHistoryAsync);
+        var canRunHistoryOperation = this.WhenAnyValue(x => x.HistoryBusy).Select(busy => !busy);
+        RefreshTestHistoryCmd = ReactiveCommand.CreateFromTask(
+            () => RunHistoryOperationAsync(RefreshTestHistoryAsync), canRunHistoryOperation);
+        PreviewTestHistoryPolicyCmd = ReactiveCommand.CreateFromTask(
+            () => RunHistoryOperationAsync(PreviewTestHistoryPolicyAsync), canRunHistoryOperation);
+        ApplyTestHistoryPolicyCmd = ReactiveCommand.CreateFromTask(
+            () => RunHistoryOperationAsync(ApplyTestHistoryPolicyAsync), canRunHistoryOperation);
+        RankByTestHistoryCmd = ReactiveCommand.CreateFromTask(
+            () => RunHistoryOperationAsync(RankByTestHistoryAsync), canRunHistoryOperation);
 
         this.WhenAnyValue(x => x.SelectedProfile)
             .Where(x => x is not null && x.IndexId.IsNotEmpty())
             .SubscribeAsync(async profile => await RefreshSelectedHistoryInsightAsync(profile.IndexId));
+    }
+
+    private async Task RunHistoryOperationAsync(Func<Task> operation)
+    {
+        // CanExecute is observed asynchronously by bindings; the interlocked flag is the authoritative
+        // guard against a second invocation slipping in before HistoryBusy propagates.
+        if (Interlocked.Exchange(ref _historyOperationActive, 1) != 0)
+        {
+            return;
+        }
+
+        HistoryBusy = true;
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            HistoryBusy = false;
+            Volatile.Write(ref _historyOperationActive, 0);
+        }
     }
 
     private List<string> GetHistoryScopeIds()

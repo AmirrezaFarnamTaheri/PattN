@@ -27,4 +27,11 @@ public class ProviderAsnCatalogRemoteSourceItem
     public string LastSignatureKeyId { get; set; } = string.Empty;
     public string LastSignatureCatalogSha256 { get; set; } = string.Empty;
     public long? LastSignatureSignedAtUnixMs { get; set; }
+    public long? LastSignatureRevision { get; set; }
+    public long? LastSignatureExpiresAtUnixMs { get; set; }
+
+    // Monotonic anti-rollback state. This survives source URI, TLS pin, and signing-key
+    // reconfiguration so a newly trusted key cannot re-introduce an older signed catalog.
+    public long SignatureRevisionHighWatermark { get; set; }
+    public string SignatureRevisionHighWatermarkCatalogSha256 { get; set; } = string.Empty;
 }

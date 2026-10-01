@@ -15,8 +15,8 @@ SING_VER="${SING_VER:-}"
 PKGROOT="v2rayN-publish"
 PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 RPM_TOPDIR="${HOME}/rpmbuild"
-DOTNET_LOONGARCH_VERSION="10.0.111"
-DOTNET_LOONGARCH_TAG="v10.0.111-loongarch64"
+DOTNET_LOONGARCH_VERSION="$PATTN_LOONG_DOTNET_VERSION"
+DOTNET_LOONGARCH_TAG="$PATTN_LOONG_DOTNET_TAG"
 DOTNET_LOONGARCH_BASE="https://github.com/loongson/dotnet/releases/download"
 DOTNET_LOONGARCH_FILE="dotnet-sdk-${DOTNET_LOONGARCH_VERSION}-linux-loongarch64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_LOONGARCH_BASE}/${DOTNET_LOONGARCH_TAG}/${DOTNET_LOONGARCH_FILE}"
@@ -95,14 +95,14 @@ install_dependencies() {
   local tmp_dotnet=""
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y --nogpgcheck install \
+    sudo dnf -y install \
       rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang \
       glibc-devel kernel-headers libatomic file ca-certificates libicu \
       && install_ok=1
 
     mkdir -p "$HOME/.dotnet"
     tmp_dotnet="$(mktemp -d)"
-    curl -fL "$DOTNET_SDK_URL" -o "$tmp_dotnet/$DOTNET_LOONGARCH_FILE"
+    pattn_download_sha256 "$DOTNET_SDK_URL" "$tmp_dotnet/$DOTNET_LOONGARCH_FILE" "$PATTN_LOONG_DOTNET_SHA256"
     tar -C "$HOME/.dotnet" -xzf "$tmp_dotnet/$DOTNET_LOONGARCH_FILE"
     rm -rf "$tmp_dotnet"
 
@@ -166,13 +166,13 @@ choose_channel() {
 }
 
 get_latest_tag_latest() {
-  curl -fsSL "https://api.github.com/repos/2dust/v2rayN/releases/latest" \
+  curl -fsSL "https://api.github.com/repos/AmirrezaFarnamTaheri/PattN/releases/latest" \
     | jq -re '.tag_name' \
     | sed 's/^v//'
 }
 
 get_latest_tag_prerelease() {
-  curl -fsSL "https://api.github.com/repos/2dust/v2rayN/releases?per_page=20" \
+  curl -fsSL "https://api.github.com/repos/AmirrezaFarnamTaheri/PattN/releases?per_page=20" \
     | jq -re 'first(.[] | select(.prerelease == true) | .tag_name)' \
     | sed 's/^v//'
 }
@@ -236,9 +236,11 @@ resolve_version() {
 
       if git_try_checkout "$clean_ver"; then
         VERSION="$clean_ver"
+      elif [[ "${PATTN_SOURCE_PINNED:-0}" == "1" ]]; then
+        echo "[*] Source-pinned build: keeping checked-out tree for version ${clean_ver}."
+        VERSION="$clean_ver"
       else
-        echo "[WARN] Tag '${VERSION_ARG}' not found."
-        apply_channel_or_keep "$(choose_channel)"
+        die "Requested tag '${VERSION_ARG}' is absent; refusing to switch source."
       fi
     else
       apply_channel_or_keep "$(choose_channel)"
@@ -535,7 +537,7 @@ stage_discovery_helper() {
     }
     (
       cd "$SCRIPT_DIR/pattn-discovery"
-      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
+      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -buildvcs=false -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
     )
     chmod 0755 "$helper"
   fi

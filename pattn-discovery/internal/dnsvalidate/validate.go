@@ -124,7 +124,7 @@ func ValidateAt(ctx context.Context, domain string, qtype uint16, opts dnstrace.
 		return Result{}, err
 	}
 	result.SignerInspection = &inspection
-	chain, err := dnschain.Validate(ctx, signer, dnschain.Options{Trace: opts})
+	chain, err := dnschain.Validate(ctx, signer, dnschain.Options{Trace: opts, ValidationTime: validationTime})
 	if err != nil {
 		return Result{}, err
 	}
@@ -202,7 +202,7 @@ func validateAliasChain(
 			continue
 		}
 
-		chain, err := dnschain.Validate(ctx, signer, dnschain.Options{Trace: opts})
+		chain, err := dnschain.Validate(ctx, signer, dnschain.Options{Trace: opts, ValidationTime: validationTime})
 		if err != nil {
 			return nil, false, false, err
 		}

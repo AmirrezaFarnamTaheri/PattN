@@ -14,8 +14,9 @@ import (
 )
 
 type Options struct {
-	Trace        dnstrace.Options
-	TrustAnchors []dnssec.TrustAnchor
+	Trace          dnstrace.Options
+	TrustAnchors   []dnssec.TrustAnchor
+	ValidationTime time.Time
 }
 
 type Step struct {
@@ -68,6 +69,12 @@ func Validate(ctx context.Context, targetZone string, opts Options) (Result, err
 	if opts.Trace.Exchange == nil {
 		opts.Trace.Exchange = dnssecExchange
 	}
+	validationTime := opts.ValidationTime
+	if validationTime.IsZero() {
+		validationTime = time.Now()
+	}
+	validationTime = validationTime.UTC()
+
 	anchors := opts.TrustAnchors
 	if len(anchors) == 0 {
 		anchors = dnssec.IANARootTrustAnchors()
@@ -78,7 +85,7 @@ func Validate(ctx context.Context, targetZone string, opts Options) (Result, err
 		Status: StatusIndeterminate,
 	}
 
-	rootStep, err := authenticateRoot(ctx, opts.Trace, anchors)
+	rootStep, err := authenticateRoot(ctx, opts.Trace, anchors, validationTime)
 	if err != nil {
 		return Result{}, err
 	}
@@ -94,7 +101,7 @@ func Validate(ctx context.Context, targetZone string, opts Options) (Result, err
 	result.AuthenticatedZone = "."
 
 	for _, zone := range zonePath(targetZone) {
-		step, err := authenticateChild(ctx, parentZone, zone, parentKeys, opts.Trace)
+		step, err := authenticateChild(ctx, parentZone, zone, parentKeys, opts.Trace, validationTime)
 		if err != nil {
 			return Result{}, err
 		}
@@ -125,7 +132,7 @@ func Validate(ctx context.Context, targetZone string, opts Options) (Result, err
 	return result, nil
 }
 
-func authenticateRoot(ctx context.Context, traceOpts dnstrace.Options, anchors []dnssec.TrustAnchor) (Step, error) {
+func authenticateRoot(ctx context.Context, traceOpts dnstrace.Options, anchors []dnssec.TrustAnchor, validationTime time.Time) (Step, error) {
 	keyTrace, err := dnstrace.Trace(ctx, ".", dnswire.TypeDNSKEY, traceOpts)
 	if err != nil {
 		return Step{}, err
@@ -133,7 +140,7 @@ func authenticateRoot(ctx context.Context, traceOpts dnstrace.Options, anchors [
 	anchorRecords := dnssec.TrustAnchorRecords(anchors)
 	delegation := dnssec.ValidateDelegation(".", anchorRecords, keyTrace.WireAnswers)
 	matchedKeys := dnssec.MatchedKeyRecords(delegation, keyTrace.WireAnswers)
-	signatures := dnssec.ValidateDNSKEYRRSetWithKeys(".", keyTrace.WireAnswers, matchedKeys, time.Now())
+	signatures := dnssec.ValidateDNSKEYRRSetWithKeys(".", keyTrace.WireAnswers, matchedKeys, validationTime)
 	authenticated := dnssec.AnyValidSignature(signatures)
 	keys := []dnswire.ResourceRecord(nil)
 	if authenticated {
@@ -155,6 +162,7 @@ func authenticateChild(
 	parentZone, zone string,
 	parentKeys []dnswire.ResourceRecord,
 	traceOpts dnstrace.Options,
+	validationTime time.Time,
 ) (Step, error) {
 	dsTrace, err := dnstrace.Trace(ctx, zone, dnswire.TypeDS, traceOpts)
 	if err != nil {
@@ -162,7 +170,7 @@ func authenticateChild(
 	}
 	step := Step{Zone: zone, Parent: parentZone, DS: &dsTrace, Status: StatusIndeterminate}
 	if !hasType(dsTrace.WireAnswers, dnswire.TypeDS) {
-		if proof := authenticatedDSAbsenceProof(zone, dsTrace, parentKeys); proof != nil {
+		if proof := authenticatedDSAbsenceProof(zone, dsTrace, parentKeys, validationTime); proof != nil {
 			step.DSAbsenceProof = proof
 			step.DelegationAuthenticated = true
 			step.InsecureDelegation = true
@@ -172,7 +180,7 @@ func authenticateChild(
 		step.Status = StatusDSFailure
 		return step, nil
 	}
-	dsSignatures := dnssec.ValidateRRSet(zone, dnswire.TypeDS, dsTrace.WireAnswers, parentKeys, time.Now())
+	dsSignatures := dnssec.ValidateRRSet(zone, dnswire.TypeDS, dsTrace.WireAnswers, parentKeys, validationTime)
 	step.DSSignatures = dsSignatures
 	if !dnssec.AnyValidSignature(dsSignatures) {
 		step.Status = StatusDSFailure
@@ -192,7 +200,7 @@ func authenticateChild(
 		return step, nil
 	}
 	matchedKeys := dnssec.MatchedKeyRecords(delegation, keyTrace.WireAnswers)
-	keySignatures := dnssec.ValidateDNSKEYRRSetWithKeys(zone, keyTrace.WireAnswers, matchedKeys, time.Now())
+	keySignatures := dnssec.ValidateDNSKEYRRSetWithKeys(zone, keyTrace.WireAnswers, matchedKeys, validationTime)
 	step.DNSKEYSignatures = keySignatures
 	if !dnssec.AnyValidSignature(keySignatures) {
 		step.Status = StatusDNSKEYFailure
@@ -210,6 +218,7 @@ func authenticatedDSAbsenceProof(
 	zone string,
 	dsTrace dnstrace.Result,
 	parentKeys []dnswire.ResourceRecord,
+	validationTime time.Time,
 ) *dnssec.DenialProof {
 	if len(parentKeys) == 0 || len(dsTrace.WireAuthorities) == 0 {
 		return nil
@@ -226,7 +235,7 @@ func authenticatedDSAbsenceProof(
 			if _, seen := seenNSEC[owner]; seen {
 				continue
 			}
-			signatures := dnssec.ValidateRRSet(record.Name, dnswire.TypeNSEC, dsTrace.WireAuthorities, parentKeys, time.Now())
+			signatures := dnssec.ValidateRRSet(record.Name, dnswire.TypeNSEC, dsTrace.WireAuthorities, parentKeys, validationTime)
 			if !dnssec.AnyValidSignature(signatures) {
 				continue
 			}
@@ -241,7 +250,7 @@ func authenticatedDSAbsenceProof(
 			if _, seen := seenNSEC3[owner]; seen {
 				continue
 			}
-			signatures := dnssec.ValidateRRSet(record.Name, dnswire.TypeNSEC3, dsTrace.WireAuthorities, parentKeys, time.Now())
+			signatures := dnssec.ValidateRRSet(record.Name, dnswire.TypeNSEC3, dsTrace.WireAuthorities, parentKeys, validationTime)
 			if !dnssec.AnyValidSignature(signatures) {
 				continue
 			}
