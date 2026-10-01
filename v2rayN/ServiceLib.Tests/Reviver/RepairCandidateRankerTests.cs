@@ -82,4 +82,31 @@ public class RepairCandidateRankerTests
             },
         };
     }
+
+    [Test]
+    public async Task Score_ShouldNeutralizeNonFiniteMetrics()
+    {
+        var candidate = new RepairCandidate
+        {
+            SessionId = "session",
+            Profile = new ProfileItem(),
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence
+            {
+                Attempts = 3,
+                Successes = 2,
+                ConsecutiveSuccesses = 2,
+                LossRate = double.NaN,
+                MedianLatencyMs = double.PositiveInfinity,
+            },
+        };
+
+        var score = new RepairCandidateRanker().Score(candidate);
+
+        await double.IsFinite(score.Overall).Should().BeTrue();
+        await score.LossQuality.Should().BeEqualTo(0.5d);
+        await score.LatencyQuality.Should().BeEqualTo(0.5d);
+    }
+
 }
