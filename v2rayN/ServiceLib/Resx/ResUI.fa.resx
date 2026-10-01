@@ -2134,4 +2134,334 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDNSRollbackEarlierAvailable" xml:space="preserve">
     <value>تعمیر DNS یک مرحله بازگردانده شد. یک تعمیر DNS قدیمی‌تر هنوز برای بازگردانی در دسترس است.</value>
   </data>
+  <data name="menuDiscoveryManagement" xml:space="preserve">
+    <value>کشف و ترمیم</value>
+  </data>
+  <data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve">
+    <value>در حال اعمال پاک‌سازی نقاط پایانی…</value>
+  </data>
+  <data name="TbDiscoveryApplyingRetention" xml:space="preserve">
+    <value>در حال اعمال نگه‌داری چرخهٔ عمر…</value>
+  </data>
+  <data name="TbDiscoveryArchiveInspectionEmpty" xml:space="preserve">
+    <value>برای بررسی بایگانی بدون واردکردن آن، یک بایگانی انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryCatalogAuditEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ جزئیات ممیزی، یک فهرست انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryCatalogLabelUpdated" xml:space="preserve">
+    <value>برچسب فهرست به‌روزرسانی شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogMetadataRefreshed" xml:space="preserve">
+    <value>فرادادهٔ فهرست تازه‌سازی شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogPreviewPrepared" xml:space="preserve">
+    <value>پیش‌نمایش به‌روزرسانی فهرست آماده شد. پیش از اعمال آن را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryCatalogPreviewPreparedStale" xml:space="preserve">
+    <value>هنگام آماده‌سازی به‌روزرسانی، انتخاب فهرست تغییر کرد؛ پیش‌نمایش قدیمی کنار گذاشته شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogPreviewRequired" xml:space="preserve">
+    <value>ابتدا پیش‌نمایش به‌روزرسانی فهرست را آماده کنید.</value>
+  </data>
+  <data name="TbDiscoveryCatalogPreviewStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ پیش‌نمایش به‌روزرسانی لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogReregisteredDisabled" xml:space="preserve">
+    <value>فهرست دوباره در حالت غیرفعال ثبت شد. پیش از فعال‌سازی آن را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryCatalogUpdateApplied" xml:space="preserve">
+    <value>به‌روزرسانی فهرست اعمال و بازبینی ثبت شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogUpdatePreviewEmpty" xml:space="preserve">
+    <value>برای بررسی تغییرات پیش از اعمال، به‌روزرسانی را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryCompactingDatabase" xml:space="preserve">
+    <value>در حال فشرده‌سازی پایگاه‌دادهٔ SQLite…</value>
+  </data>
+  <data name="TbDiscoveryCompactionCompleted" xml:space="preserve">
+    <value>فشرده‌سازی پایگاه‌داده کامل شد.</value>
+  </data>
+  <data name="TbDiscoveryCompactionPrepared" xml:space="preserve">
+    <value>پیش‌نمایش فشرده‌سازی پایگاه‌داده آماده شد. پیش از اعمال آن را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryCompactionPreview" xml:space="preserve">
+    <value>برای بررسی وضعیت فعلی پایگاه‌داده، فشرده‌سازی را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryDisablingEndpoint" xml:space="preserve">
+    <value>در حال غیرفعال‌کردن نقطهٔ پایانی…</value>
+  </data>
+  <data name="TbDiscoveryEnablingEndpoint" xml:space="preserve">
+    <value>در حال فعال‌کردن نقطهٔ پایانی…</value>
+  </data>
+  <data name="TbDiscoveryEndpointCleanupApplied" xml:space="preserve">
+    <value>پاک‌سازی نقاط پایانی اعمال شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointCleanupPrepared" xml:space="preserve">
+    <value>پیش‌نمایش پاک‌سازی نقاط پایانی آماده شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointCleanupPreview" xml:space="preserve">
+    <value>برای بررسی نقاط پایانی تحت‌تأثیر، پاک‌سازی را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryEndpointCleanupResult" xml:space="preserve">
+    <value>اعمال شد: {0}/{1} حذف؛ {2} ورودی تغییرکرده نادیده گرفته شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointDisabled" xml:space="preserve">
+    <value>نقطهٔ پایانی غیرفعال شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointEnabled" xml:space="preserve">
+    <value>نقطهٔ پایانی فعال شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointHistoryEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ سابقه، یک نقطهٔ پایانی انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryEndpointLabelUpdated" xml:space="preserve">
+    <value>برچسب نقطهٔ پایانی به‌روزرسانی شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointPinned" xml:space="preserve">
+    <value>نقطهٔ پایانی پین شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointPoolRefreshed" xml:space="preserve">
+    <value>مخزن نقاط پایانی تازه‌سازی شد.</value>
+  </data>
+  <data name="TbDiscoveryEndpointUnpinned" xml:space="preserve">
+    <value>پین نقطهٔ پایانی برداشته شد.</value>
+  </data>
+  <data name="TbDiscoveryEnterHttpsCatalogUrl" xml:space="preserve">
+    <value>ابتدا یک نشانی HTTPS برای فهرست وارد کنید.</value>
+  </data>
+  <data name="TbDiscoveryFetchPreview" xml:space="preserve">
+    <value>برای مقایسهٔ فهرست راه‌دور پیش از اعمال، یک پیش‌نمایش دریافت کنید.</value>
+  </data>
+  <data name="TbDiscoveryFixPinEditor" xml:space="preserve">
+    <value>پیش از افزودن کلید مشاهده‌شده، ویرایشگر پین فعلی را اصلاح کنید.</value>
+  </data>
+  <data name="TbDiscoveryFixSpkiPins" xml:space="preserve">
+    <value>پیش از ذخیره، مجموعه پین‌های SPKI مربوط به HTTPS را اصلاح کنید.</value>
+  </data>
+  <data name="TbDiscoveryImportPreview" xml:space="preserve">
+    <value>پیش از واردکردن، پیکربندی اعتماد را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryInspectServerKeyFirst" xml:space="preserve">
+    <value>ابتدا کلید فعلی سرور HTTPS را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryInspectSpki" xml:space="preserve">
+    <value>برای مشاهدهٔ SPKI، کلید فعلی سرور را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryMaintenance" xml:space="preserve">
+    <value>نگه‌داری</value>
+  </data>
+  <data name="TbDiscoveryManagementDesc" xml:space="preserve">
+    <value>داده‌های کشف را بررسی کنید، منابع فهرست مورداعتماد را مدیریت کنید، ترمیم‌ها را ببینید و کارهای نگه‌داری را اجرا کنید. تغییرات فقط با انتخاب صریح شما انجام می‌شوند.</value>
+  </data>
+  <data name="TbDiscoveryManagementRefreshed" xml:space="preserve">
+    <value>داده‌های مدیریت کشف تازه‌سازی شد.</value>
+  </data>
+  <data name="TbDiscoveryNoExtraTlsPins" xml:space="preserve">
+    <value>اعتبارسنجی استاندارد گواهی فعال است؛ هیچ پین SPKI اضافی تنظیم نشده است.</value>
+  </data>
+  <data name="TbDiscoveryNoRemoteSource" xml:space="preserve">
+    <value>برای این فهرست هیچ منبع راه‌دوری تنظیم نشده است.</value>
+  </data>
+  <data name="TbDiscoveryOperationFailed" xml:space="preserve">
+    <value>عملیات ناموفق بود. برای جزئیات، شواهد ذخیره‌شده یا گزارش برنامه را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryPinningEndpoint" xml:space="preserve">
+    <value>در حال پین‌کردن نقطهٔ پایانی…</value>
+  </data>
+  <data name="TbDiscoveryPreparingCompaction" xml:space="preserve">
+    <value>در حال آماده‌سازی پیش‌نمایش فشرده‌سازی SQLite…</value>
+  </data>
+  <data name="TbDiscoveryPreparingEndpointCleanup" xml:space="preserve">
+    <value>در حال آماده‌سازی پیش‌نمایش پاک‌سازی نقاط پایانی…</value>
+  </data>
+  <data name="TbDiscoveryPreparingRetention" xml:space="preserve">
+    <value>در حال آماده‌سازی پیش‌نمایش نگه‌داری چرخهٔ عمر…</value>
+  </data>
+  <data name="TbDiscoveryPreviewChanged" xml:space="preserve">
+    <value>پیش‌نمایش تغییر کرده است. پیش از اعمال، یک پیش‌نمایش تازه را بررسی کنید.</value>
+  </data>
+  <data name="TbDiscoveryPreviewRequired" xml:space="preserve">
+    <value>پیش از اعمال این عملیات، آن را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryPromotionEventDetailsEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ جزئیات، یک رویداد انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryReady" xml:space="preserve">
+    <value>آماده</value>
+  </data>
+  <data name="TbDiscoveryRefreshingEndpointPool" xml:space="preserve">
+    <value>در حال تازه‌سازی مخزن نقاط پایانی…</value>
+  </data>
+  <data name="TbDiscoveryRefreshingRepairHistory" xml:space="preserve">
+    <value>در حال تازه‌سازی سابقهٔ ترمیم…</value>
+  </data>
+  <data name="TbDiscoveryRemoteExportStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ خروجی‌گرفتن از منبع راه‌دور لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteFetchStale" xml:space="preserve">
+    <value>هنگام دریافت، انتخاب فهرست تغییر کرد؛ پیش‌نمایش راه‌دور قدیمی کنار گذاشته شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteHealthDetailsEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ جزئیات سلامت ذخیره‌شده، یک منبع انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteHealthEmpty" xml:space="preserve">
+    <value>برای بارگذاری سلامت ذخیره‌شدهٔ منبع، تازه‌سازی کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteHealthRefreshed" xml:space="preserve">
+    <value>سلامت منبع راه‌دور از فرادادهٔ ذخیره‌شده تازه‌سازی شد. هیچ دریافت شبکه‌ای انجام نشد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteImportPreparedStale" xml:space="preserve">
+    <value>هنگام آماده‌سازی واردکردن، انتخاب فهرست تغییر کرد؛ پیش‌نمایش قدیمی کنار گذاشته شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteImportPreviewRequired" xml:space="preserve">
+    <value>ابتدا پیش‌نمایش واردکردن منبع راه‌دور را آماده کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteImportPreviewStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ پیش‌نمایش واردکردن منبع راه‌دور لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteImportWrongCatalog" xml:space="preserve">
+    <value>این پیش‌نمایش واردکردن متعلق به فهرست دیگری است؛ یک پیش‌نمایش تازه آماده کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemotePreviewNoUpdate" xml:space="preserve">
+    <value>پیش‌نمایش راه‌دور فعلی هیچ به‌روزرسانی فهرستی ندارد.</value>
+  </data>
+  <data name="TbDiscoveryRemotePreviewRequired" xml:space="preserve">
+    <value>ابتدا پیش‌نمایش فهرست راه‌دور را دریافت کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemotePreviewWrongCatalog" xml:space="preserve">
+    <value>پیش‌نمایش راه‌دور متعلق به فهرست دیگری است؛ یک پیش‌نمایش تازه دریافت کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteProvenanceDetailsEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ منشأ ذخیره‌شده، یک به‌روزرسانی انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteProvenanceEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ شواهد ذخیره‌شده از به‌روزرسانی‌های راه‌دور قبلی، جست‌وجو کنید.</value>
+  </data>
+  <data name="TbDiscoveryRemoteProvenanceRefreshed" xml:space="preserve">
+    <value>پرس‌وجوی منشأ راه‌دور از سابقهٔ محلی تازه‌سازی شد. هیچ دریافت شبکه‌ای انجام نشد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteRemovalStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ حذف منبع راه‌دور لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteSaveStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ ذخیرهٔ منبع راه‌دور لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteSaveTrustCancelled" xml:space="preserve">
+    <value>ذخیرهٔ منبع راه‌دور لغو شد؛ اعتماد انتقال موجود بدون تغییر باقی ماند.</value>
+  </data>
+  <data name="TbDiscoveryRemoteSourceSaved" xml:space="preserve">
+    <value>منبع فهرست راه‌دور ذخیره شد. هیچ بایت فهرستی تغییر نکرد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteTrustImported" xml:space="preserve">
+    <value>پیکربندی اعتماد منبع راه‌دور وارد شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteUpdateApplied" xml:space="preserve">
+    <value>به‌روزرسانی فهرست راه‌دور از مسیر بازبینی اعمال شد.</value>
+  </data>
+  <data name="TbDiscoveryRepairHistoryEmpty" xml:space="preserve">
+    <value>برای بارگذاری سابقهٔ ترمیم تازه‌سازی کنید.</value>
+  </data>
+  <data name="TbDiscoveryRepairHistoryRefreshed" xml:space="preserve">
+    <value>سابقهٔ ترمیم تازه‌سازی شد.</value>
+  </data>
+  <data name="TbDiscoveryRetentionApplied" xml:space="preserve">
+    <value>نگه‌داری چرخهٔ عمر اعمال شد.</value>
+  </data>
+  <data name="TbDiscoveryRetentionPrepared" xml:space="preserve">
+    <value>پیش‌نمایش نگه‌داری چرخهٔ عمر آماده شد.</value>
+  </data>
+  <data name="TbDiscoveryRetentionPreview" xml:space="preserve">
+    <value>برای بررسی رکوردهایی که حذف خواهند شد، نگه‌داری را پیش‌نمایش کنید.</value>
+  </data>
+  <data name="TbDiscoveryRetentionResult" xml:space="preserve">
+    <value>اعمال شد: {0}/{1} حذف؛ {2} مورد از قبل وجود نداشت.</value>
+  </data>
+  <data name="TbDiscoveryRetiredArchiveRefreshed" xml:space="preserve">
+    <value>بایگانی فهرست بازنشسته تازه‌سازی شد.</value>
+  </data>
+  <data name="TbDiscoveryRetiredCatalogDetailsEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ سابقهٔ حفظ‌شده، یک فهرست بازنشسته انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryRetiredExportStale" xml:space="preserve">
+    <value>انتخاب فهرست بازنشسته تغییر کرد؛ خروجی‌گرفتن لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRevisionDetailsEmpty" xml:space="preserve">
+    <value>برای مشاهدهٔ جزئیات، یک بازبینی انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoverySelectCatalog" xml:space="preserve">
+    <value>ابتدا یک فهرست انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoverySelectEndpoint" xml:space="preserve">
+    <value>ابتدا یک نقطهٔ پایانی انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoverySelectRetiredCatalog" xml:space="preserve">
+    <value>ابتدا یک فهرست بازنشسته انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoverySelectRevision" xml:space="preserve">
+    <value>ابتدا یک بازبینی فهرست انتخاب کنید.</value>
+  </data>
+  <data name="TbDiscoveryStatus" xml:space="preserve">
+    <value>وضعیت</value>
+  </data>
+  <data name="TbDiscoveryTlsObservationStale" xml:space="preserve">
+    <value>هنگام بررسی TLS، نشانی فهرست تغییر کرد؛ مشاهدهٔ قدیمی کنار گذاشته شد.</value>
+  </data>
+  <data name="TbDiscoveryUnpinningEndpoint" xml:space="preserve">
+    <value>در حال برداشتن پین نقطهٔ پایانی…</value>
+  </data>
+  <data name="TbDiscoveryUpdatingEndpointLabel" xml:space="preserve">
+    <value>در حال به‌روزرسانی برچسب نقطهٔ پایانی…</value>
+  </data>
+  <data name="TbDiscoveryWorking" xml:space="preserve">
+    <value>در حال کار…</value>
+  </data>
+  <data name="TbDNS" xml:space="preserve">
+    <value>DNS</value>
+  </data>
+  <data name="TbDNSCatalogStatus" xml:space="preserve">
+    <value>فهرست حل‌کننده‌ها</value>
+  </data>
+  <data name="TbDNSHealthAdvisory" xml:space="preserve">
+    <value>بررسی‌های زندهٔ حل‌کننده‌ها جنبهٔ راهنما دارند و تنظیمات DNS را به‌طور خودکار تغییر نمی‌دهند.</value>
+  </data>
+  <data name="TbDNSHealthError" xml:space="preserve">
+    <value>عیب‌یابی</value>
+  </data>
+  <data name="TbDNSHealthLastUpdated" xml:space="preserve">
+    <value>آخرین به‌روزرسانی</value>
+  </data>
+  <data name="TbDNSHealthRefresh" xml:space="preserve">
+    <value>تازه‌سازی سلامت DNS</value>
+  </data>
+  <data name="TbDNSHealthSummary" xml:space="preserve">
+    <value>خلاصهٔ سلامت</value>
+  </data>
+  <data name="TbDNSHistoryError" xml:space="preserve">
+    <value>عیب‌یابی سابقه</value>
+  </data>
+  <data name="TbDNSHistoryLastUpdated" xml:space="preserve">
+    <value>آخرین به‌روزرسانی سابقه</value>
+  </data>
+  <data name="TbDNSOperationHistory" xml:space="preserve">
+    <value>اقدام‌های اخیر DNS و ترمیم</value>
+  </data>
+  <data name="TbDNSResolverDetails" xml:space="preserve">
+    <value>جزئیات حل‌کننده</value>
+  </data>
+  <data name="TbDNSResolverHistory" xml:space="preserve">
+    <value>سابقهٔ حل‌کننده</value>
+  </data>
+  <data name="TbReviverDiagnosisLine" xml:space="preserve">
+    <value>تشخیص: {0}</value>
+  </data>
+  <data name="TbReviverEmptyValue" xml:space="preserve">
+    <value>(خالی)</value>
+  </data>
+  <data name="TbReviverMutationLine" xml:space="preserve">
+    <value>{0}: {1} → {2} ({3})</value>
+  </data>
+  <data name="TbReviverValidationLine" xml:space="preserve">
+    <value>اعتبارسنجی: {0}/{1} تلاش موفق؛ میانهٔ تأخیر {2}؛ افت {3}.</value>
+  </data>
 </root>
