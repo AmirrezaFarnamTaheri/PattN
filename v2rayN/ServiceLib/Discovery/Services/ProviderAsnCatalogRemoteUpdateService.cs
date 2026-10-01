@@ -149,11 +149,10 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             item.LastCheckedAtUnixMs = 0;
             item.LastFetchedAtUnixMs = null;
 
-            // Source URI, signature URI, policy, or TLS pin rotation must not silently
-            // erase the anti-rollback baseline when the signing key itself is unchanged.
-            // A signing-key rotation establishes a new trust root and intentionally starts
-            // a new continuity epoch; schema-v2 signed monotonic revisions will make that
-            // transition explicit rather than timestamp-only.
+            // Configuration changes may reset display/cache metadata, but the monotonic
+            // signature revision high-water mark below is deliberately never reset. That
+            // high-water state belongs to the registry identity, not to a particular URI,
+            // TLS pin set, or signing key.
             if (!preservesSignatureContinuity)
             {
                 item.LastSignatureValid = null;
@@ -161,6 +160,8 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
                 item.LastSignatureKeyId = string.Empty;
                 item.LastSignatureCatalogSha256 = string.Empty;
                 item.LastSignatureSignedAtUnixMs = null;
+                item.LastSignatureRevision = null;
+                item.LastSignatureExpiresAtUnixMs = null;
             }
         }
 
@@ -386,6 +387,27 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         item.LastSignatureKeyId = signatureValidation.KeyId;
         item.LastSignatureCatalogSha256 = signatureValidation.CatalogSha256;
         item.LastSignatureSignedAtUnixMs = signatureValidation.SignedAt?.ToUnixTimeMilliseconds();
+        item.LastSignatureRevision = signatureValidation.Revision;
+        item.LastSignatureExpiresAtUnixMs = signatureValidation.ExpiresAt?.ToUnixTimeMilliseconds();
+
+        if (signatureValidation.Attempted
+            && signatureValidation.Valid
+            && signatureValidation.Revision is long acceptedRevision)
+        {
+            if (acceptedRevision > item.SignatureRevisionHighWatermark)
+            {
+                item.SignatureRevisionHighWatermark = acceptedRevision;
+                item.SignatureRevisionHighWatermarkCatalogSha256 = signatureValidation.CatalogSha256;
+            }
+            else if (acceptedRevision == item.SignatureRevisionHighWatermark
+                     && item.SignatureRevisionHighWatermarkCatalogSha256.IsNullOrEmpty())
+            {
+                // Migration from a pre-high-water schema: bind the existing accepted
+                // revision to its content hash without lowering the revision.
+                item.SignatureRevisionHighWatermarkCatalogSha256 = signatureValidation.CatalogSha256;
+            }
+        }
+
         await sources.UpsertAsync(item, cancellationToken);
 
         ProviderAsnCatalogUpdatePlan? updatePlan = null;
@@ -686,6 +708,9 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             LastSignatureKeyId = item.LastSignatureKeyId,
             LastSignatureCatalogSha256 = item.LastSignatureCatalogSha256,
             LastSignatureSignedAt = FromUnixMs(item.LastSignatureSignedAtUnixMs),
+            LastSignatureRevision = item.LastSignatureRevision,
+            LastSignatureExpiresAt = FromUnixMs(item.LastSignatureExpiresAtUnixMs),
+            SignatureRevisionHighWatermark = item.SignatureRevisionHighWatermark,
         };
 
     public async Task<ProviderAsnCatalogRemoteApplyProvenanceView?> GetRevisionProvenanceAsync(
@@ -727,7 +752,9 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             SignatureStatus = signature?.Status ?? string.Empty,
             SignatureKeyId = signature?.KeyId ?? string.Empty,
             SignatureCatalogSha256 = signature?.CatalogSha256 ?? string.Empty,
+            SignatureRevision = signature?.Revision,
             SignatureSignedAtUnixMs = signature?.SignedAt?.ToUnixTimeMilliseconds(),
+            SignatureExpiresAtUnixMs = signature?.ExpiresAt?.ToUnixTimeMilliseconds(),
             CheckedAtUnixMs = preview.CheckedAt.ToUnixTimeMilliseconds(),
             AppliedAtUnixMs = revision.AppliedAt.ToUnixTimeMilliseconds(),
         };
