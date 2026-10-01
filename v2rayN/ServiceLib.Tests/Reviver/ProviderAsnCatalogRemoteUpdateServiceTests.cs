@@ -527,6 +527,39 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
     }
 
     [Test]
+    public async Task RemoveThenConfigure_ShouldPreserveSignatureRevisionHighWatermark()
+    {
+        await using var fixture = await RemoteFixture.CreateAsync("1");
+        var source = Source(fixture.Registry.Id, string.Empty);
+        source.SignatureRevisionHighWatermark = 10;
+        source.SignatureRevisionHighWatermarkCatalogSha256 = new string('a', 64);
+        var sourceStore = new FakeSourceStore(source);
+        var service = fixture.CreateService(sourceStore, new QueueTransport([]));
+
+        await service.RemoveAsync(fixture.Registry.Id);
+
+        await (await service.GetAsync(fixture.Registry.Id)).Should().BeNull();
+        await sourceStore.Item.Should().NotBeNull();
+        await sourceStore.Item!.RemovedAtUnixMs.Should().NotBeNull();
+        await sourceStore.Item.Uri.Should().BeEmpty();
+        await sourceStore.Item.TrustedPublicKeySpkiBase64.Should().BeEmpty();
+        await sourceStore.Item.SignatureRevisionHighWatermark.Should().BeEqualTo(10);
+        await sourceStore.Item.SignatureRevisionHighWatermarkCatalogSha256.Should().BeEqualTo(new string('a', 64));
+
+        await service.ConfigureAsync(
+            fixture.Registry.Id,
+            new ProviderAsnCatalogRemoteSourceConfig
+            {
+                Uri = "https://catalog.example/reconfigured.json",
+            });
+
+        await sourceStore.Item.RemovedAtUnixMs.Should().BeNull();
+        await sourceStore.Item.Uri.Should().BeEqualTo("https://catalog.example/reconfigured.json");
+        await sourceStore.Item.SignatureRevisionHighWatermark.Should().BeEqualTo(10);
+        await sourceStore.Item.SignatureRevisionHighWatermarkCatalogSha256.Should().BeEqualTo(new string('a', 64));
+    }
+
+    [Test]
     public async Task Configure_ShouldHonorCrossProcessRemoteOperationLease()
     {
         await using var fixture = await RemoteFixture.CreateAsync("1");
@@ -654,13 +687,23 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
             string registryId,
             CancellationToken cancellationToken = default)
             => Task.FromResult(
+                Item is not null
+                && Item.RegistryId == registryId
+                && Item.RemovedAtUnixMs is null
+                    ? Item
+                    : null);
+
+        public Task<ProviderAsnCatalogRemoteSourceItem?> GetIncludingRemovedAsync(
+            string registryId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(
                 Item is not null && Item.RegistryId == registryId ? Item : null);
 
         public Task<IReadOnlyList<ProviderAsnCatalogRemoteSourceItem>> ListAsync(
             int maxItems = 500,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProviderAsnCatalogRemoteSourceItem>>(
-                Item is null ? [] : [Item]);
+                Item is null || Item.RemovedAtUnixMs is not null ? [] : [Item]);
 
         public Task UpsertAsync(
             ProviderAsnCatalogRemoteSourceItem value,
