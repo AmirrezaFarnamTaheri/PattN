@@ -78,12 +78,12 @@ func main() {
 }
 
 
-var fuzzTargetArgCounts = map[string]int{
-	"FuzzParseMessage":     1,
-	"FuzzReadName":         2,
-	"FuzzParseDNSSECRData": 2,
-	"FuzzDnameSynthesis":   3,
-	"FuzzNDJSONFraming":    1,
+var fuzzTargetArgTypes = map[string][]string{
+	"FuzzParseMessage":     {"[]byte"},
+	"FuzzReadName":         {"[]byte", "uint16"},
+	"FuzzParseDNSSECRData": {"uint16", "[]byte"},
+	"FuzzDnameSynthesis":   {"string", "string", "string"},
+	"FuzzNDJSONFraming":    {"[]byte"},
 }
 
 func validateCorpusEntry(path string, raw []byte) error {
@@ -95,30 +95,34 @@ func validateCorpusEntry(path string, raw []byte) error {
 	}
 
 	target := filepath.Base(filepath.Dir(path))
-	want, ok := fuzzTargetArgCounts[target]
+	wantTypes, ok := fuzzTargetArgTypes[target]
 	if !ok {
 		return fmt.Errorf("unknown fuzz target %q", target)
 	}
 	values := lines[1:]
-	if len(values) != want {
-		return fmt.Errorf("fuzz target %s requires %d argument(s), corpus entry has %d", target, want, len(values))
+	if len(values) != len(wantTypes) {
+		return fmt.Errorf("fuzz target %s requires %d argument(s), corpus entry has %d", target, len(wantTypes), len(values))
 	}
 	for i, value := range values {
-		if err := validateFuzzValue(value); err != nil {
+		actualType, err := validateFuzzValue(value)
+		if err != nil {
 			return fmt.Errorf("argument %d: %w", i+1, err)
+		}
+		if actualType != wantTypes[i] {
+			return fmt.Errorf("argument %d: fuzz target %s requires %s, corpus entry uses %s", i+1, target, wantTypes[i], actualType)
 		}
 	}
 	return nil
 }
 
-func validateFuzzValue(value string) error {
+func validateFuzzValue(value string) (string, error) {
 	expr, err := parser.ParseExpr(strings.TrimSpace(value))
 	if err != nil {
-		return fmt.Errorf("invalid Go fuzz value: %w", err)
+		return "", fmt.Errorf("invalid Go fuzz value: %w", err)
 	}
 	call, ok := expr.(*ast.CallExpr)
 	if !ok || len(call.Args) != 1 {
-		return fmt.Errorf("fuzz value must be a single supported type conversion")
+		return "", fmt.Errorf("fuzz value must be a single supported type conversion")
 	}
 
 	supportedScalar := map[string]bool{
@@ -130,28 +134,36 @@ func validateFuzzValue(value string) error {
 	switch fun := call.Fun.(type) {
 	case *ast.Ident:
 		if !supportedScalar[fun.Name] {
-			return fmt.Errorf("unsupported fuzz value type %q", fun.Name)
+			return "", fmt.Errorf("unsupported fuzz value type %q", fun.Name)
 		}
 	case *ast.ArrayType:
 		elt, ok := fun.Elt.(*ast.Ident)
 		if fun.Len != nil || !ok || elt.Name != "byte" {
-			return fmt.Errorf("only []byte slice fuzz values are supported")
+			return "", fmt.Errorf("only []byte slice fuzz values are supported")
 		}
 	default:
-		return fmt.Errorf("unsupported fuzz value conversion")
+		return "", fmt.Errorf("unsupported fuzz value conversion")
+	}
+
+	var valueType string
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		valueType = fun.Name
+	case *ast.ArrayType:
+		valueType = "[]byte"
 	}
 
 	switch arg := call.Args[0].(type) {
 	case *ast.BasicLit:
-		return nil
+		return valueType, nil
 	case *ast.Ident:
 		if arg.Name == "true" || arg.Name == "false" {
-			return nil
+			return valueType, nil
 		}
 	case *ast.UnaryExpr:
 		if _, ok := arg.X.(*ast.BasicLit); ok {
-			return nil
+			return valueType, nil
 		}
 	}
-	return fmt.Errorf("unsupported fuzz value literal")
+	return "", fmt.Errorf("unsupported fuzz value literal")
 }
