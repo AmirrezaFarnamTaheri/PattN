@@ -239,9 +239,11 @@ resolve_version() {
 
       if git_try_checkout "$clean_ver"; then
         VERSION="$clean_ver"
+      elif [[ "${PATTN_SOURCE_PINNED:-0}" == "1" ]]; then
+        echo "[*] Source-pinned build: keeping checked-out tree for version ${clean_ver}."
+        VERSION="$clean_ver"
       else
-        echo "[WARN] Tag '${VERSION_ARG}' not found."
-        apply_channel_or_keep "$(choose_channel)"
+        die "Requested tag '${VERSION_ARG}' is absent; refusing to switch source."
       fi
     else
       apply_channel_or_keep "$(choose_channel)"
@@ -536,7 +538,7 @@ stage_discovery_helper() {
     }
     (
       cd "$SCRIPT_DIR/pattn-discovery"
-      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
+      CGO_ENABLED=0 GOOS=linux GOARCH="$goarch"         go build -buildvcs=false -trimpath -ldflags="-s -w" -o "$helper" ./cmd/pattn-discovery
     )
     chmod 0755 "$helper"
   fi
