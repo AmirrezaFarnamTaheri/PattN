@@ -267,7 +267,7 @@ public sealed class ProxyTestHistoryService
         return new(
             profileIndexId,
             diagnosticRows.Count,
-            windowCount > 0 ? failureCount : diagnosticRows.Count - successCount,
+            diagnosticRows.Count - successCount,
             consecutiveFailures,
             diagnosticRows.Count == 0 ? 0 : (double)successCount / diagnosticRows.Count,
             averageDelay,
