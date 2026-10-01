@@ -29,20 +29,8 @@ jobs:
         arch: [ x64, arm64 ]
     runs-on: ubuntu-latest
     env:
-      Target: |- 
-        ${{
-          case(
-            inputs.target == 'windows-desktop', 'windows',
-            inputs.target
-          )
-        }}
-      Arch: |-
-        ${{
-          case(
-            matrix.arch == 'x64', '64',
-            matrix.arch
-          ) 
-        }}
+      Target: ${{ case(inputs.target == 'windows-desktop', 'windows', inputs.target) }}
+      Arch: ${{ case(matrix.arch == 'x64', '64', matrix.arch) }}
     steps:
     - name: Checkout
       uses: actions/checkout@v7
