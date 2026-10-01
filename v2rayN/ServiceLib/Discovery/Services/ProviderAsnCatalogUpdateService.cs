@@ -131,8 +131,8 @@ public sealed class ProviderAsnCatalogUpdateService
                 plan.DestinationPath,
                 plan.AfterBytes,
                 plan.BeforeSha256,
-                cancellationToken);
-            replaced = true;
+                cancellationToken,
+                () => replaced = true);
 
             var written = await CurrentFingerprintAsync(plan.DestinationPath, cancellationToken);
             if (!string.Equals(written, plan.AfterSha256, StringComparison.Ordinal))
@@ -349,7 +349,8 @@ public sealed class ProviderAsnCatalogUpdateService
         string path,
         ReadOnlyMemory<byte> bytes,
         string? expectedCurrentFingerprint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action? afterReplace = null)
         => DurableAtomicFile.WriteAsync(
             path,
             bytes,
@@ -367,7 +368,8 @@ public sealed class ProviderAsnCatalogUpdateService
                         "Provider/ASN catalog changed while the replacement file was being prepared; refusing atomic replace.");
                 }
             },
-            cancellationToken);
+            cancellationToken,
+            afterReplace);
 
     private static async Task RestoreBeforeBestEffortAsync(
         ProviderAsnCatalogUpdatePlan plan,
