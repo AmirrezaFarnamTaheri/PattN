@@ -90,6 +90,81 @@ public class RepairPromotionServiceTests
 
 
     [Test]
+    public async Task Prepare_ShouldRejectUndeclaredProfileChanges()
+    {
+        var original = new ProfileItem
+        {
+            IndexId = "original",
+            ConfigType = EConfigType.VLESS,
+            Address = "old.example",
+            Port = 443,
+            Password = "11111111-1111-4111-8111-111111111111",
+        };
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(original) };
+        var repaired = JsonUtils.DeepCopy(original)!;
+        repaired.Password = "22222222-2222-4222-8222-222222222222";
+        var candidate = new RepairCandidate
+        {
+            Id = "candidate",
+            SessionId = session.Id,
+            Profile = repaired,
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence
+            {
+                Attempts = 1,
+                Successes = 1,
+                ConsecutiveSuccesses = 1,
+            },
+        };
+
+        var threw = false;
+        try
+        {
+            _ = new RepairPromotionService().Prepare(session, candidate);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("undeclared profile changes", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Prepare_ShouldRejectRuntimeValidatedCandidateWithoutSuccessfulAttempt()
+    {
+        var original = new ProfileItem { IndexId = "original" };
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(original) };
+        var candidate = new RepairCandidate
+        {
+            Id = "candidate",
+            SessionId = session.Id,
+            Profile = JsonUtils.DeepCopy(original)!,
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence
+            {
+                Attempts = 1,
+                Successes = 0,
+                ConsecutiveSuccesses = 0,
+            },
+        };
+
+        var threw = false;
+        try
+        {
+            _ = new RepairPromotionService().Prepare(session, candidate);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("successful validation attempt", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+    }
+
+    [Test]
     public async Task Promote_ShouldRejectSourceChangedAfterValidation()
     {
         var original = new ProfileItem
