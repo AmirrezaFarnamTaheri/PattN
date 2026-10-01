@@ -118,6 +118,48 @@ public sealed class RepairPromotionService(
 
         try
         {
+            var sourceAfterInsert = await _profileLoader(plan.OriginalProfileId);
+            if (sourceAfterInsert is null
+                || (plan.OriginalProfileFingerprint.IsNotEmpty()
+                    && !string.Equals(
+                        ProxyTestHistoryService.ComputeProfileFingerprint(sourceAfterInsert),
+                        plan.OriginalProfileFingerprint,
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "The source profile changed while the repaired child was being persisted.");
+            }
+        }
+        catch (Exception sourceRaceError)
+        {
+            var compensationErrors = new List<Exception>();
+            try
+            {
+                if (await _removeServers(config, [child]) != 0)
+                {
+                    compensationErrors.Add(new InvalidOperationException(
+                        "Failed to remove the repaired child after detecting a concurrent source change."));
+                }
+            }
+            catch (Exception ex)
+            {
+                compensationErrors.Add(ex);
+            }
+
+            if (compensationErrors.Count > 0)
+            {
+                throw new AggregateException(
+                    "The source profile changed during promotion and repaired-child cleanup was incomplete.",
+                    [sourceRaceError, .. compensationErrors]);
+            }
+
+            throw new InvalidOperationException(
+                "The source profile changed during promotion; the repaired child was removed. Prepare and validate a fresh repair.",
+                sourceRaceError);
+        }
+
+        try
+        {
             if (makeDefault)
             {
                 if (await ConfigHandler.SetDefaultServerIndex(config, child.IndexId) != 0)
@@ -208,6 +250,13 @@ public sealed class RepairPromotionService(
         {
             throw new InvalidOperationException(
                 "The promoted profile was selected after promotion; rollback will not overwrite that newer user choice.");
+        }
+
+        if (wasDefault && previousDefault.IsNullOrEmpty())
+        {
+            throw new InvalidOperationException(
+                "The promoted profile is currently selected, but the rollback receipt has no previous default. " +
+                "Select another live profile before rolling back so the active selection cannot become empty.");
         }
 
         // Validate the replacement before touching durable state. A stale receipt must never make
