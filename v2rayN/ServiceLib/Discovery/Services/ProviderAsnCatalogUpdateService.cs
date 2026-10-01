@@ -44,7 +44,10 @@ public sealed class ProviderAsnCatalogUpdateService
 
         var existed = File.Exists(path);
         var beforeBytes = existed
-            ? await File.ReadAllBytesAsync(path, cancellationToken)
+            ? await BoundedFileRead.ReadAllBytesAsync(
+                path,
+                ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+                cancellationToken)
             : [];
         var beforeSha = existed ? Fingerprint(beforeBytes) : MissingFingerprint;
 
@@ -338,7 +341,10 @@ public sealed class ProviderAsnCatalogUpdateService
         {
             return MissingFingerprint;
         }
-        var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+        var bytes = await BoundedFileRead.ReadAllBytesAsync(
+            path,
+            ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+            cancellationToken);
         return Fingerprint(bytes);
     }
 
