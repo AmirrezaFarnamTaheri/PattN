@@ -2,6 +2,11 @@ namespace ServiceLib.ViewModels;
 
 public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
 {
+    private const int MaximumMixedConcurrency = 128;
+    private const int MaximumSpeedTestTimeoutSeconds = 600;
+    private const int MaximumRetryCount = 20;
+    private const int MaximumHistoryRetentionDays = 3650;
+    private const int MaximumHistoryPolicyCount = 1000;
     public event EventHandler? RequestClose;
 
     #region Core
@@ -321,14 +326,14 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         }
         var hasWindowPolicy = HistoryPolicyFailureCount > 0 || HistoryPolicyWindowCount > 0;
         var hasAnyHistoryPolicy = hasWindowPolicy || HistoryPolicyConsecutiveFailures > 0;
-        if (MixedConcurrencyCount <= 0
-            || SpeedTestTimeout <= 0
-            || RetryEachProxyCount < 0
-            || RetryFailedAfterBatchCount < 0
-            || TestHistoryRetentionDays < 0
-            || HistoryPolicyFailureCount < 0
-            || HistoryPolicyWindowCount < 0
-            || HistoryPolicyConsecutiveFailures < 0
+        if (MixedConcurrencyCount is <= 0 or > MaximumMixedConcurrency
+            || SpeedTestTimeout is <= 0 or > MaximumSpeedTestTimeoutSeconds
+            || RetryEachProxyCount is < 0 or > MaximumRetryCount
+            || RetryFailedAfterBatchCount is < 0 or > MaximumRetryCount
+            || TestHistoryRetentionDays is < 0 or > MaximumHistoryRetentionDays
+            || HistoryPolicyFailureCount is < 0 or > MaximumHistoryPolicyCount
+            || HistoryPolicyWindowCount is < 0 or > MaximumHistoryPolicyCount
+            || HistoryPolicyConsecutiveFailures is < 0 or > MaximumHistoryPolicyCount
             || (hasWindowPolicy
                 && (HistoryPolicyFailureCount <= 0
                     || HistoryPolicyWindowCount <= 0
