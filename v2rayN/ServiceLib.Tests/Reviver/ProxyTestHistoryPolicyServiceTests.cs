@@ -193,6 +193,32 @@ public class ProxyTestHistoryPolicyServiceTests
     }
 
     [Test]
+    public async Task ComputeProfileFingerprint_IsStableAcrossStructuredExtraSerialization()
+    {
+        var first = new ProfileItem
+        {
+            ConfigType = EConfigType.VLESS,
+            CoreType = ECoreType.Xray,
+            Address = "example.com",
+            Port = 443,
+            Password = "11111111-1111-1111-1111-111111111111",
+            Network = "ws",
+            StreamSecurity = "tls",
+            ProtoExtra = """{"Flow":null,"VlessEncryption":"none"}""",
+            TransportExtra = """{"Host":"example.com","Path":null,"GrpcMode":null}"""
+        };
+        var second = JsonUtils.DeepCopy(first)!;
+        second.ProtoExtra = """{ "VlessEncryption":"none", "Flow":"" }""";
+        second.TransportExtra = """{ "GrpcMode":"", "Path":"", "Host":"example.com" }""";
+
+        var firstFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(first);
+        var secondFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(second);
+
+        await firstFingerprint.StartsWith("fp2:", StringComparison.Ordinal).Should().BeTrue();
+        await firstFingerprint.Should().BeEqualTo(secondFingerprint);
+    }
+
+    [Test]
     public async Task ComputeProfileFingerprint_ChangesWhenConnectionChanges()
     {
         var first = new ProfileItem
