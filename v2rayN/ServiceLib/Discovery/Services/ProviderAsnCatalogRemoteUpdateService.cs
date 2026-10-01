@@ -108,6 +108,13 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         var beforeRevision = existing is null
             ? null
             : ProviderAsnCatalogRemoteSourceRevisionProjector.Clone(existing);
+        var preservesSignatureContinuity = existing is not null
+                                           && !existing.TrustedPublicKeySpkiBase64.IsNullOrEmpty()
+                                           && string.Equals(
+                                               existing.TrustedPublicKeySpkiBase64.Trim(),
+                                               config.TrustedPublicKeySpkiBase64.Trim(),
+                                               StringComparison.Ordinal);
+
         var sameConfiguration = existing is not null
                                 && string.Equals(existing.Uri, catalogUri.AbsoluteUri, StringComparison.Ordinal)
                                 && string.Equals(existing.SignatureUri, signatureUri?.AbsoluteUri ?? string.Empty, StringComparison.Ordinal)
@@ -141,11 +148,20 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             item.CacheUpdatedAtUnixMs = 0;
             item.LastCheckedAtUnixMs = 0;
             item.LastFetchedAtUnixMs = null;
-            item.LastSignatureValid = null;
-            item.LastSignatureStatus = string.Empty;
-            item.LastSignatureKeyId = string.Empty;
-            item.LastSignatureCatalogSha256 = string.Empty;
-            item.LastSignatureSignedAtUnixMs = null;
+
+            // Source URI, signature URI, policy, or TLS pin rotation must not silently
+            // erase the anti-rollback baseline when the signing key itself is unchanged.
+            // A signing-key rotation establishes a new trust root and intentionally starts
+            // a new continuity epoch; schema-v2 signed monotonic revisions will make that
+            // transition explicit rather than timestamp-only.
+            if (!preservesSignatureContinuity)
+            {
+                item.LastSignatureValid = null;
+                item.LastSignatureStatus = string.Empty;
+                item.LastSignatureKeyId = string.Empty;
+                item.LastSignatureCatalogSha256 = string.Empty;
+                item.LastSignatureSignedAtUnixMs = null;
+            }
         }
 
         await sources.UpsertAsync(item, cancellationToken);
