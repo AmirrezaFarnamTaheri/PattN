@@ -1809,4 +1809,212 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>تگ "{0}" در EchOutbound قبلاً توسط outbound دیگری استفاده شده است</value>
   </data>
+
+  <data name="TbDNSRepairResolver" xml:space="preserve">
+    <value>حل‌کننده ترمیم DNS</value>
+  </data>
+  <data name="TbDNSRepairPreviewAction" xml:space="preserve">
+    <value>پیش‌نمایش تغییرات</value>
+  </data>
+  <data name="TbDNSRepairApplyAction" xml:space="preserve">
+    <value>اعمال ترمیم DNS</value>
+  </data>
+  <data name="TbDNSRepairRollbackAction" xml:space="preserve">
+    <value>بازگردانی ترمیم DNS</value>
+  </data>
+  <data name="TbDNSRepairPlan" xml:space="preserve">
+    <value>تغییراتی که اعمال می‌شوند</value>
+  </data>
+  <data name="TbDNSRepairStatus" xml:space="preserve">
+    <value>وضعیت ترمیم</value>
+  </data>
+  <data name="TbDNSRepairSafety" xml:space="preserve">
+    <value>پیش‌نمایش، تغییرات دقیق DNS را نشان می‌دهد. اعمال ترمیم فقط DNS راه‌دور و DNS راه‌انداز را تغییر می‌دهد و یک نسخه برای بازگردانی ذخیره می‌کند.</value>
+  </data>
+  <data name="TbConfirmDNSRepairApply" xml:space="preserve">
+    <value>این ترمیم DNS اکنون اعمال شود؟ فقط DNS راه‌دور و DNS راه‌انداز تغییر می‌کنند و یک نسخه برای بازگردانی ذخیره خواهد شد.</value>
+  </data>
+  <data name="TbConfirmDNSRepairRollback" xml:space="preserve">
+    <value>آخرین ترمیم DNS بازگردانی شود؟ اگر تنظیمات فعلی هنوز با ترمیم اعمال‌شده یکسان باشند، مقادیر قبلی DNS راه‌دور و DNS راه‌انداز بازیابی می‌شوند.</value>
+  </data>
+  <data name="TbDNSRepairApplyCancelled" xml:space="preserve">
+    <value>ترمیم DNS اعمال نشد.</value>
+  </data>
+  <data name="TbDNSRepairRollbackCancelled" xml:space="preserve">
+    <value>بازگردانی ترمیم DNS لغو شد.</value>
+  </data>
+  <data name="TbApplyCatalogUpdate" xml:space="preserve">
+    <value>اعمال به‌روزرسانی</value>
+  </data>
+  <data name="TbRollbackRevision" xml:space="preserve">
+    <value>بازگردانی نسخه</value>
+  </data>
+  <data name="TbApplyEndpointCleanup" xml:space="preserve">
+    <value>اعمال پاک‌سازی</value>
+  </data>
+  <data name="TbPreviewLifecycleRetention" xml:space="preserve">
+    <value>پیش‌نمایش نگه‌داری</value>
+  </data>
+  <data name="TbApplyLifecycleRetention" xml:space="preserve">
+    <value>اعمال نگه‌داری</value>
+  </data>
+  <data name="TbConfirmCatalogUpdate" xml:space="preserve">
+    <value>به‌روزرسانی آماده‌شده فهرست ارائه‌دهنده اعمال شود؟ پیش از هر تغییر، کنترل قدیمی‌نبودن طرح و نوشتن اتمی دوباره اجرا می‌شود.</value>
+  </data>
+  <data name="TbConfirmCatalogRollback" xml:space="preserve">
+    <value>نسخه انتخاب‌شده فهرست ارائه‌دهنده بازگردانی شود؟ ویرایش‌های جدیدتر و نسخه‌های غیرفعال همچنان با کنترل تداخل در لایه پشتیبان محافظت می‌شوند.</value>
+  </data>
+  <data name="TbConfirmEndpointCleanup" xml:space="preserve">
+    <value>طرح آماده‌شده پاک‌سازی مخزن نقطه‌های پایانی اعمال شود؟ ورودی‌هایی که پس از پیش‌نمایش تغییر کرده‌اند حذف نمی‌شوند.</value>
+  </data>
+  <data name="TbConfirmLifecycleRetention" xml:space="preserve">
+    <value>طرح آماده‌شده نگه‌داری چرخه‌عمر اعمال شود؟ فقط شناسه‌های ثابت‌شده در پیش‌نمایش امکان حذف دارند.</value>
+  </data>
+  <data name="TbUnregisterCatalog" xml:space="preserve">
+    <value>لغو ثبت فهرست</value>
+  </data>
+  <data name="TbConfirmCatalogUnregister" xml:space="preserve">
+    <value>ثبت فهرست ارائه‌دهنده انتخاب‌شده لغو شود؟ فایل JSON روی دیسک باقی می‌ماند و تاریخچه نسخه‌ها حفظ می‌شود.</value>
+  </data>
+  <data name="TbDiscardRetiredHistory" xml:space="preserve">
+    <value>حذف تاریخچه نسخه‌ها</value>
+  </data>
+  <data name="TbConfirmDiscardRetiredCatalogHistory" xml:space="preserve">
+    <value>تاریخچه نسخه‌های ذخیره‌شده این فهرست بازنشسته برای همیشه حذف شود؟ فایل فهرست نگه داشته می‌شود، اما شواهد بازگردانی قابل بازیابی نخواهند بود.</value>
+  </data>
+  <data name="TbDatabaseCompaction" xml:space="preserve">
+    <value>فشرده‌سازی پایگاه داده</value>
+  </data>
+  <data name="TbPreviewDatabaseCompaction" xml:space="preserve">
+    <value>پیش‌نمایش فشرده‌سازی</value>
+  </data>
+  <data name="TbApplyDatabaseCompaction" xml:space="preserve">
+    <value>فشرده‌سازی پایگاه داده</value>
+  </data>
+  <data name="TbConfirmDatabaseCompaction" xml:space="preserve">
+    <value>پایگاه داده SQLite اکنون فشرده شود؟ VACUUM فایل پایگاه داده را بازنویسی می‌کند و ممکن است موقتاً به فضای دیسک بیشتری نیاز داشته باشد. عملیات از نظر قدیمی‌شدن کنترل می‌شود اما قابل بازگشت نیست.</value>
+  </data>
+  <data name="TbRemoveRemoteSource" xml:space="preserve">
+    <value>حذف منبع راه‌دور</value>
+  </data>
+  <data name="TbApplyRemotePreview" xml:space="preserve">
+    <value>اعمال پیش‌نمایش راه‌دور</value>
+  </data>
+  <data name="TbConfirmRemoveRemoteCatalogSource" xml:space="preserve">
+    <value>پیکربندی منبع راه‌دور این فهرست، اعتبارسنج‌های کش و وضعیت امضا حذف شوند؟ فایل فهرست محلی و تاریخچه نسخه‌ها تغییر نمی‌کنند.</value>
+  </data>
+  <data name="TbApplyRemoteSourceImport" xml:space="preserve">
+    <value>اعمال واردکردن اعتماد</value>
+  </data>
+  <data name="TbConfirmRemoteSourceImport" xml:space="preserve">
+    <value>این پیکربندی اعتماد منبع راه‌دور اعمال شود؟ فقط تنظیمات منبع/اعتماد تغییر می‌کنند و هیچ محتوای فهرستی دریافت یا اعمال نمی‌شود.</value>
+  </data>
+  <data name="TbConfirmRemoveTlsPins" xml:space="preserve">
+    <value>ذخیره این منبع راه‌دور، {0} پین HTTPS SPKI موجود را حذف می‌کند. این کار مجموعه اعتماد انتقال فعلی را ضعیف یا تغییر می‌دهد. ادامه داده شود؟</value>
+  </data>
+  <data name="menuReviver" xml:space="preserve">
+    <value>ترمیم</value>
+  </data>
+  <data name="menuReviveSelectedProfile" xml:space="preserve">
+    <value>تشخیص و ترمیم</value>
+  </data>
+  <data name="menuCancelReviver" xml:space="preserve">
+    <value>لغو تحلیل ترمیم</value>
+  </data>
+  <data name="menuExportReviverSupportBundle" xml:space="preserve">
+    <value>خروجی بسته تشخیصی ترمیم</value>
+  </data>
+  <data name="TbReviverStatus" xml:space="preserve">
+    <value>وضعیت ترمیم</value>
+  </data>
+  <data name="TbReviverHelp" xml:space="preserve">
+    <value>یک پروفایل انتخاب‌شده را تشخیص و بررسی کنید. ترمیم‌ها ابتدا اعتبارسنجی می‌شوند و به‌صورت یک پروفایل فرزند جدید ذخیره می‌شوند؛ پروفایل منبع هرگز بازنویسی نمی‌شود.</value>
+  </data>
+  <data name="TbReviverDiagnosing" xml:space="preserve">
+    <value>در حال تشخیص پروفایل انتخاب‌شده و اعتبارسنجی گزینه‌های ترمیم محدود…</value>
+  </data>
+  <data name="TbReviverHealthy" xml:space="preserve">
+    <value>پروفایل اعتبارسنجی تکرارشونده هسته واقعی را با موفقیت گذراند. نیازی به ترمیم نبود.</value>
+  </data>
+  <data name="TbReviverUnsupported" xml:space="preserve">
+    <value>ترمیم خودکار برای این نوع پروفایل در دسترس نیست.</value>
+  </data>
+  <data name="TbReviverNoCandidate" xml:space="preserve">
+    <value>هیچ ترمیمی اعتبارسنجی تکرارشونده هسته واقعی را نگذرانْد. پروفایل منبع تغییر نکرد.</value>
+  </data>
+  <data name="TbReviverValidatedNotApplied" xml:space="preserve">
+    <value>یک ترمیم معتبر پیدا شد اما اعمال نشد.</value>
+  </data>
+  <data name="TbReviverPromoted" xml:space="preserve">
+    <value>یک پروفایل فرزند ترمیم‌شده ساخته شد. پروفایل منبع و پروفایل پیش‌فرض فعلی تغییر نکردند.</value>
+  </data>
+  <data name="TbReviverCancelling" xml:space="preserve">
+    <value>در حال لغو تحلیل ترمیم…</value>
+  </data>
+  <data name="TbReviverCancelled" xml:space="preserve">
+    <value>تحلیل ترمیم لغو شد یا زمان آن به پایان رسید. هیچ تغییری اعمال نشد.</value>
+  </data>
+  <data name="TbReviverExported" xml:space="preserve">
+    <value>بسته تشخیصی ترمیم ذخیره شد.</value>
+  </data>
+  <data name="TbReviverExportUnavailable" xml:space="preserve">
+    <value>پیش از خروجی گرفتن بسته تشخیصی، «تشخیص و ترمیم» را اجرا کنید.</value>
+  </data>
+  <data name="TbReviverAnalysisFailed" xml:space="preserve">
+    <value>تحلیل ترمیم ناموفق بود. هیچ تغییری اعمال نشد.</value>
+  </data>
+  <data name="TbReviverConfirmPromotion" xml:space="preserve">
+    <value>یک ترمیم، اعتبارسنجی تکرارشونده هسته واقعی را با موفقیت گذراند.\n\n{0}\n\nیک پروفایل ترمیم‌شده مستقل ساخته شود؟ پروفایل منبع و پروفایل پیش‌فرض فعلی تغییر نمی‌کنند.</value>
+  </data>
+  <data name="TbPreviewProxyTestHistoryPolicy" xml:space="preserve">
+    <value>پیش‌نمایش سیاست تاریخچه</value>
+  </data>
+  <data name="TbApplyProxyTestHistoryPolicy" xml:space="preserve">
+    <value>اعمال سیاست تاریخچه</value>
+  </data>
+  <data name="TbProxyTestHistory" xml:space="preserve">
+    <value>تاریخچه آزمون پراکسی</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyPreviewEmpty" xml:space="preserve">
+    <value>هیچ پیش‌نمایشی برای سیاست تاریخچه موجود نیست.</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyNoRules" xml:space="preserve">
+    <value>ابتدا در تنظیمات، یک قاعده شکست N از M یا قاعده شکست‌های پیاپی را فعال کنید.</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyNoMatches" xml:space="preserve">
+    <value>در حال حاضر هیچ پراکسی غیرفعالی با سیاست تاریخچه پیکربندی‌شده مطابقت ندارد.</value>
+  </data>
+  <data name="TbConfirmProxyTestHistoryPolicyApply" xml:space="preserve">
+    <value>پراکسی‌های غیرفعال نشان‌داده‌شده در این پیش‌نمایش حذف شوند؟ پروفایل فعال همیشه محافظت می‌شود.</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyApplied" xml:space="preserve">
+    <value>سیاست تاریخچه {0} پروفایل را حذف کرد؛ {1} پروفایل فعال محافظت شد.</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyPrepared" xml:space="preserve">
+    <value>پیش‌نمایش سیاست تاریخچه آماده شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogUnregisterStale" xml:space="preserve">
+    <value>انتخاب فهرست تغییر کرد؛ لغو ثبت انجام نشد.</value>
+  </data>
+  <data name="TbDiscoveryRetiredDiscardStale" xml:space="preserve">
+    <value>انتخاب فهرست بازنشسته تغییر کرد؛ حذف تاریخچه انجام نشد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteSourceRemoved" xml:space="preserve">
+    <value>پیکربندی منبع راه‌دور و فراداده کش حذف شدند. فایل فهرست تغییری نکرد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteApplyStale" xml:space="preserve">
+    <value>انتخاب فهرست یا پیش‌نمایش راه‌دور تغییر کرد؛ اعمال لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRemoteImportApplyStale" xml:space="preserve">
+    <value>انتخاب فهرست یا پیش‌نمایش واردکردن تغییر کرد؛ اعمال لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryCatalogApplyStale" xml:space="preserve">
+    <value>انتخاب فهرست یا پیش‌نمایش به‌روزرسانی تغییر کرد؛ اعمال لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRollbackStale" xml:space="preserve">
+    <value>انتخاب نسخه فهرست تغییر کرد؛ بازگردانی لغو شد.</value>
+  </data>
+  <data name="TbDiscoveryRollbackApplied" xml:space="preserve">
+    <value>نسخه فهرست بازگردانی شد.</value>
+  </data>
 </root>
