@@ -48,6 +48,10 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
             {
                 return false;
             }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
         }
     }
 
