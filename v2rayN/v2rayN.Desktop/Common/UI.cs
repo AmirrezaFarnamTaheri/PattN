@@ -47,7 +47,8 @@ internal class UI
             SuggestedFileName = suggestedFileName,
             ShowOverwritePrompt = true,
         };
-        if (filter.Contains("*.json", StringComparison.OrdinalIgnoreCase))
+        // Callers pass either a display filter ("JSON") or a pattern ("*.json"); both select JSON metadata.
+        if (filter.Contains("json", StringComparison.OrdinalIgnoreCase))
         {
             var json = new FilePickerFileType("JSON")
             {
