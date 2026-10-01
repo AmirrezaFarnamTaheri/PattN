@@ -18,6 +18,7 @@ public class RepairPromotionHistoryQueryServiceTests
                 EventKind = "promoted",
                 SessionId = "session-1",
                 CandidateId = "candidate-1",
+                StrategyId = "endpoint-replacement",
                 OriginalProfileId = "profile-1",
                 PromotedProfileId = "profile-2",
                 Score = 95,
@@ -63,6 +64,7 @@ public class RepairPromotionHistoryQueryServiceTests
                 EventKind = "rolled-back",
                 SessionId = "session-1",
                 CandidateId = "candidate-1",
+                StrategyId = "endpoint-replacement",
                 OriginalProfileId = "profile-1",
                 PromotedProfileId = "profile-2",
                 OutcomeVerdict = string.Empty,
@@ -77,7 +79,13 @@ public class RepairPromotionHistoryQueryServiceTests
         await summary.Rollbacks.Should().BeEqualTo(1);
         await summary.Improved.Should().BeEqualTo(1);
         await summary.Unknown.Should().BeEqualTo(1);
+        await summary.Strategies.Should().HaveCount(1);
+        await summary.Strategies[0].StrategyId.Should().BeEqualTo("endpoint-replacement");
+        await summary.Strategies[0].Promotions.Should().BeEqualTo(1);
+        await summary.Strategies[0].Rollbacks.Should().BeEqualTo(1);
+        await summary.Strategies[0].Improved.Should().BeEqualTo(1);
         await summary.Entries[0].EventKind.Should().BeEqualTo("rolled-back");
+        await summary.Entries[1].StrategyId.Should().BeEqualTo("endpoint-replacement");
         await summary.Entries[1].Mutations.Count.Should().BeEqualTo(1);
         await summary.Entries[1].BaselineValidation!.Successes.Should().BeEqualTo(1);
         await summary.Entries[1].CandidateValidation!.Successes.Should().BeEqualTo(3);
