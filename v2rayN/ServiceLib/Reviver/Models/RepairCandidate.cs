@@ -10,6 +10,7 @@ public sealed class RepairCandidate
     public ERepairFailureClass FailureClassAddressed { get; init; } = ERepairFailureClass.Unknown;
     public ERepairCandidateState State { get; set; } = ERepairCandidateState.Planned;
     public RepairValidationEvidence? Validation { get; set; }
+    public int RequiredRuntimeSuccesses { get; set; } = 2;
     public double? Score { get; set; }
     public RepairCandidateScore? ScoreBreakdown { get; set; }
 }
