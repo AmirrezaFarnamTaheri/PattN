@@ -746,8 +746,9 @@ func (e *Engine) runResolverDiscovery(parent context.Context, req protocol.Reque
 	if strings.TrimSpace(p.Domain) == "" {
 		p.Domain = "example.com"
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 1200
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 1200*time.Millisecond)
+	if timeoutErr != nil {
+		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}})
 	}
 	if p.Concurrency <= 0 {
 		p.Concurrency = 128
@@ -781,7 +782,7 @@ func (e *Engine) runResolverDiscovery(parent context.Context, req protocol.Reque
 	}
 
 	summary, err := resolverdiscovery.Run(scanCtx, resolverdiscovery.Options{
-		Ranges: ranges, Port: p.Port, Domain: p.Domain, Timeout: time.Duration(p.TimeoutMs) * time.Millisecond,
+		Ranges: ranges, Port: p.Port, Domain: p.Domain, Timeout: timeout,
 		Concurrency: p.Concurrency, MaxTargets: p.MaxTargets, Gate: session.gate,
 	}, resolverdiscovery.Callbacks{
 		Result: func(result resolverdiscovery.Result) error {
@@ -851,8 +852,9 @@ func (e *Engine) runTCPScan(parent context.Context, req protocol.Request, emit f
 	if len(ports) == 0 {
 		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: "at least one non-zero port is required"}})
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 1500
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 1500*time.Millisecond)
+	if timeoutErr != nil {
+		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}})
 	}
 	if p.Concurrency <= 0 {
 		p.Concurrency = 256
@@ -887,7 +889,7 @@ func (e *Engine) runTCPScan(parent context.Context, req protocol.Request, emit f
 	}
 
 	summary, err := scan.RunTCP(scanCtx, scan.TCPOptions{
-		Ranges: ranges, Ports: ports, Timeout: time.Duration(p.TimeoutMs) * time.Millisecond,
+		Ranges: ranges, Ports: ports, Timeout: timeout,
 		Concurrency: p.Concurrency, MaxTargets: p.MaxTargets, Gate: session.gate,
 	}, scan.TCPCallbacks{
 		Result: func(result scan.TCPResult) error {
@@ -1002,8 +1004,9 @@ func probeEndpoints(ctx context.Context, p endpointProbeParams) (endpointProbeRe
 	if p.MinSuccesses > p.Attempts {
 		return endpointProbeResponse{}, fmt.Errorf("minSuccesses cannot exceed attempts")
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 5000
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 5*time.Second)
+	if timeoutErr != nil {
+		return endpointProbeResponse{}, timeoutErr
 	}
 	if p.Scheme == "" {
 		p.Scheme = "https"
@@ -1036,7 +1039,7 @@ func probeEndpoints(ctx context.Context, p endpointProbeParams) (endpointProbeRe
 				Scheme:             p.Scheme,
 				Path:               p.Path,
 				Method:             p.Method,
-				Timeout:            time.Duration(p.TimeoutMs) * time.Millisecond,
+				Timeout:            timeout,
 				InsecureSkipVerify: p.InsecureSkipVerify,
 			})
 			if probeErr != nil {
