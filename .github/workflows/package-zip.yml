@@ -55,38 +55,53 @@ jobs:
         name: ${{ matrix.arch }}
         path: PattN-${{ env.Target }}-${{ env.Arch }}
 
-    - name: Get v2rayN-core-bin
+    - name: Bundle locked runtime assets
+      shell: bash
       run: |
-        wget -nv -O core-bin.zip "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/v2rayN-${Target}-${Arch}.zip"
+        set -euo pipefail
+        # shellcheck source=release-assets.lock.sh
+        source ./release-assets.lock.sh
+        rid="$Target-$Arch"
+
+        core_blob="$(pattn_core_bundle_blob_sha1 "$rid")" || {
+          echo "::error::no locked core bundle for $rid"
+          exit 1
+        }
+        core_url="https://raw.githubusercontent.com/2dust/v2rayN-core-bin/${PATTN_CORE_BIN_COMMIT}/v2rayN-${Target}-${Arch}.zip"
+        pattn_download_git_blob "$core_url" core-bin.zip "$core_blob"
         7z x -y core-bin.zip
         cp -an "v2rayN-$Target-$Arch/." "PattN-$Target-$Arch/"
 
-    - name: Bundle patterniha/Xray-core
-      run: |
-        set -euo pipefail
-        case "$Target-$Arch" in
+        case "$rid" in
           windows-64)    asset=Xray-windows-64.zip ;;
           windows-arm64) asset=Xray-windows-arm64-v8a.zip ;;
           linux-64)      asset=Xray-linux-64.zip ;;
           linux-arm64)   asset=Xray-linux-arm64-v8a.zip ;;
           macos-64)      asset=Xray-macos-64.zip ;;
           macos-arm64)   asset=Xray-macos-arm64-v8a.zip ;;
-          *) echo "::error::no Xray asset mapping for $Target-$Arch"; exit 1 ;;
+          *) echo "::error::no Xray asset mapping for $rid"; exit 1 ;;
         esac
-        wget -nv -O xray-core.zip "https://github.com/patterniha/Xray-core/releases/latest/download/$asset"
+        xray_sha="$(pattn_xray_sha256 "$rid")" || {
+          echo "::error::no locked Xray digest for $rid"
+          exit 1
+        }
+        pattn_download_sha256           "https://github.com/patterniha/Xray-core/releases/download/v${PATTN_XRAY_VERSION}/$asset"           xray-core.zip           "$xray_sha"
         7z x -y -oxray-core xray-core.zip
         mkdir -p "PattN-$Target-$Arch/bin/xray"
         cp -f xray-core/xray* "PattN-$Target-$Arch/bin/xray/"
         chmod +x "PattN-$Target-$Arch/bin/xray/xray" 2>/dev/null || true
 
-    - name: Bundle Chocolate4U geo files
-      run: |
-        set -euo pipefail
-        wget -nv -O "PattN-$Target-$Arch/bin/geosite.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geosite.dat"
-        wget -nv -O "PattN-$Target-$Arch/bin/geoip.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geoip.dat"
+        pattn_download_sha256           "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geosite.dat"           "PattN-$Target-$Arch/bin/geosite.dat"           "$PATTN_IRAN_GEOSITE_SHA256"
+        pattn_download_sha256           "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geoip.dat"           "PattN-$Target-$Arch/bin/geoip.dat"           "$PATTN_IRAN_GEOIP_SHA256"
+
         mkdir -p "PattN-$Target-$Arch/bin/srss"
-        wget -nv -O "PattN-$Target-$Arch/bin/srss/geosite-category-ir.srs" "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/rule-set/geosite-category-ir.srs"
-        wget -nv -O "PattN-$Target-$Arch/bin/srss/geoip-ir.srs" "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/rule-set/geoip-ir.srs"
+        for rule in geosite-category-ir.srs geoip-ir.srs; do
+          expected="$(pattn_raw_rule_blob_sha1 iran "$rule")" || {
+            echo "::error::no locked Iran rule digest for $rule"
+            exit 1
+          }
+          pattn_download_git_blob             "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/${PATTN_IRAN_SING_RULES_COMMIT}/$rule"             "PattN-$Target-$Arch/bin/srss/$rule"             "$expected"
+        done
 
     - name: Verify bundled pattn-discovery
       shell: bash
