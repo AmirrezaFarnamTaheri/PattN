@@ -211,7 +211,8 @@ public sealed class ProxyTestHistoryService
             config,
             profiles,
             persisted =>
-                expectedFingerprintById.TryGetValue(persisted.IndexId, out var expected)
+                !string.Equals(persisted.IndexId, config.IndexId, StringComparison.Ordinal)
+                && expectedFingerprintById.TryGetValue(persisted.IndexId, out var expected)
                 && string.Equals(
                     ComputeProfileFingerprint(persisted),
                     expected,
