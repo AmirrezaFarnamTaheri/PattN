@@ -7555,5 +7555,239 @@ namespace ServiceLib.Resx {
             }
         }
 
+        public static string TbDNSNoResolverTelemetry {
+            get {
+                return ResourceManager.GetString("TbDNSNoResolverTelemetry", resourceCulture);
+            }
+        }
+
+        public static string TbDNSCatalogStatusNotLoaded {
+            get {
+                return ResourceManager.GetString("TbDNSCatalogStatusNotLoaded", resourceCulture);
+            }
+        }
+
+        public static string TbDNSNever {
+            get {
+                return ResourceManager.GetString("TbDNSNever", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewInitial {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewInitial", resourceCulture);
+            }
+        }
+
+        public static string TbDNSNoResolverHistory {
+            get {
+                return ResourceManager.GetString("TbDNSNoResolverHistory", resourceCulture);
+            }
+        }
+
+        public static string TbDNSNoOperationHistory {
+            get {
+                return ResourceManager.GetString("TbDNSNoOperationHistory", resourceCulture);
+            }
+        }
+
+        public static string TbDNSSelectResolverAfterRefresh {
+            get {
+                return ResourceManager.GetString("TbDNSSelectResolverAfterRefresh", resourceCulture);
+            }
+        }
+
+        public static string TbDNSSelectedResolverPreviewFormat {
+            get {
+                return ResourceManager.GetString("TbDNSSelectedResolverPreviewFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRollbackAvailableFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRollbackAvailableFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSHealthSummaryFormat {
+            get {
+                return ResourceManager.GetString("TbDNSHealthSummaryFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSCatalogAuditNotRun {
+            get {
+                return ResourceManager.GetString("TbDNSCatalogAuditNotRun", resourceCulture);
+            }
+        }
+
+        public static string TbDNSCatalogFreshnessUnauditedFormat {
+            get {
+                return ResourceManager.GetString("TbDNSCatalogFreshnessUnauditedFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSFresh {
+            get {
+                return ResourceManager.GetString("TbDNSFresh", resourceCulture);
+            }
+        }
+
+        public static string TbDNSStaleFormat {
+            get {
+                return ResourceManager.GetString("TbDNSStaleFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSValid {
+            get {
+                return ResourceManager.GetString("TbDNSValid", resourceCulture);
+            }
+        }
+
+        public static string TbDNSInvalid {
+            get {
+                return ResourceManager.GetString("TbDNSInvalid", resourceCulture);
+            }
+        }
+
+        public static string TbDNSUnknownTime {
+            get {
+                return ResourceManager.GetString("TbDNSUnknownTime", resourceCulture);
+            }
+        }
+
+        public static string TbDNSCatalogAuditSummaryFormat {
+            get {
+                return ResourceManager.GetString("TbDNSCatalogAuditSummaryFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSResolverDiagnosticsHint {
+            get {
+                return ResourceManager.GetString("TbDNSResolverDiagnosticsHint", resourceCulture);
+            }
+        }
+
+        public static string TbDNSChooseResolverFirst {
+            get {
+                return ResourceManager.GetString("TbDNSChooseResolverFirst", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewResolverFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewResolverFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewPolicyFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewPolicyFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewHealthFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewHealthFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewCatalogFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewCatalogFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewRemoteFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewRemoteFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewBootstrapFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewBootstrapFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewChangedFieldsFormat {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewChangedFieldsFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairBlockedCatalog {
+            get {
+                return ResourceManager.GetString("TbDNSRepairBlockedCatalog", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairBlockedTelemetry {
+            get {
+                return ResourceManager.GetString("TbDNSRepairBlockedTelemetry", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairBlockedSimpleDns {
+            get {
+                return ResourceManager.GetString("TbDNSRepairBlockedSimpleDns", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewReady {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewReady", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewBlocked {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewBlocked", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRepairPreviewFirst {
+            get {
+                return ResourceManager.GetString("TbDNSRepairPreviewFirst", resourceCulture);
+            }
+        }
+
+        public static string TbDNSApplySafetyBlocked {
+            get {
+                return ResourceManager.GetString("TbDNSApplySafetyBlocked", resourceCulture);
+            }
+        }
+
+        public static string TbDNSPreviewChangedDuringConfirm {
+            get {
+                return ResourceManager.GetString("TbDNSPreviewChangedDuringConfirm", resourceCulture);
+            }
+        }
+
+        public static string TbDNSAppliedResolverFormat {
+            get {
+                return ResourceManager.GetString("TbDNSAppliedResolverFormat", resourceCulture);
+            }
+        }
+
+        public static string TbDNSNoRepairToRollback {
+            get {
+                return ResourceManager.GetString("TbDNSNoRepairToRollback", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRollbackExact {
+            get {
+                return ResourceManager.GetString("TbDNSRollbackExact", resourceCulture);
+            }
+        }
+
+        public static string TbDNSRollbackEarlierAvailable {
+            get {
+                return ResourceManager.GetString("TbDNSRollbackEarlierAvailable", resourceCulture);
+            }
+        }
+
     }
 }
