@@ -4,7 +4,7 @@ namespace ServiceLib.Discovery.Services;
 
 public static class ProviderAsnCatalogSignatureVerifier
 {
-    private const string DomainSeparator = "PattN provider catalog signature v1";
+    private const string DomainSeparator = "PattN provider catalog signature v2";
 
     public static ProviderAsnCatalogSignatureValidation Verify(
         JsonProviderAsnEndpointCatalog catalog,
@@ -240,6 +240,8 @@ public static class ProviderAsnCatalogSignatureVerifier
             Status = status,
             KeyId = envelope.KeyId,
             CatalogSha256 = catalogSha256,
+            Revision = envelope.Revision > 0 ? envelope.Revision : null,
             SignedAt = envelope.SignedAt == default ? null : envelope.SignedAt,
+            ExpiresAt = envelope.ExpiresAt == default ? null : envelope.ExpiresAt,
         };
 }
