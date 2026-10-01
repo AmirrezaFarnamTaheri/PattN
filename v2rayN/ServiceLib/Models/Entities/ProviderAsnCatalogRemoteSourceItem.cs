@@ -34,4 +34,8 @@ public class ProviderAsnCatalogRemoteSourceItem
     // reconfiguration so a newly trusted key cannot re-introduce an older signed catalog.
     public long SignatureRevisionHighWatermark { get; set; }
     public string SignatureRevisionHighWatermarkCatalogSha256 { get; set; } = string.Empty;
+
+    // A removed remote source keeps only its registry-scoped anti-rollback watermark.
+    // Null means the source is actively configured; non-null rows are hidden from normal reads.
+    public long? RemovedAtUnixMs { get; set; }
 }
