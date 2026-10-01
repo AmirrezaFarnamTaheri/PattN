@@ -420,7 +420,10 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         {
             var bytes = fetchedBytes
                 ? contentResponse.Bytes
-                : await File.ReadAllBytesAsync(registry.FilePath, cancellationToken);
+                : await BoundedFileRead.ReadAllBytesAsync(
+                    registry.FilePath,
+                    ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+                    cancellationToken);
             updatePlan = await catalogs.PrepareUpdateAsync(
                 registryId,
                 bytes,
