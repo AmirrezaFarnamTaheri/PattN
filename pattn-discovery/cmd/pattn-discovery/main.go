@@ -38,7 +38,9 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 	defer stopServer()
 
 	const maxConcurrentUnary = 8
+	const maxConcurrentStreams = 2
 	unarySlots := make(chan struct{}, maxConcurrentUnary)
+	streamSlots := make(chan struct{}, maxConcurrentStreams)
 	var workers sync.WaitGroup
 	var activeMu sync.Mutex
 	activeUnary := make(map[string]context.CancelFunc)
@@ -97,9 +99,22 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 			continue
 		}
 		if engine.IsStreamingMethod(req.Method) {
+			select {
+			case streamSlots <- struct{}{}:
+			default:
+				if err := emit(protocol.Response{
+					Version: protocol.Version,
+					ID: req.ID,
+					Error: &protocol.Error{Code: "server_busy", Message: "too many concurrent streaming requests"},
+				}); err != nil {
+					return err
+				}
+				continue
+			}
 			workers.Add(1)
 			go func(request protocol.Request) {
 				defer workers.Done()
+				defer func() { <-streamSlots }()
 				if err := eng.HandleStream(serverCtx, request, emit); err != nil {
 					recordRunErr(err)
 				}
