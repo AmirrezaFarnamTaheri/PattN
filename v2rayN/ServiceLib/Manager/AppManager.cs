@@ -151,6 +151,13 @@ public sealed class AppManager
                 """);
         });
         SQLiteHelper.Instance.CreateTable<RepairPromotionHistoryItem>();
+        SQLiteHelper.Instance.RunInTransaction(db =>
+        {
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_RepairPromotionHistory_StrategyTime
+                ON RepairPromotionHistoryItem (StrategyId, ObservedAtUnixMs DESC)
+                """);
+        });
         SQLiteHelper.Instance.CreateTable<FullConfigTemplateItem>();
 #pragma warning disable CS0618
         SQLiteHelper.Instance.CreateTable<ProfileGroupItem>();
