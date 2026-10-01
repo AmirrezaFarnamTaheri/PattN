@@ -109,6 +109,7 @@ public class RepairPromotionServiceTests
             Mutations = [],
             State = ERepairCandidateState.RuntimeValidated,
             Validation = new RepairValidationEvidence { Attempts = 1, Successes = 1, ConsecutiveSuccesses = 1 },
+            RequiredRuntimeSuccesses = 1,
         };
         var plan = new RepairPromotionService().Prepare(session, candidate);
         var edited = JsonUtils.DeepCopy(original)!;
@@ -271,6 +272,64 @@ public class RepairPromotionServiceTests
         await config.IndexId.Should().BeEqualTo("promoted");
         await saveCount.Should().BeEqualTo(0);
         await removeCount.Should().BeEqualTo(0);
+    }
+
+    [Test]
+    public async Task Prepare_ShouldRejectRuntimeValidatedCandidateBelowItsRecordedQuorum()
+    {
+        var profile = new ProfileItem { IndexId = "original", Address = "example.com", Port = 443 };
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(profile) };
+        var candidate = new RepairCandidate
+        {
+            SessionId = session.Id,
+            Profile = JsonUtils.DeepCopy(profile)!,
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence { Attempts = 3, Successes = 1, ConsecutiveSuccesses = 1 },
+            RequiredRuntimeSuccesses = 2,
+        };
+
+        var threw = false;
+        try
+        {
+            _ = new RepairPromotionService().Prepare(session, candidate);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("quorum", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Prepare_ShouldRejectUndeclaredCandidateMutation()
+    {
+        var profile = new ProfileItem { IndexId = "original", Address = "old.example", Port = 443 };
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(profile) };
+        var changed = JsonUtils.DeepCopy(profile)!;
+        changed.Address = "203.0.113.7";
+        var candidate = new RepairCandidate
+        {
+            SessionId = session.Id,
+            Profile = changed,
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence { Attempts = 2, Successes = 2, ConsecutiveSuccesses = 2 },
+            RequiredRuntimeSuccesses = 2,
+        };
+
+        var threw = false;
+        try
+        {
+            _ = new RepairPromotionService().Prepare(session, candidate);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("not declared", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
     }
 
     [Test]
