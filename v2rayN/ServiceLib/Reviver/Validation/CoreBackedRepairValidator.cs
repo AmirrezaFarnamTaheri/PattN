@@ -86,8 +86,20 @@ public sealed class CoreBackedRepairValidator(RepairPolicy? policy = null) : IRe
         {
             if (process is not null)
             {
-                await process.StopAsync();
-                process.Dispose();
+                try
+                {
+                    await process.StopAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup must not leak the process handle or mask the validation result when
+                    // a core has already exited during cancellation/startup failure.
+                    Logging.SaveLog(nameof(CoreBackedRepairValidator), ex);
+                }
+                finally
+                {
+                    process.Dispose();
+                }
             }
         }
     }
