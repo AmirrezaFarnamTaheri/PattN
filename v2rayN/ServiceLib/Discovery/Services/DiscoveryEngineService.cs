@@ -22,6 +22,9 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
     private Task? _stdoutLoop;
     private Task? _stderrLoop;
     private int _disposeState;
+    private int _consecutiveHelperFailures;
+    private long _nextStartAllowedUnixMs;
+    private const int MaxProtocolLineChars = 4 * 1024 * 1024;
 
     public DiscoveryEngineService(string? executablePath = null)
     {
@@ -33,7 +36,18 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
         get
         {
             var process = Volatile.Read(ref _process);
-            return process is not null && !process.HasExited;
+            if (process is null)
+            {
+                return false;
+            }
+            try
+            {
+                return !process.HasExited;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
         }
     }
 
@@ -582,6 +596,14 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
                 return;
             }
 
+            var nowUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var nextStartUnixMs = Volatile.Read(ref _nextStartAllowedUnixMs);
+            if (nextStartUnixMs > nowUnixMs)
+            {
+                throw new IOException(
+                    $"pattn-discovery restart is backing off for {nextStartUnixMs - nowUnixMs} ms after repeated failures.");
+            }
+
             var staleProcess = _process;
             var staleStdout = _stdoutLoop;
             if (staleProcess is not null)
@@ -625,10 +647,18 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
                 },
                 EnableRaisingEvents = false,
             };
-            if (!process.Start())
+            try
+            {
+                if (!process.Start())
+                {
+                    throw new InvalidOperationException("Failed to start pattn-discovery.");
+                }
+            }
+            catch
             {
                 process.Dispose();
-                throw new InvalidOperationException("Failed to start pattn-discovery.");
+                RegisterHelperFailure();
+                throw;
             }
 
             Interlocked.Exchange(ref _process, process);
@@ -647,7 +677,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var line = await process.StandardOutput.ReadLineAsync(cancellationToken);
+                var line = await ReadBoundedLineAsync(process.StandardOutput, MaxProtocolLineChars, cancellationToken);
                 if (line is null)
                 {
                     break;
@@ -671,6 +701,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
                 {
                     continue;
                 }
+                MarkHelperHealthy();
                 if (_streams.TryGetValue(response.Id, out var stream))
                 {
                     // Never await a bounded stream write from the one stdout reader. A stalled consumer must
@@ -818,6 +849,56 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
         }
     }
 
+    private static async Task<string?> ReadBoundedLineAsync(
+        StreamReader reader,
+        int maxChars,
+        CancellationToken cancellationToken)
+    {
+        var builder = new System.Text.StringBuilder(Math.Min(maxChars, 4096));
+        var buffer = new char[1];
+        while (true)
+        {
+            var read = await reader.ReadAsync(buffer.AsMemory(0, 1), cancellationToken);
+            if (read == 0)
+            {
+                return builder.Length == 0 ? null : builder.ToString();
+            }
+
+            var ch = buffer[0];
+            if (ch == '\n')
+            {
+                if (builder.Length > 0 && builder[^1] == '\r')
+                {
+                    builder.Length--;
+                }
+                return builder.ToString();
+            }
+
+            if (builder.Length >= maxChars)
+            {
+                throw new DiscoveryRpcException(
+                    "frame_too_large",
+                    $"pattn-discovery emitted an NDJSON record larger than {maxChars} characters.");
+            }
+            builder.Append(ch);
+        }
+    }
+
+    private void RegisterHelperFailure()
+    {
+        var failures = Math.Min(8, Interlocked.Increment(ref _consecutiveHelperFailures));
+        var delayMs = Math.Min(30_000, 250 * (1 << (failures - 1)));
+        Volatile.Write(
+            ref _nextStartAllowedUnixMs,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + delayMs);
+    }
+
+    private void MarkHelperHealthy()
+    {
+        Interlocked.Exchange(ref _consecutiveHelperFailures, 0);
+        Volatile.Write(ref _nextStartAllowedUnixMs, 0);
+    }
+
     private static T DeserializeData<T>(DiscoveryRpcResponse response)
         => response.Data.Deserialize<T>()
            ?? throw new DiscoveryRpcException("invalid_response", $"Event '{response.Event}' returned no data.");
@@ -837,6 +918,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
             return;
         }
 
+        RegisterHelperFailure();
         try
         {
             FailAllPending(error);
