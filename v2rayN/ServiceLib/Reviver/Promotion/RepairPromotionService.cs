@@ -252,6 +252,13 @@ public sealed class RepairPromotionService(
                 "The promoted profile was selected after promotion; rollback will not overwrite that newer user choice.");
         }
 
+        if (wasDefault && previousDefault.IsNullOrEmpty())
+        {
+            throw new InvalidOperationException(
+                "The promoted profile is currently selected, but the rollback receipt has no previous default. " +
+                "Select another live profile before rolling back so the active selection cannot become empty.");
+        }
+
         // Validate the replacement before touching durable state. A stale receipt must never make
         // the config point at a profile that no longer exists, nor may it name the child being removed.
         if (wasDefault && previousDefault.IsNotEmpty())
