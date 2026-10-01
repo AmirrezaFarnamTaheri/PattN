@@ -50,6 +50,9 @@ jobs:
         # shellcheck source=release-assets.lock.sh
         source ./release-assets.lock.sh
         rid="$Target-$Arch"
+        if [[ "$rid" == "linux-64" ]]; then
+          rid="linux-x64"
+        fi
 
         core_blob="$(pattn_core_bundle_blob_sha1 "$rid")" || {
           echo "::error::no locked core bundle for $rid"
@@ -63,7 +66,7 @@ jobs:
         case "$rid" in
           windows-64)    asset=Xray-windows-64.zip ;;
           windows-arm64) asset=Xray-windows-arm64-v8a.zip ;;
-          linux-64)      asset=Xray-linux-64.zip ;;
+          linux-x64)     asset=Xray-linux-64.zip ;;
           linux-arm64)   asset=Xray-linux-arm64-v8a.zip ;;
           macos-64)      asset=Xray-macos-64.zip ;;
           macos-arm64)   asset=Xray-macos-arm64-v8a.zip ;;
