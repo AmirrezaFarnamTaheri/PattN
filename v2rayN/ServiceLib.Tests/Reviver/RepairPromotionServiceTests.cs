@@ -133,6 +133,67 @@ public class RepairPromotionServiceTests
     }
 
     [Test]
+    public async Task Promote_ShouldRemoveChildWhenSourceChangesDuringInsert()
+    {
+        var original = new ProfileItem
+        {
+            IndexId = "original",
+            ConfigType = EConfigType.VLESS,
+            Address = "old.example",
+            Port = 443,
+            Password = "11111111-1111-4111-8111-111111111111",
+        };
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(original) };
+        var candidate = new RepairCandidate
+        {
+            Id = "candidate",
+            SessionId = session.Id,
+            Profile = JsonUtils.DeepCopy(original)!,
+            Mutations = [],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence { Attempts = 1, Successes = 1, ConsecutiveSuccesses = 1 },
+            RequiredRuntimeSuccesses = 1,
+        };
+        var plan = new RepairPromotionService().Prepare(session, candidate);
+        var edited = JsonUtils.DeepCopy(original)!;
+        edited.Password = "22222222-2222-4222-8222-222222222222";
+
+        var loaderCalls = 0;
+        var removeCalls = 0;
+        var service = new RepairPromotionService(
+            profileLoader: _ =>
+            {
+                loaderCalls++;
+                return Task.FromResult<ProfileItem?>(loaderCalls == 1 ? original : edited);
+            },
+            removeServers: (_, profiles) =>
+            {
+                removeCalls++;
+                return Task.FromResult(profiles.Count == 1 && profiles[0].IndexId == "promoted" ? 0 : -1);
+            },
+            addServer: (_, child) =>
+            {
+                child.IndexId = "promoted";
+                return Task.FromResult(0);
+            });
+
+        var threw = false;
+        try
+        {
+            await service.PromoteAsync(new Config(), plan, makeDefault: false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("source profile changed during promotion", StringComparison.OrdinalIgnoreCase)
+                    && ex.Message.Contains("child was removed", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+        await loaderCalls.Should().BeEqualTo(2);
+        await removeCalls.Should().BeEqualTo(1);
+    }
+
+    [Test]
     public async Task Rollback_ShouldNotDeleteProfileSelectedAfterNonDefaultPromotion()
     {
         var promoted = new ProfileItem { IndexId = "promoted", Address = "203.0.113.10", Port = 443 };
@@ -271,6 +332,53 @@ public class RepairPromotionServiceTests
 
         await threw.Should().BeTrue();
         await config.IndexId.Should().BeEqualTo("promoted");
+        await saveCount.Should().BeEqualTo(0);
+        await removeCount.Should().BeEqualTo(0);
+    }
+
+    [Test]
+    public async Task Rollback_ShouldRejectEmptyPreviousDefaultBeforeMutation()
+    {
+        var promoted = new ProfileItem { IndexId = "promoted", Address = "203.0.113.10", Port = 443 };
+        var config = new Config { IndexId = promoted.IndexId };
+        var saveCount = 0;
+        var removeCount = 0;
+
+        var service = new RepairPromotionService(
+            profileLoader: id => Task.FromResult<ProfileItem?>(id == promoted.IndexId ? promoted : null),
+            removeServers: (_, _) =>
+            {
+                removeCount++;
+                return Task.FromResult(0);
+            },
+            saveConfig: _ =>
+            {
+                saveCount++;
+                return Task.FromResult(0);
+            });
+
+        var receipt = new RepairPromotionReceipt
+        {
+            SessionId = "session",
+            CandidateId = "candidate",
+            OriginalProfileId = "original",
+            PromotedProfileId = promoted.IndexId,
+            PreviousDefaultProfileId = string.Empty,
+            BecameDefault = true,
+        };
+
+        var threw = false;
+        try
+        {
+            await service.RollbackAsync(config, receipt);
+        }
+        catch (InvalidOperationException ex)
+        {
+            threw = ex.Message.Contains("no previous default", StringComparison.OrdinalIgnoreCase);
+        }
+
+        await threw.Should().BeTrue();
+        await config.IndexId.Should().BeEqualTo(promoted.IndexId);
         await saveCount.Should().BeEqualTo(0);
         await removeCount.Should().BeEqualTo(0);
     }
