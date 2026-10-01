@@ -45,6 +45,27 @@ public class RepairCandidateRankerTests
         await ranked[0].Id.Should().BeEqualTo("valid");
     }
 
+    [Test]
+    public async Task Score_ShouldNormalizeNonFiniteValidationMetrics()
+    {
+        var candidate = Candidate(
+            "non-finite",
+            ERepairConfidence.EvidenceBacked,
+            attempts: 3,
+            successes: 2,
+            consecutive: 2,
+            latencyMs: double.PositiveInfinity,
+            loss: double.NaN);
+
+        var score = new RepairCandidateRanker().Score(candidate);
+
+        await double.IsFinite(score.Overall).Should().BeTrue();
+        await double.IsFinite(score.LossQuality).Should().BeTrue();
+        await double.IsFinite(score.LatencyQuality).Should().BeTrue();
+        await score.LossQuality.Should().BeEqualTo(0.5d);
+        await score.LatencyQuality.Should().BeEqualTo(0.5d);
+    }
+
     private static RepairCandidate Candidate(
         string id,
         ERepairConfidence confidence,
