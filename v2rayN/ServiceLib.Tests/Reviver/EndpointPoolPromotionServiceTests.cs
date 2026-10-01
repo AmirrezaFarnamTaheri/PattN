@@ -263,7 +263,10 @@ public class EndpointPoolPromotionServiceTests
         {
             Request = request;
             Candidate = candidate;
-            Pinned = pinned;
+            if (pinned is not null)
+            {
+                Pinned = pinned.Value;
+            }
             Label = label;
             return Task.FromResult(new EndpointPoolItem
             {
@@ -272,7 +275,7 @@ public class EndpointPoolPromotionServiceTests
                 HttpHost = request.HttpHost ?? string.Empty,
                 Port = request.OriginalPort,
                 Address = candidate.Address,
-                Pinned = pinned,
+                Pinned = this.Pinned,
                 Label = label ?? string.Empty,
             });
         }
