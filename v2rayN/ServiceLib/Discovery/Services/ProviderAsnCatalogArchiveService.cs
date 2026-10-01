@@ -32,7 +32,10 @@ public sealed class ProviderAsnCatalogArchiveService(
             throw new FileNotFoundException("Retired catalog file no longer exists.", registry.FilePath);
         }
 
-        var bytes = await File.ReadAllBytesAsync(registry.FilePath, cancellationToken);
+        var bytes = await BoundedFileRead.ReadAllBytesAsync(
+            registry.FilePath,
+            ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+            cancellationToken);
         var sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         if (!options.AllowFileDrift
             && !registry.Sha256.IsNullOrEmpty()
