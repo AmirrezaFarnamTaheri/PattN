@@ -485,6 +485,59 @@ func TestResolverCatalogAuditRejectsAbsurdAgeWindow(t *testing.T) {
 }
 
 
+func TestStreamingMethodsRejectTimeoutDurationOverflow(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		params json.RawMessage
+	}{
+		{
+			name:   "tcp scan",
+			method: "scan.tcp",
+			params: json.RawMessage(`{"targets":["127.0.0.1"],"ports":[443],"timeoutMs":9223372036854775807}`),
+		},
+		{
+			name:   "resolver discovery",
+			method: "dns.resolver.discover",
+			params: json.RawMessage(`{"targets":["127.0.0.1"],"timeoutMs":9223372036854775807}`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response protocol.Response
+			err := New().HandleStream(context.Background(), protocol.Request{
+				Version: protocol.Version,
+				ID:      "timeout-overflow",
+				Method:  tt.method,
+				Params:  tt.params,
+			}, func(got protocol.Response) error {
+				response = got
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.Error == nil || response.Error.Code != "invalid_params" {
+				t.Fatalf("error=%+v", response.Error)
+			}
+		})
+	}
+}
+
+func TestEndpointProbeRejectsTimeoutDurationOverflow(t *testing.T) {
+	params := json.RawMessage(`{"addresses":["127.0.0.1"],"port":443,"serverName":"example.com","timeoutMs":9223372036854775807}`)
+	res := New().Handle(context.Background(), protocol.Request{
+		Version: protocol.Version,
+		ID:      "timeout-overflow",
+		Method:  "endpoint.probe",
+		Params:  params,
+	})
+	if res.Error == nil || res.Error.Code != "invalid_params" {
+		t.Fatalf("error=%+v", res.Error)
+	}
+}
+
 func TestDnsTraceRejectsTimeoutDurationOverflow(t *testing.T) {
 	params := json.RawMessage(`{"domain":"example.com","queryType":1,"timeoutMs":9223372036854775807}`)
 	res := New().Handle(context.Background(), protocol.Request{
