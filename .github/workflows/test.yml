@@ -39,8 +39,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
-  checks: write
-  pull-requests: write
+  contents: read
+  actions: read
 
 jobs:
   workflow-lint:
@@ -167,16 +167,22 @@ jobs:
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+    - name: Prepare test results directory
+      shell: bash
+      run: |
+        mkdir -p ./TestResults
+        printf 'placeholder for result handoff\n' > ./TestResults/ci-placeholder.txt
+
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       with:
-        dotnet-version: '10.x'
+        dotnet-version: '10.0.111'
         dotnet-quality: 'ga'
 
     - name: Setup Go
       uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
       with:
-        go-version-file: './pattn-discovery/go.mod'
+        go-version: '1.23.12'
         cache: false
 
     - name: Audit new desktop XAML accessibility markup
@@ -383,8 +389,44 @@ jobs:
           (cd "$case_dir" && ./ServiceLib.FaultHarness verify "$checkpoint")
         done
 
-    - name: Comment PR with results
+    - name: Upload test results
       if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: service-test-results
+        path: ./TestResults
+        if-no-files-found: error
+        retention-days: 7
+
+  test-results:
+    name: Test Results
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: service-test-results
+        path: ./TestResults
+
+    - name: Detect TRX results
+      id: trx
+      shell: bash
+      run: |
+        if compgen -G './TestResults/*.trx' >/dev/null; then
+          echo 'found=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'found=false' >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Publish unit test results
+      if: steps.trx.outputs.found == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
       with:
         files: ./TestResults/*.trx
@@ -402,7 +444,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       with:
-        dotnet-version: '10.x'
+        dotnet-version: '10.0.111'
         dotnet-quality: 'ga'
 
     - name: Build WPF
