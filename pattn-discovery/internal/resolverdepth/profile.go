@@ -361,7 +361,7 @@ func queryDoH(ctx context.Context, opts Options) Attempt {
 		out.Error = "DoH response content-type is not application/dns-message"
 		return out
 	}
-	packet, err := io.ReadAll(io.LimitReader(response.Body, 65536))
+	packet, err := readBoundedDoHMessage(response.Body)
 	if err != nil { out.Error = err.Error(); return out }
 	message, err := dnswire.ParseMessage(packet, id, opts.Domain, dnswire.TypeA)
 	if err != nil { out.Error = err.Error(); return out }
@@ -369,6 +369,19 @@ func queryDoH(ctx context.Context, opts Options) Attempt {
 	out.LatencyMs = float64(time.Since(start)) / float64(time.Millisecond)
 	fillMessage(&out, message, dnswire.TypeA)
 	return out
+}
+
+const maxDoHMessageBytes = 64 * 1024
+
+func readBoundedDoHMessage(reader io.Reader) ([]byte, error) {
+	packet, err := io.ReadAll(io.LimitReader(reader, maxDoHMessageBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(packet) > maxDoHMessageBytes {
+		return nil, fmt.Errorf("DoH response exceeds %d bytes", maxDoHMessageBytes)
+	}
+	return packet, nil
 }
 
 func fillObservation(out *Attempt, observation dnsmeasure.Observation) {
