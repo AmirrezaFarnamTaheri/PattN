@@ -358,16 +358,26 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             return;
         }
 
-        if (!await ConfirmInteraction.HandleSafe(ResUI.TbConfirmDNSRepairApply))
-        {
-            DnsRepairStatus = ResUI.TbDNSRepairApplyCancelled;
-            return;
-        }
-
+        // Hold the busy gate across the confirmation prompt so Preview/Apply/Rollback cannot be re-entered
+        // (or the plan replaced) while the user is still deciding; finally always restores command state.
+        var plan = _dnsRepairPlan;
         DnsRepairBusy = true;
+        UpdateDnsRepairCommandState();
         try
         {
-            _dnsRepairReceipt = await _dnsSettingsRepair.ApplyAsync(_config, _dnsRepairPlan);
+            if (!await ConfirmInteraction.HandleSafe(ResUI.TbConfirmDNSRepairApply))
+            {
+                DnsRepairStatus = ResUI.TbDNSRepairApplyCancelled;
+                return;
+            }
+
+            if (!ReferenceEquals(plan, _dnsRepairPlan) || SelectedDnsResolver is null)
+            {
+                DnsRepairStatus = "The DNS repair preview changed while confirming. Preview again before applying.";
+                return;
+            }
+
+            _dnsRepairReceipt = await _dnsSettingsRepair.ApplyAsync(_config, plan);
             RemoteDNS = _dnsRepairReceipt.Applied.RemoteDNS ?? string.Empty;
             BootstrapDNS = _dnsRepairReceipt.Applied.BootstrapDNS ?? string.Empty;
             DnsRepairStatus = $"Applied {SelectedDnsResolver.Name}. The previous Simple DNS snapshot is available for rollback.";
@@ -394,15 +404,16 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             return;
         }
 
-        if (!await ConfirmInteraction.HandleSafe(ResUI.TbConfirmDNSRepairRollback))
-        {
-            DnsRepairStatus = ResUI.TbDNSRepairRollbackCancelled;
-            return;
-        }
-
         DnsRepairBusy = true;
+        UpdateDnsRepairCommandState();
         try
         {
+            if (!await ConfirmInteraction.HandleSafe(ResUI.TbConfirmDNSRepairRollback))
+            {
+                DnsRepairStatus = ResUI.TbDNSRepairRollbackCancelled;
+                return;
+            }
+
             await _dnsSettingsRepair.RollbackAsync(_config, _dnsRepairReceipt);
             RemoteDNS = _dnsRepairReceipt.Before.RemoteDNS ?? string.Empty;
             BootstrapDNS = _dnsRepairReceipt.Before.BootstrapDNS ?? string.Empty;
