@@ -145,10 +145,21 @@ jobs:
           exit 1
         fi
 
-    - name: Run actionlint
-      uses: docker://rhysd/actionlint:1.7.12
-      with:
-        args: -color
+    - name: Run verified actionlint
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck source=release-assets.lock.sh
+        source ./release-assets.lock.sh
+        archive="$RUNNER_TEMP/actionlint.tar.gz"
+        install_dir="$RUNNER_TEMP/actionlint"
+        mkdir -p "$install_dir"
+        pattn_download_sha256 \
+          "https://github.com/rhysd/actionlint/releases/download/v${PATTN_ACTIONLINT_VERSION}/actionlint_${PATTN_ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+          "$archive" \
+          "$PATTN_ACTIONLINT_LINUX_AMD64_SHA256"
+        tar -xzf "$archive" -C "$install_dir"
+        "$install_dir/actionlint" -color
 
   test:
     runs-on: ubuntu-latest
