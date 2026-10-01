@@ -84,7 +84,10 @@ public sealed class ProviderAsnCatalogRemoteSourcePortabilityService(
                 $"Remote-source bundle size {info.Length} is outside the allowed range.");
         }
 
-        var json = await File.ReadAllTextAsync(path, cancellationToken);
+        var json = await BoundedFileRead.ReadAllUtf8TextAsync(
+            path,
+            MaximumPortableBundleBytes,
+            cancellationToken);
         var bundle = JsonUtils.Deserialize<ProviderAsnCatalogRemoteSourcePortableBundle>(json)
             ?? throw new InvalidOperationException("Remote-source bundle JSON could not be decoded.");
         ValidateBundle(bundle);
