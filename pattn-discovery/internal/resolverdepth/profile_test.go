@@ -1,6 +1,10 @@
 package resolverdepth
 
-import (\n\t"bytes"\n\t"strings"\n\t"testing"\n)
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestDecodeTXTMultipleSegments(t *testing.T) {
 	got := decodeTXT([]byte{3, 'o', 'n', 'e', 3, 't', 'w', 'o'})
