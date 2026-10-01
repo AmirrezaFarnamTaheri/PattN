@@ -257,7 +257,7 @@ public class EndpointPoolPromotionServiceTests
         public Task<EndpointPoolItem> UpsertAsync(
             DiscoveryCandidateRequest request,
             DiscoveryEndpointCandidate candidate,
-            bool pinned = false,
+            bool? pinned = null,
             string? label = null,
             CancellationToken cancellationToken = default)
         {
