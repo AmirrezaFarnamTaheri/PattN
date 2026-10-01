@@ -133,5 +133,6 @@ public sealed class RepairCandidateRanker
         };
     }
 
-    private static double Clamp01(double value) => Math.Clamp(value, 0d, 1d);
+    private static double Clamp01(double value)
+        => double.IsFinite(value) ? Math.Clamp(value, 0d, 1d) : 0.5d;
 }
