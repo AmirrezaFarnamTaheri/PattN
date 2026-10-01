@@ -540,7 +540,7 @@ public class ProviderAsnCatalogRemoteUpdateServiceTests
 
         await (await service.GetAsync(fixture.Registry.Id)).Should().BeNull();
         await sourceStore.Item.Should().NotBeNull();
-        await sourceStore.Item!.RemovedAtUnixMs.Should().NotBeNull();
+        await sourceStore.Item!.RemovedAtUnixMs.HasValue.Should().BeTrue();
         await sourceStore.Item.Uri.Should().BeEmpty();
         await sourceStore.Item.TrustedPublicKeySpkiBase64.Should().BeEmpty();
         await sourceStore.Item.SignatureRevisionHighWatermark.Should().BeEqualTo(10);
