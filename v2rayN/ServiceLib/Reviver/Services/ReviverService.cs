@@ -137,7 +137,8 @@ public sealed class ReviverService(
             }
 
             candidate.Validation = await validator.ValidateAsync(candidate, cancellationToken);
-            if (candidate.Validation.MeetsQuorum(_policy.MinimumRuntimeSuccesses))
+            candidate.RequiredRuntimeSuccesses = _policy.MinimumRuntimeSuccesses;
+            if (candidate.Validation.MeetsQuorum(candidate.RequiredRuntimeSuccesses))
             {
                 candidate.State = ERepairCandidateState.RuntimeValidated;
                 validated.Add(candidate);
