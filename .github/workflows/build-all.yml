@@ -8,12 +8,13 @@ on:
         type: string
 
 permissions:
-  actions: write
-  contents: write
+  contents: read
 
 jobs:
   public-key:
     if: inputs.release_tag != ''
+    permissions:
+      contents: write
     uses: ./.github/workflows/pub-key.yml
     with:
       release_tag: ${{ inputs.release_tag }}
@@ -22,6 +23,9 @@ jobs:
 
   update:
     if: inputs.release_tag != ''
+    permissions:
+      actions: write
+      contents: read
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
