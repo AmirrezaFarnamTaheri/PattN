@@ -46,6 +46,7 @@ PATTN_FEDORA_LOONG_QCOW2_SHA256="8c233276f22c8a73dc74a9e5a0b7ee57411d6f716c08709
 
 pattn_xray_sha256() {
   case "$1" in
+    windows-32)       echo "8e605e38181216e4122662d6a075e073af6af6e60508912daf03a25f94186b1f" ;;
     windows-64)       echo "89bed4cc0dffe57ee221d9149c361ac70586ac85074a5e5c17b0deb50fdfd473" ;;
     windows-arm64)    echo "5bf2f93e82ad7470a214fe5b3ae8604bf5228cb2e5552d1b1b803bb84f9eeb77" ;;
     linux-x64)         echo "632d913cc2e702ad1f8e77352a087a5e501363bc950c85c1a1acf1e471894bed" ;;
@@ -60,6 +61,7 @@ pattn_xray_sha256() {
 
 pattn_singbox_sha256() {
   case "$1" in
+    windows-386)       echo "745b3ae034972244396414a54a1518aaa46fa55b6b9c4690dc7a4c2b71bac69b" ;;
     linux-x64)         echo "a684484d7477d1437282ee411f4d131d0340aaad60a7868841ebd5d87dd8a0c6" ;;
     linux-arm64)       echo "b43a1fb1bda131c6653576741ce527eb2bdeab7c9308ca90ee8b972abb7e4a7f" ;;
     linux-riscv64)     echo "7ee2d238081085a4047569b5a9f296763ede3f59742786a30a2ebc8a9f611e4f" ;;
