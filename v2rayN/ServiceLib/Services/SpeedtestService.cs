@@ -72,19 +72,24 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         {
             try
             {
-                await ProfileExManager.Instance.SaveTo();
+                try
+                {
+                    await ProfileExManager.Instance.SaveTo();
+                }
+                finally
+                {
+                    await UpdateFunc("", ResUI.SpeedtestingCompleted);
+                }
             }
             finally
             {
-                await UpdateFunc("", ResUI.SpeedtestingCompleted);
-            }
+                lock (_runLock)
+                {
+                    _runCtsList.Remove(runCts);
+                }
 
-            lock (_runLock)
-            {
-                _runCtsList.Remove(runCts);
+                runCts.Dispose();
             }
-
-            runCts.Dispose();
         }
     }
 
