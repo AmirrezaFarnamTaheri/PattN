@@ -235,6 +235,7 @@ public sealed class RepairPromotionService(
             {
                 await strategyOutcomes.RecordAsync(new StrategyOutcomeObservation
                 {
+                    CandidateId = receipt.CandidateId,
                     StrategyId = receipt.StrategyId,
                     GenomeKey = receipt.GenomeKey,
                     NetworkKey = receipt.NetworkKey,
@@ -391,6 +392,7 @@ public sealed class RepairPromotionService(
             {
                 await strategyOutcomes.RecordAsync(new StrategyOutcomeObservation
                 {
+                    CandidateId = receipt.CandidateId,
                     StrategyId = receipt.StrategyId,
                     GenomeKey = receipt.GenomeKey,
                     NetworkKey = receipt.NetworkKey,
