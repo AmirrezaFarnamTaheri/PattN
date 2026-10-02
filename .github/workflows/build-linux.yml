@@ -15,6 +15,7 @@ on:
       - '.github/workflows/build-linux.yml'
       - 'release-assets.lock.sh'
       - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
       - 'package-debian.sh'
       - 'package-rhel.sh'
       - 'package-debian-riscv.sh'
