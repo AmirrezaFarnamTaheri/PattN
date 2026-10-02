@@ -36,4 +36,33 @@ public class CoreManagerTests
     {
         await CoreManager.ShouldRunAsSudo(isTunLaunch: true, coreType, isNonWindows: true).Should().BeFalse();
     }
+    [Test]
+    public async Task ProcessService_Dispose_ShouldDeleteOwnedEphemeralConfig()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pattn-speedtest-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(path, "{}");
+
+        try
+        {
+            using (var process = new ProcessService(
+                       fileName: "unused",
+                       arguments: string.Empty,
+                       workingDirectory: Path.GetTempPath(),
+                       displayLog: false,
+                       redirectInput: false,
+                       environmentVars: null,
+                       updateFunc: null,
+                       cleanupPaths: [path]))
+            {
+                await File.Exists(path).Should().BeTrue();
+            }
+
+            await File.Exists(path).Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
 }
