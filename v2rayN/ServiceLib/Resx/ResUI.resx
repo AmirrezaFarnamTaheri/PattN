@@ -2716,4 +2716,18 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRemoteHealthRefreshed" xml:space="preserve">
     <value>Remote source health refreshed from persisted metadata. No network fetch was performed.</value>
   </data>
+
+  <data name="TbNetworkIntelligence" xml:space="preserve"><value>Network Intelligence</value></data>
+  <data name="TbRefreshNetworkIntelligence" xml:space="preserve"><value>Refresh intelligence</value></data>
+  <data name="TbNetworkIntelligenceSummaryEmpty" xml:space="preserve"><value>No local network intelligence observations have been recorded yet.</value></data>
+  <data name="TbNetworkIntelligenceSummaryLine" xml:space="preserve"><value>{0} observations · upload-stall signals {1} · latest confidence {2:P0} · latest {3}</value></data>
+  <data name="TbStrategyLearningSummaryEmpty" xml:space="preserve"><value>No strategy outcome evidence has been recorded yet.</value></data>
+  <data name="TbStrategyLearningSummaryLine" xml:space="preserve"><value>Top learned strategies: {0}</value></data>
+  <data name="TbNetworkHeatmap" xml:space="preserve"><value>Network health aggregates</value></data>
+  <data name="LvCountry" xml:space="preserve"><value>Country</value></data>
+  <data name="LvCarrierKey" xml:space="preserve"><value>Carrier key</value></data>
+  <data name="LvSamples" xml:space="preserve"><value>Samples</value></data>
+  <data name="LvIPv4" xml:space="preserve"><value>IPv4 success</value></data>
+  <data name="LvIPv6" xml:space="preserve"><value>IPv6 success</value></data>
+  <data name="LvUploadStall" xml:space="preserve"><value>Upload stall</value></data>
 </root>
