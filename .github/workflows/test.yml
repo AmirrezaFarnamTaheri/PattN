@@ -55,6 +55,7 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Audit release packaging integrity lock
+      if: ${{ hashFiles('release-assets.lock.sh', 'release-reproducibility.sh') != '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -261,6 +262,7 @@ jobs:
         }
 
     - name: Run verified actionlint
+      if: ${{ hashFiles('release-assets.lock.sh') != '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -449,14 +451,17 @@ jobs:
         go test ./cmd/pattn-discovery -run=^$ -fuzz=^FuzzNDJSONFraming$ -fuzztime=3s
 
     - name: Audit committed fuzz regression corpus
+      if: ${{ hashFiles('pattn-discovery/cmd/fuzz-corpus-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/fuzz-corpus-audit -root .
 
     - name: Audit DNS root trust-anchor snapshot
+      if: ${{ hashFiles('pattn-discovery/cmd/dns-trust-anchor-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/dns-trust-anchor-audit -max-age-days 90
 
     - name: Audit DNS fixture corpus
+      if: ${{ hashFiles('pattn-discovery/cmd/dns-fixture-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/dns-fixture-audit -root ./internal/dnsfixture/testdata -fail-on-orphans
 
@@ -464,9 +469,11 @@ jobs:
       run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
 
     - name: Build durability fault harness
+      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
       run: dotnet build ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release
 
     - name: Abrupt-loss recovery smoke
+      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
       shell: bash
       run: |
         set -euo pipefail
