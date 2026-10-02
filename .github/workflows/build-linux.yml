@@ -14,6 +14,7 @@ on:
     paths:
       - '.github/workflows/build-linux.yml'
       - 'release-assets.lock.sh'
+      - 'release-reproducibility.sh'
       - 'scripts/deterministic_zip.py'
       - 'scripts/generate_dependency_sbom.py'
       - 'package-debian.sh'
@@ -83,6 +84,25 @@ jobs:
       run: chmod 755 package-debian.sh
     - name: Package DEB (Debian-family)
       run: ./package-debian.sh "${RELEASE_TAG}" --arch all
+    - name: Prove DEB byte reproducibility
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        set -euo pipefail
+        first="$RUNNER_TEMP/pattn-deb-first"
+        mkdir -p "$first"
+        cp -a "$HOME/debbuild/"*.deb "$first/"
+        rm -rf "$HOME/debbuild"
+        ./package-debian.sh "${RELEASE_TAG}" --arch all
+        for expected in "$first"/*.deb; do
+          actual="$HOME/debbuild/$(basename "$expected")"
+          [[ -f "$actual" ]] || { echo "::error::second DEB build omitted $(basename "$expected")"; exit 1; }
+          cmp "$expected" "$actual" || {
+            echo "::error::DEB is not byte-for-byte reproducible: $(basename "$expected")"
+            sha256sum "$expected" "$actual" || true
+            exit 1
+          }
+        done
     - name: Collect DEBs into workspace
       run: |
         mkdir -p "$GITHUB_WORKSPACE/dist/deb"
@@ -147,6 +167,25 @@ jobs:
       run: chmod 755 package-rhel.sh
     - name: Package RPM (RHEL-family)
       run: ./package-rhel.sh "${RELEASE_TAG}" --arch all
+    - name: Prove RPM byte reproducibility
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        set -euo pipefail
+        first="$RUNNER_TEMP/pattn-rpm-first"
+        mkdir -p "$first"
+        find "$HOME/rpmbuild/RPMS" -type f -name '*.rpm' -exec cp -a {} "$first/" \;
+        rm -rf "$HOME/rpmbuild"
+        ./package-rhel.sh "${RELEASE_TAG}" --arch all
+        for expected in "$first"/*.rpm; do
+          actual="$(find "$HOME/rpmbuild/RPMS" -type f -name "$(basename "$expected")" -print -quit)"
+          [[ -n "$actual" && -f "$actual" ]] || { echo "::error::second RPM build omitted $(basename "$expected")"; exit 1; }
+          cmp "$expected" "$actual" || {
+            echo "::error::RPM is not byte-for-byte reproducible: $(basename "$expected")"
+            sha256sum "$expected" "$actual" || true
+            exit 1
+          }
+        done
     - name: Collect RPMs into workspace
       run: |
         mkdir -p "$GITHUB_WORKSPACE/dist/rpm"
