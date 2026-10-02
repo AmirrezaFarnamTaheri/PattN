@@ -23,6 +23,24 @@ const (
 	MaxUploadProbeChunks = 64
 )
 
+var nonPublicProbePrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("192.88.99.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"),
+	netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("100::/64"),
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+	netip.MustParsePrefix("2001:2::/48"),
+	netip.MustParsePrefix("2001:db8::/32"),
+	netip.MustParsePrefix("2001:10::/28"),
+	netip.MustParsePrefix("2001:20::/28"),
+}
+
 type UploadProbeOptions struct {
 	URL             string
 	TotalBytes      int
@@ -226,13 +244,22 @@ func (b *pacedUploadBody) Read(p []byte) (int, error) {
 func (b *pacedUploadBody) Close() error { return nil }
 
 func isPublicProbeAddress(addr netip.Addr) bool {
-	return addr.IsValid()
-		&& !addr.IsUnspecified()
-		&& !addr.IsLoopback()
-		&& !addr.IsPrivate()
-		&& !addr.IsLinkLocalUnicast()
-		&& !addr.IsLinkLocalMulticast()
-		&& !addr.IsMulticast()
+	if !addr.IsValid()
+		|| !addr.IsGlobalUnicast()
+		|| addr.IsUnspecified()
+		|| addr.IsLoopback()
+		|| addr.IsPrivate()
+		|| addr.IsLinkLocalUnicast()
+		|| addr.IsLinkLocalMulticast()
+		|| addr.IsMulticast() {
+		return false
+	}
+	for _, prefix := range nonPublicProbePrefixes {
+		if prefix.Contains(addr) {
+			return false
+		}
+	}
+	return true
 }
 
 func ParseUploadProbeTimeout(milliseconds int) (time.Duration, error) {
