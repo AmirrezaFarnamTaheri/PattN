@@ -1,0 +1,66 @@
+name: Stack & Localization Audit
+
+# Static gates for the Discovery/Reviver review stack. Both checks are pure
+# (git + python3, no toolchain), so they run on every PR in seconds and guard
+# the two failure modes this repo has actually hit:
+#   1. a split PR drifting behind its own base and silently reverting hardening
+#      when merged  -> scripts/check_stack_sync.py
+#   2. a view binding a resource key that was deleted from ResUI.resx, which
+#      compiles and throws at window load -> scripts/check_localization.py
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/stack-audit.yml'
+      - 'scripts/check_stack_sync.py'
+      - 'scripts/check_localization.py'
+      - 'v2rayN/ServiceLib/Resx/**'
+      - 'v2rayN/ServiceLib/Discovery/**'
+      - 'v2rayN/ServiceLib/Reviver/**'
+      - 'v2rayN/ServiceLib/Helper/SqliteHelper.cs'
+      - 'v2rayN/ServiceLib/Manager/AppManager.cs'
+      - 'v2rayN/v2rayN/**'
+      - 'v2rayN/v2rayN.Desktop/**'
+      - 'pattn-discovery/**'
+  push:
+    branches:
+      - my-releases
+      - feat/discovery-reviver-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  localization-parity:
+    name: ResUI key parity (R1/R2/R3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Scoped to this PR's localization surface
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/check_localization.py --base "${{ github.event.pull_request.base.sha }}" --head HEAD
+      - name: Whole tree (push / manual)
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/check_localization.py
+
+  stack-sync:
+    name: Split-stack integrity (base ancestry + blob parity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Every open split PR must contain its base tip and match the integration ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_stack_sync.py

@@ -1,0 +1,46 @@
+# Code ownership for PattN.
+#
+# WHY THIS EXISTS (audit finding F-09, 2026-10-02)
+# The Discovery/Reviver review stack (12 open PRs) had zero independent approvals: bots were skipped
+# ("fewer than 10 stars" / "subscription no longer active") and every recorded review was a comment by
+# the author. The mechanical control that fixes that class of failure is branch protection with
+# "require review from designated code owners"; it cannot be enabled from a non-admin token, so this
+# file records the *assignment* and the enabling step is left as an explicit action item:
+#   1. Settings → Branches → add protection for `my-releases` (and `feat/discovery-reviver-integration`
+#      while the stack is open)
+#   2. tick "Require review from Code Owners"
+#   3. keep "Do not allow bypassing the above settings" on for the fork's default line
+# Until then, the entries below are documentation, not enforcement — and they should be read as the
+# reviewer-routing map for the riskiest surfaces.
+#
+# Lines are ordered so the most specific (last matching) rule wins, per GitHub's precedence.
+
+# Upstream: this is a fork of v2rayN. Anything that can change what a user's traffic is routed through,
+# or how a release is produced, should carry an upstream maintainer's approval.
+# NOTE: confirm the handle before relying on this — an unresolvable owner silently becomes "no owner".
+*                                       @AmirrezaFarnamTaheri
+
+# --- update path: signature trust, updater self-replacement, artifact reproducibility ---
+/pattn-discovery/cmd/catalog-audit/     @AmirrezaFarnamTaheri @2dust
+/v2rayN/AmazTool/                       @AmirrezaFarnamTaheri @2dust
+/.github/workflows/upload-sign.yml      @AmirrezaFarnamTaheri @2dust
+/.github/workflows/pub-key.yml          @AmirrezaFarnamTaheri @2dust
+/.github/workflows/winget-publish.yml   @AmirrezaFarnamTaheri @2dust
+/package-*.sh                           @AmirrezaFarnamTaheri @2dust
+/scripts/deterministic_zip.py           @AmirrezaFarnamTaheri @2dust
+/scripts/generate_dependency_sbom.py     @AmirrezaFarnamTaheri @2dust
+
+# --- network trust root and resolver/depth data (DNSSEC, catalog trust) ---
+/pattn-discovery/internal/dnssec/       @AmirrezaFarnamTaheri @2dust
+/pattn-discovery/internal/dnsvalidate/  @AmirrezaFarnamTaheri @2dust
+/pattn-discovery/internal/resolvercatalog/ @AmirrezaFarnamTaheri @2dust
+/v2rayN/ServiceLib/Discovery/Protocol/  @AmirrezaFarnamTaheri
+
+# --- local privacy: derived keys, retention, support-bundle redaction ---
+/v2rayN/ServiceLib/Reviver/Intelligence/ @AmirrezaFarnamTaheri
+/v2rayN/ServiceLib/Reviver/Support/      @AmirrezaFarnamTaheri
+
+# --- review-stack integrity gates (this file's sibling control) ---
+/scripts/check_stack_sync.py            @AmirrezaFarnamTaheri
+/scripts/check_localization.py         @AmirrezaFarnamTaheri
+/.github/workflows/stack-audit.yml     @AmirrezaFarnamTaheri
