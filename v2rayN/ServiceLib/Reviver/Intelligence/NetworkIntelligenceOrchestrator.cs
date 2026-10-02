@@ -42,7 +42,9 @@ public sealed class NetworkIntelligenceOrchestrator(
             TcpSucceeded = probe.Connected,
             TlsSucceeded = probe.TlsHandshakeSucceeded,
             UploadSucceeded = probe.BodyFullyRead,
-            DownstreamSucceeded = probe.ResponseReceived,
+            // A response on this same request is not an independent downstream-path signal;
+            // do not upgrade a partial request-body read into a high-confidence UplinkStall.
+            DownstreamSucceeded = null,
             IPv4Succeeded = context?.IPv4Succeeded,
             IPv6Succeeded = context?.IPv6Succeeded,
             LatencyMs = probe.DurationMs,
