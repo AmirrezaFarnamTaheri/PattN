@@ -153,4 +153,10 @@
   <data name="Information" xml:space="preserve">
     <value>Information</value>
   </data>
+  <data name="RestoreUpgradeSelf" xml:space="preserve">
+    <value>Previous AmazTool executable restored, so PattN can still be started.</value>
+  </data>
+  <data name="FailedRestoreUpgradeSelf" xml:space="preserve">
+    <value>Failed to restore the previous AmazTool executable: </value>
+  </data>
 </root>
