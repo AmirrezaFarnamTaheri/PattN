@@ -308,6 +308,14 @@ public partial class ProfilesViewModel
                 HumanizeIdentifier(run.Diagnosis.FailureClass.ToString()))
         };
 
+        if (run.FailureAssessment is { } assessment)
+        {
+            lines.Add(string.Format(
+                CultureInfo.CurrentCulture,
+                ResUI.TbReviverConfidenceLine,
+                assessment.Confidence));
+        }
+
         if (candidate.Validation is { } validation)
         {
             var latency = validation.MedianLatencyMs is { } latencyMs
