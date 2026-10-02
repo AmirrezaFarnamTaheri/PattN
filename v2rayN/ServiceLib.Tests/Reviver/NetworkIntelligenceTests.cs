@@ -98,7 +98,7 @@ public class NetworkIntelligenceTests
         var now = DateTimeOffset.UtcNow;
         var decayed = NetworkIntelligenceService.ApplyEvidenceDecay(0.8d, now.AddDays(-45), now, 45d);
 
-        await Math.Abs(decayed - 0.4d).Should().BeLessThan(0.0001d);
+        await (Math.Abs(decayed - 0.4d) < 0.0001d).Should().BeTrue("decay must halve the score after one half-life");
     }
 
     [Test]
@@ -130,7 +130,7 @@ public class NetworkIntelligenceTests
         var summary = SqliteStrategyOutcomeStore.Summarize("ipv6", rows, now);
 
         await summary.Samples.Should().BeEqualTo(2);
-        await Math.Abs(summary.EffectiveSuccessRate - (2d / 3d)).Should().BeLessThan(0.0001d);
+        await (Math.Abs(summary.EffectiveSuccessRate - (2d / 3d)) < 0.0001d).Should().BeTrue("success rate must be the sample mean");
     }
 
     [Test]
