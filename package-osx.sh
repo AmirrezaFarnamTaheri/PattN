@@ -120,4 +120,16 @@ cat >"$PackagePath/PattN.app/Contents/Info.plist" <<-EOF
 </plist>
 EOF
 
+if [[ -n "${PATTN_MACOS_CODESIGN_IDENTITY:-}" ]]; then
+  command -v codesign >/dev/null 2>&1 || die "codesign is required for a signed macOS release"
+  codesign \
+    --force \
+    --deep \
+    --options runtime \
+    --timestamp \
+    --sign "$PATTN_MACOS_CODESIGN_IDENTITY" \
+    "$PackagePath/PattN.app"
+  codesign --verify --deep --strict --verbose=2 "$PackagePath/PattN.app"
+fi
+
 create-dmg   --volname "PattN Installer"   --window-size 700 420   --icon-size 100   --icon "PattN.app" 160 185   --hide-extension "PattN.app"   --app-drop-link 500 185   "PattN-${Arch}.dmg"   "$PackagePath/PattN.app"
