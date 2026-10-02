@@ -62,6 +62,46 @@ public class ProviderAsnCatalogRegistryServiceTests
     }
 
     [Test]
+    public async Task Refresh_ShouldHonorSameOperationLeaseAsApply()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var path = Path.Combine(root, "catalog.json");
+            await File.WriteAllBytesAsync(path, Catalog("catalog", "v1", "203.0.113.10"));
+
+            var store = new MemoryStore();
+            var service = new ProviderAsnCatalogRegistryService(store);
+            var registered = await service.RegisterAsync(path);
+
+            await using var heldLease =
+                await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+                    path,
+                    CancellationToken.None);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+
+            var cancelled = false;
+            try
+            {
+                _ = await service.RefreshAsync(
+                    registered.Id,
+                    cancellationToken: timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                cancelled = true;
+            }
+
+            await cancelled.Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+
+    [Test]
     public async Task ApplyThenRestartRollback_ShouldRestoreExactPriorCatalogFromPersistedRevision()
     {
         var root = CreateTempDirectory();
