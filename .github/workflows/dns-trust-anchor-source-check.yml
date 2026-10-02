@@ -14,6 +14,10 @@ on:
     # fails after 2026-10-11 until a post-rollover review updates VerifiedDate.
     - cron: '17 6 10-20 10 *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
