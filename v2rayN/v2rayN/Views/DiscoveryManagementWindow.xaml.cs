@@ -60,6 +60,9 @@ public partial class DiscoveryManagementWindow
             this.Bind(ViewModel, vm => vm.SelectedPromotionEvent, v => v.lstRepairHistory.SelectedItem).DisposeWith(disposables);
             this.OneWayBind(ViewModel, vm => vm.PromotionHistorySummaryText, v => v.txtRepairHistorySummary.Text).DisposeWith(disposables);
             this.OneWayBind(ViewModel, vm => vm.PromotionEventDetails, v => v.txtRepairEventDetails.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.NetworkIntelligenceSummaryText, v => v.txtNetworkIntelligenceSummary.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.StrategyLearningSummaryText, v => v.txtStrategyLearningSummary.Text).DisposeWith(disposables);
+            this.OneWayBind(ViewModel, vm => vm.NetworkHeatmapRows, v => v.lstNetworkHeatmap.ItemsSource).DisposeWith(disposables);
 
             this.OneWayBind(ViewModel, vm => vm.EndpointMaintenancePreview, v => v.txtEndpointMaintenancePreview.Text).DisposeWith(disposables);
             this.OneWayBind(ViewModel, vm => vm.RetentionPreview, v => v.txtRetentionPreview.Text).DisposeWith(disposables);
@@ -105,6 +108,7 @@ public partial class DiscoveryManagementWindow
             this.BindCommand(ViewModel, vm => vm.RelabelEndpointCmd, v => v.btnRelabelEndpoint).DisposeWith(disposables);
 
             this.BindCommand(ViewModel, vm => vm.RefreshPromotionHistoryCmd, v => v.btnRefreshRepairHistory).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.RefreshNetworkIntelligenceCmd, v => v.btnRefreshNetworkIntelligence).DisposeWith(disposables);
 
             this.BindCommand(ViewModel, vm => vm.PreviewEndpointMaintenanceCmd, v => v.btnPreviewEndpointMaintenance).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.ApplyEndpointMaintenanceCmd, v => v.btnApplyEndpointMaintenance).DisposeWith(disposables);
