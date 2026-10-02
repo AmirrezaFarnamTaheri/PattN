@@ -42,44 +42,52 @@ public sealed class IntelligenceRetentionService
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var rows = await SQLiteHelper.Instance.TableAsync<StrategyOutcomeHistoryItem>()
-                .Where(x => x.ObservedAtUnixMs < rawCutoff)
-                .OrderBy(x => x.ObservedAtUnixMs)
-                .Take(policy.BatchSize)
-                .ToListAsync();
-            if (rows.Count == 0)
-            {
-                break;
-            }
+            var batchCount = 0;
+            var batchDeleted = 0;
 
-            var aggregates = rows
-                .GroupBy(x => new
-                {
-                    x.StrategyId,
-                    x.GenomeKey,
-                    x.NetworkKey,
-                    Day = DayBucket(DateTimeOffset.FromUnixTimeMilliseconds(x.ObservedAtUnixMs)),
-                })
-                .Select(group => new StrategyOutcomeAggregateItem
-                {
-                    Id = AggregateId(group.Key.StrategyId, group.Key.GenomeKey, group.Key.NetworkKey, group.Key.Day),
-                    StrategyId = group.Key.StrategyId,
-                    GenomeKey = group.Key.GenomeKey,
-                    NetworkKey = group.Key.NetworkKey,
-                    DayBucketUnixSeconds = group.Key.Day,
-                    Samples = group.Count(),
-                    Successes = group.Count(x => x.Succeeded && !x.RolledBack),
-                    Rollbacks = group.Count(x => x.RolledBack),
-                    HumanConfirmed = group.Count(x => x.HumanConfirmed),
-                    LatencySumMs = group
-                        .Where(x => x.LatencyMs is { } v && double.IsFinite(v) && v >= 0d)
-                        .Sum(x => x.LatencyMs!.Value),
-                    LatencySamples = group.Count(x => x.LatencyMs is { } v && double.IsFinite(v) && v >= 0d),
-                })
-                .ToArray();
-
+            // Selection, aggregation, and deletion must share the same exclusive write gate.
+            // Otherwise two concurrent retention runs can select the same raw rows before
+            // either acquires the gate and then double-increment the aggregate counters.
             await SQLiteHelper.Instance.RunExclusiveWriteAsync(db =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                var rows = db.Table<StrategyOutcomeHistoryItem>()
+                    .Where(x => x.ObservedAtUnixMs < rawCutoff)
+                    .OrderBy(x => x.ObservedAtUnixMs)
+                    .Take(policy.BatchSize)
+                    .ToList();
+                batchCount = rows.Count;
+                if (batchCount == 0)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var aggregates = rows
+                    .GroupBy(x => new
+                    {
+                        x.StrategyId,
+                        x.GenomeKey,
+                        x.NetworkKey,
+                        Day = DayBucket(DateTimeOffset.FromUnixTimeMilliseconds(x.ObservedAtUnixMs)),
+                    })
+                    .Select(group => new StrategyOutcomeAggregateItem
+                    {
+                        Id = AggregateId(group.Key.StrategyId, group.Key.GenomeKey, group.Key.NetworkKey, group.Key.Day),
+                        StrategyId = group.Key.StrategyId,
+                        GenomeKey = group.Key.GenomeKey,
+                        NetworkKey = group.Key.NetworkKey,
+                        DayBucketUnixSeconds = group.Key.Day,
+                        Samples = group.Count(),
+                        Successes = group.Count(x => x.Succeeded && !x.RolledBack),
+                        Rollbacks = group.Count(x => x.RolledBack),
+                        HumanConfirmed = group.Count(x => x.HumanConfirmed),
+                        LatencySumMs = group
+                            .Where(x => x.LatencyMs is { } v && double.IsFinite(v) && v >= 0d)
+                            .Sum(x => x.LatencyMs!.Value),
+                        LatencySamples = group.Count(x => x.LatencyMs is { } v && double.IsFinite(v) && v >= 0d),
+                    })
+                    .ToArray();
+
                 foreach (var aggregate in aggregates)
                 {
                     var existing = db.Find<StrategyOutcomeAggregateItem>(aggregate.Id);
@@ -101,13 +109,19 @@ public sealed class IntelligenceRetentionService
 
                 foreach (var row in rows)
                 {
-                    deletedRaw += db.Delete(row);
+                    batchDeleted += db.Delete(row);
                 }
                 return Task.CompletedTask;
             }, cancellationToken);
 
-            rolledUp += rows.Count;
-            if (rows.Count < policy.BatchSize)
+            if (batchCount == 0)
+            {
+                break;
+            }
+
+            rolledUp += batchCount;
+            deletedRaw += batchDeleted;
+            if (batchCount < policy.BatchSize)
             {
                 break;
             }
