@@ -2,6 +2,7 @@ package measure
 
 import (
 	"context"
+	"crypto/x509"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -23,12 +24,15 @@ func TestProbeUploadReportsBodyConsumptionAndResponse(t *testing.T) {
 
 	// The production helper requires HTTPS but blocks private destinations. Tests opt into
 	// loopback explicitly so the network behavior remains deterministic and self-contained.
+	roots := x509.NewCertPool()
+	roots.AddCert(server.Certificate())
 	result, err := ProbeUpload(context.Background(), UploadProbeOptions{
 		URL: server.URL,
 		TotalBytes: 16 * 1024,
 		Chunks: 8,
 		Timeout: 5 * time.Second,
 		AllowPrivate: true,
+		RootCAs: roots,
 	})
 	if err != nil {
 		t.Fatal(err)
