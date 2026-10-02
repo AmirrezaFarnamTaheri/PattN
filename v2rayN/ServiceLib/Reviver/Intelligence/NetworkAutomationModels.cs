@@ -109,3 +109,37 @@ public sealed record HeatmapCell
     public double IPv6SuccessRate { get; init; }
     public double UploadStallRate { get; init; }
 }
+
+public sealed record StrategyConflict
+{
+    public required string CandidateId { get; init; }
+    public required string Field { get; init; }
+    public required string ExistingTarget { get; init; }
+    public required string ConflictingTarget { get; init; }
+}
+
+public sealed record CompatibleStrategyPlan
+{
+    public IReadOnlyList<string> SelectedCandidateIds { get; init; } = [];
+    public IReadOnlyList<StrategyConflict> Conflicts { get; init; } = [];
+}
+
+public enum EIntelligencePrivacyMode
+{
+    LocalOnly = 0,
+    PrivateHashed,
+    AnonymousAggregate,
+}
+
+public sealed record IntelligenceSharingPolicy
+{
+    public EIntelligencePrivacyMode Mode { get; init; } = EIntelligencePrivacyMode.LocalOnly;
+    public bool ExplicitOptIn { get; init; }
+    public int MinimumAggregateSamples { get; init; } = 5;
+}
+
+public sealed record IntelligenceShareBatch
+{
+    public IReadOnlyList<AnonymousIntelligenceRecord> Records { get; init; } = [];
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+}
