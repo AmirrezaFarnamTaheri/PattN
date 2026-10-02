@@ -24,7 +24,11 @@ public sealed class NetworkIntelligenceService
             TcpSucceeded = result.Connected,
             TlsSucceeded = result.TlsHandshakeSucceeded,
             UploadSucceeded = result.BodyFullyRead,
-            DownstreamSucceeded = result.ResponseReceived && result.StatusCode is >= 200 and < 300,
+            // A response on the same HTTP exchange is not independent proof that the remote
+            // peer consumed the complete request body. Servers may answer early. Treat this
+            // probe as upload/application evidence only; UplinkStall requires a separate
+            // downstream-success signal in Classify(NetworkObservation).
+            DownstreamSucceeded = null,
             LatencyMs = result.DurationMs,
             ObservedAt = observedAt ?? DateTimeOffset.UtcNow,
         }, now);
@@ -407,6 +411,42 @@ public sealed class NetworkIntelligenceService
             return "baseline";
         }
         return string.Join("+", candidate.Mutations.Select(x => x.Kind.ToString()).Distinct().OrderBy(x => x, StringComparer.Ordinal));
+    }
+
+    public static bool IsDerivedNetworkKey(string? value)
+        => IsDerivedKey(value, "net:v1:");
+
+    public static bool IsDerivedGenomeKey(string? value)
+        => IsDerivedKey(value, "genome:v1:");
+
+    public static bool IsLocalNetworkKey(string? value)
+        => IsDerivedNetworkKey(value)
+           || string.Equals(value, "net:unknown", StringComparison.Ordinal);
+
+    public static bool IsSafeStrategyId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 128)
+        {
+            return false;
+        }
+
+        return value.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_' or '.' or ':' or '+');
+    }
+
+    public static bool IsKnownFailureClass(string? value)
+        => !string.IsNullOrWhiteSpace(value)
+           && Enum.TryParse<ERepairFailureClass>(value, ignoreCase: false, out var parsed)
+           && Enum.IsDefined(parsed);
+
+    private static bool IsDerivedKey(string? value, string prefix)
+    {
+        if (value is null || value.Length != prefix.Length + 24 || !value.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return value.AsSpan(prefix.Length).ToArray().All(
+            ch => ch is >= '0' and <= '9' or >= 'a' and <= 'f');
     }
 
     private static double ExperimentUtility(ExperimentHypothesis hypothesis)
