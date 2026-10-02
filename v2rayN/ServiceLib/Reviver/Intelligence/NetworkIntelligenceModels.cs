@@ -65,6 +65,7 @@ public sealed record FailureAssessment
 
 public sealed record StrategyOutcomeObservation
 {
+    public string CandidateId { get; init; } = string.Empty;
     public required string StrategyId { get; init; }
     public required string GenomeKey { get; init; }
     public required string NetworkKey { get; init; }
