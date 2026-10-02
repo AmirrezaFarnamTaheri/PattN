@@ -1,3 +1,5 @@
+using ServiceLib.Reviver.Models;
+
 namespace ServiceLib.Reviver.Services;
 
 public sealed record RepairMetricsSnapshot
