@@ -66,6 +66,14 @@ These cannot be truthfully completed by client-only changes and remain intention
 6. **Remaining non-Persian translations**
    - Require native translation/review, not mechanical English duplication.
 
+7. **Long-duration and real-environment assurance**
+   - A >24-hour helper soak/heap-regression campaign and high-contention SQLite stress campaign require dedicated runner time and are not substituted by unit tests.
+   - Accessibility conformance still requires real release builds with UI Automation / AT-SPI / VoiceOver; static XAML checks are only regression guards.
+   - DNSSEC insecure-delegation and alias-authentication confidence should continue to grow through reviewed real-capture fixtures; synthetic and fuzz coverage do not make the corpus exhaustive.
+
+8. **Optional architectural simplification**
+   - Generated cross-language RPC schemas, a consolidated SQLite unit-of-work abstraction, and further platform-specific sysproxy abstraction remain maintainability refactors rather than correctness blockers. They should be pursued only with migration tests and measurable reduction in duplicated surface.
+
 ## Date-gated DNSSEC verification
 
 The embedded IANA root-anchor snapshot contains the current and successor KSKs and the scheduled workflow verifies IANA's detached CMS signature. The local audit is intentionally designed to require an explicit review after **2026-10-11**. This cannot be marked complete before that date; a post-rollover source verification must update the reviewed snapshot if IANA's active material changes.
