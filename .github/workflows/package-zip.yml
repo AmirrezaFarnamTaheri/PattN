@@ -104,8 +104,20 @@ jobs:
         fi
         [[ -s "$helper" ]] || { echo "::error::missing bundled discovery helper: $helper"; exit 1; }
 
-    - name: Package zip archive
-      run: 7z a -tZip "PattN-$Target-$Arch.zip" "PattN-$Target-$Arch" -mx1
+    - name: Package deterministic zip archive
+      shell: bash
+      run: |
+        set -euo pipefail
+        epoch="$(git show -s --format=%ct "$GITHUB_SHA")"
+        first="$RUNNER_TEMP/PattN-$Target-$Arch.first.zip"
+        second="$RUNNER_TEMP/PattN-$Target-$Arch.second.zip"
+        python3 scripts/deterministic_zip.py "PattN-$Target-$Arch" "$first" --epoch "$epoch"
+        python3 scripts/deterministic_zip.py "PattN-$Target-$Arch" "$second" --epoch "$epoch"
+        cmp "$first" "$second" || {
+          echo "::error::deterministic ZIP self-check failed"
+          exit 1
+        }
+        mv "$first" "PattN-$Target-$Arch.zip"
 
     - name: Rename windows-desktop
       if: inputs.target == 'windows-desktop'
