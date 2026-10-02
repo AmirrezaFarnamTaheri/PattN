@@ -17,7 +17,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Registering provider catalog...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var registered = await _catalogs.RegisterAsync(path);
             await RefreshCatalogsCoreAsync();
@@ -35,7 +35,7 @@ public partial class DiscoveryManagementViewModel
         }
 
         var id = SelectedCatalog.Id;
-        await RunBusyAsync("Refreshing catalog audit...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _catalogs.RefreshAsync(id);
             await RefreshCatalogsCoreAsync();
@@ -85,7 +85,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Unregistering catalog...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var receipt = await _catalogs.UnregisterAsync(id);
             _pendingCatalogUpdate = null;
@@ -99,7 +99,7 @@ public partial class DiscoveryManagementViewModel
     }
 
     private async Task RefreshRetiredCatalogsAsync()
-        => await RunBusyAsync("Refreshing retired catalogs...", async () =>
+        => await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await RefreshRetiredCatalogsCoreAsync();
             StatusMessage = ResUI.TbDiscoveryRetiredArchiveRefreshed;
@@ -114,7 +114,7 @@ public partial class DiscoveryManagementViewModel
         }
 
         var retired = SelectedRetiredCatalog;
-        await RunBusyAsync("Re-registering retired catalog...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var restored = await _catalogs.RegisterAsync(
                 retired.FilePath,
@@ -152,7 +152,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Discarding retired catalog revision history...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var receipt = await _catalogs.DiscardRetiredRevisionHistoryAsync(id);
             await RefreshRetiredCatalogsCoreAsync();
@@ -183,7 +183,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Exporting retired catalog archive...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var bundle = await _catalogArchive.PrepareAsync(id);
             await _catalogArchive.SaveAsync(bundle, destination);
@@ -200,7 +200,7 @@ public partial class DiscoveryManagementViewModel
         }
 
         var id = SelectedCatalog.Id;
-        await RunBusyAsync("Renaming catalog...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _catalogs.RenameAsync(id, CatalogDisplayNameEdit);
             await RefreshCatalogsCoreAsync();
@@ -261,7 +261,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Saving remote catalog source...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _remoteCatalogs.ConfigureAsync(id, draft);
             _pendingRemoteCatalogFetch = null;
@@ -290,7 +290,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Removing remote catalog source...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _remoteCatalogs.RemoveAsync(id);
             _pendingRemoteCatalogFetch = null;
@@ -314,7 +314,7 @@ public partial class DiscoveryManagementViewModel
         _pendingRemoteCatalogFetch = null;
         HasRemoteCatalogPreview = false;
         RemoteCatalogFetchPreview = ResUI.TbDiscoveryFetchPreview;
-        await RunBusyAsync("Fetching remote catalog preview from saved source...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var preview = await _remoteCatalogs.FetchPreviewAsync(id);
             if (!string.Equals(SelectedCatalog?.Id, id, StringComparison.Ordinal))
@@ -370,7 +370,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Applying remote catalog update...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var revision = await _remoteCatalogs.ApplyAsync(preview);
             _pendingRemoteCatalogFetch = null;
@@ -521,7 +521,7 @@ public partial class DiscoveryManagementViewModel
         }
 
         var sourceUri = RemoteCatalogUri;
-        await RunBusyAsync("Inspecting ordinary HTTPS server key...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var observation = await _tlsObservation.ObserveAsync(sourceUri);
             if (!string.Equals(RemoteCatalogUri, sourceUri, StringComparison.Ordinal))
@@ -596,7 +596,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Exporting portable remote-source trust configuration...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var bundle = await _remoteSourcePortability.ExportAsync(id);
             await _remoteSourcePortability.SaveAsync(bundle, destination);
@@ -628,7 +628,7 @@ public partial class DiscoveryManagementViewModel
         _pendingRemoteSourceImport = null;
         HasRemoteSourceImportPreview = false;
         RemoteSourceImportPreview = ResUI.TbDiscoveryImportPreview;
-        await RunBusyAsync("Preparing remote-source trust import preview...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var bundle = await _remoteSourcePortability.LoadAsync(sourcePath);
             var preview = await _remoteSourcePortability.PrepareImportAsync(id, bundle);
@@ -678,7 +678,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Applying remote-source trust configuration...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _remoteSourcePortability.ApplyImportAsync(preview);
             _pendingRemoteSourceImport = null;
@@ -701,7 +701,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Inspecting provider catalog archive...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var inspection = await _catalogArchiveInspection.InspectAsync(path);
             ArchiveInspectionSummary = FormatArchiveInspection(inspection);
@@ -711,7 +711,7 @@ public partial class DiscoveryManagementViewModel
     }
 
     private async Task SearchRemoteProvenanceAsync()
-        => await RunBusyAsync("Searching persisted remote provenance...", async () =>
+        => await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await SearchRemoteProvenanceCoreAsync();
             StatusMessage = ResUI.TbDiscoveryRemoteProvenanceRefreshed;
@@ -764,7 +764,7 @@ public partial class DiscoveryManagementViewModel
         _pendingCatalogUpdate = null;
         HasCatalogUpdatePreview = false;
         CatalogUpdatePreview = ResUI.TbUpdatePreview;
-        await RunBusyAsync("Preparing catalog update preview...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var bytes = await File.ReadAllBytesAsync(path);
             var plan = await _catalogs.PrepareUpdateAsync(id, bytes);
@@ -807,7 +807,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Applying catalog update...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             var revision = await _catalogs.ApplyUpdateAsync(id, plan);
             _pendingCatalogUpdate = null;
@@ -846,7 +846,7 @@ public partial class DiscoveryManagementViewModel
             return;
         }
 
-        await RunBusyAsync("Rolling back catalog revision...", async () =>
+        await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await _catalogs.RollbackRevisionAsync(revisionId);
             await RefreshCatalogsCoreAsync();
@@ -857,7 +857,7 @@ public partial class DiscoveryManagementViewModel
     }
 
     private async Task RefreshRemoteSourceHealthAsync()
-        => await RunBusyAsync("Refreshing persisted remote source health...", async () =>
+        => await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await RefreshRemoteSourceHealthCoreAsync();
             StatusMessage = ResUI.TbDiscoveryRemoteHealthRefreshed;
