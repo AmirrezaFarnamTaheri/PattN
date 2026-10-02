@@ -101,6 +101,28 @@ jobs:
         PATTN_MACOS_CODESIGN_IDENTITY: ${{ github.event_name != 'pull_request' && secrets.APPLE_SIGNING_IDENTITY || '' }}
       run: ./package-osx.sh "macos-$Arch" "PattN-macos-$Arch" "$PackageVersion"
 
+    - name: Prove unsigned app payload reproducibility
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        set -euo pipefail
+        epoch="$(git show -s --format=%ct HEAD)"
+        app="v2rayN-Package-macos-$Arch/PattN.app"
+        first="$RUNNER_TEMP/PattN-macos-$Arch-first.zip"
+        second="$RUNNER_TEMP/PattN-macos-$Arch-second.zip"
+
+        python3 scripts/deterministic_zip.py "$app" "$first" --epoch "$epoch"
+
+        rm -rf "v2rayN-Package-macos-$Arch" "PattN-macos-$Arch.dmg"
+        ./package-osx.sh "macos-$Arch" "PattN-macos-$Arch" "$PackageVersion"
+        python3 scripts/deterministic_zip.py "$app" "$second" --epoch "$epoch"
+
+        cmp "$first" "$second" || {
+          echo "::error::Unsigned PattN.app payload is not byte-for-byte reproducible for macos-$Arch"
+          shasum -a 256 "$first" "$second" || true
+          exit 1
+        }
+
     - name: Notarize and staple DMG
       if: github.event_name != 'pull_request'
       shell: bash
