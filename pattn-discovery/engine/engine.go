@@ -78,7 +78,7 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 	case "engine.version":
 		base.Data = map[string]any{"engine": "pattn-discovery", "version": EngineVersion}
 	case "engine.capabilities":
-		base.Data = protocol.Capabilities{ProtocolVersion: protocol.Version, NativeScanner: true, Methods: []string{"engine.version", "engine.capabilities", "targets.inspect", "targets.normalize", "endpoint.probe", "dns.trace", "dns.authority.compare", "dns.trust-anchor.audit", "dns.dnssec.inspect", "dns.dnssec.chain", "dns.dnssec.validate", "dns.consensus.compare", "dns.repair.inspect", "dns.resolver.catalog", "dns.resolver.catalog.audit", "dns.resolver.profile", "dns.resolver.qualify", "scan.tcp", "dns.resolver.discover", "scan.pause", "scan.resume", "scan.cancel", "request.cancel"}}
+		base.Data = protocol.Capabilities{ProtocolVersion: protocol.Version, NativeScanner: true, Methods: []string{"engine.version", "engine.capabilities", "targets.inspect", "targets.normalize", "endpoint.probe", "network.uplink.probe", "dns.trace", "dns.authority.compare", "dns.trust-anchor.audit", "dns.dnssec.inspect", "dns.dnssec.chain", "dns.dnssec.validate", "dns.consensus.compare", "dns.repair.inspect", "dns.resolver.catalog", "dns.resolver.catalog.audit", "dns.resolver.profile", "dns.resolver.qualify", "scan.tcp", "dns.resolver.discover", "scan.pause", "scan.resume", "scan.cancel", "request.cancel"}}
 	case "targets.inspect":
 		var p struct {
 			Targets []string `json:"targets"`
@@ -161,6 +161,49 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			break
 		}
 		result, err := probeEndpoints(ctx, p)
+		if err != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: err.Error()}
+			break
+		}
+		base.Data = result
+	case "network.uplink.probe":
+		var p struct {
+			URL               string `json:"url"`
+			TotalBytes        int    `json:"totalBytes"`
+			Chunks            int    `json:"chunks"`
+			TimeoutMs         int    `json:"timeoutMs"`
+			InterChunkDelayMs int    `json:"interChunkDelayMs"`
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: err.Error()}
+			break
+		}
+		if p.TotalBytes == 0 {
+			p.TotalBytes = 16 * 1024
+		}
+		if p.Chunks == 0 {
+			p.Chunks = 8
+		}
+		if p.TimeoutMs == 0 {
+			p.TimeoutMs = 8000
+		}
+		timeout, err := measure.ParseUploadProbeTimeout(p.TimeoutMs)
+		if err != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: err.Error()}
+			break
+		}
+		delay, err := measure.ParseUploadProbeDelay(p.InterChunkDelayMs)
+		if err != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: err.Error()}
+			break
+		}
+		result, err := measure.ProbeUpload(ctx, measure.UploadProbeOptions{
+			URL: p.URL,
+			TotalBytes: p.TotalBytes,
+			Chunks: p.Chunks,
+			Timeout: timeout,
+			InterChunkDelay: delay,
+		})
 		if err != nil {
 			base.Error = &protocol.Error{Code: "invalid_params", Message: err.Error()}
 			break
