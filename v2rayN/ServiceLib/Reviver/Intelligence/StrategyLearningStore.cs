@@ -58,8 +58,15 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
             .OrderByDescending(x => x.ObservedAtUnixMs)
             .Take(maxSamples)
             .ToListAsync();
+        var aggregates = await SQLiteHelper.Instance.TableAsync<StrategyOutcomeAggregateItem>()
+            .Where(x => x.StrategyId == strategyId
+                        && x.GenomeKey == genomeKey
+                        && x.NetworkKey == networkKey)
+            .OrderByDescending(x => x.DayBucketUnixSeconds)
+            .Take(maxSamples)
+            .ToListAsync();
 
-        return Summarize(strategyId, rows, DateTimeOffset.UtcNow);
+        return Summarize(strategyId, rows, aggregates, DateTimeOffset.UtcNow);
     }
 
     public static StrategyEffectivenessSummary Summarize(
@@ -67,8 +74,20 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
         IReadOnlyList<StrategyOutcomeHistoryItem> rows,
         DateTimeOffset now,
         double halfLifeDays = 45d)
+        => Summarize(strategyId, rows, [], now, halfLifeDays);
+
+    public static StrategyEffectivenessSummary Summarize(
+        string strategyId,
+        IReadOnlyList<StrategyOutcomeHistoryItem> rows,
+        IReadOnlyList<StrategyOutcomeAggregateItem> aggregates,
+        DateTimeOffset now,
+        double halfLifeDays = 45d)
     {
-        if (rows.Count == 0)
+        if (halfLifeDays <= 0d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(halfLifeDays));
+        }
+        if (rows.Count == 0 && aggregates.Count == 0)
         {
             return new StrategyEffectivenessSummary
             {
@@ -81,7 +100,10 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
 
         var weightedSuccess = 0d;
         var totalWeight = 0d;
+        var samples = 0;
+        DateTimeOffset? latest = null;
         var finiteLatency = new List<double>();
+
         foreach (var row in rows)
         {
             var observedAt = DateTimeOffset.FromUnixTimeMilliseconds(row.ObservedAtUnixMs);
@@ -90,6 +112,7 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
             var weight = timeWeight * sourceWeight;
             var success = row.Succeeded && !row.RolledBack;
 
+            samples++;
             totalWeight += weight;
             if (success)
             {
@@ -98,6 +121,31 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
             if (success && row.LatencyMs is { } latency && double.IsFinite(latency) && latency >= 0d)
             {
                 finiteLatency.Add(latency);
+            }
+            if (latest is null || observedAt > latest.Value)
+            {
+                latest = observedAt;
+            }
+        }
+
+        foreach (var aggregate in aggregates)
+        {
+            var observedAt = DateTimeOffset.FromUnixTimeSeconds(aggregate.DayBucketUnixSeconds);
+            var timeWeight = NetworkIntelligenceService.ApplyEvidenceDecay(1d, observedAt, now, halfLifeDays);
+            var aggregateSamples = Math.Max(0, aggregate.Samples);
+            var humanConfirmed = Math.Clamp(aggregate.HumanConfirmed, 0, aggregateSamples);
+            var successes = Math.Clamp(aggregate.Successes, 0, aggregateSamples);
+            var humanSuccesses = Math.Clamp(
+                aggregate.HumanConfirmedSuccesses,
+                0,
+                Math.Min(humanConfirmed, successes));
+
+            samples += aggregateSamples;
+            totalWeight += (aggregateSamples + humanConfirmed) * timeWeight;
+            weightedSuccess += (successes + humanSuccesses) * timeWeight;
+            if (latest is null || observedAt > latest.Value)
+            {
+                latest = observedAt;
             }
         }
 
@@ -111,11 +159,11 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
         return new StrategyEffectivenessSummary
         {
             StrategyId = strategyId,
-            Samples = rows.Count,
+            Samples = samples,
             EffectiveSuccessRate = totalWeight <= 0d ? 0.5d : weightedSuccess / totalWeight,
             Confidence = 1d - Math.Exp(-totalWeight / 6d),
             MedianLatencyMs = median,
-            LastObservedAt = rows.Max(x => DateTimeOffset.FromUnixTimeMilliseconds(x.ObservedAtUnixMs)),
+            LastObservedAt = latest,
         };
     }
 }
