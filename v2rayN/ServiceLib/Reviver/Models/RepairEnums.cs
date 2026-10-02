@@ -27,6 +27,7 @@ public enum ERepairFailureClass
     DnsThroughTunnelFailure,
     UdpUnavailable,
     ApplicationProbeFailure,
+    UploadStall,
     PerformanceDegraded,
     IntermittentFailure,
 }
