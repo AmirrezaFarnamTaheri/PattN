@@ -45,20 +45,39 @@ public sealed class ReviverService(
         var diagnosis = await diagnostic.DiagnoseAsync(session, cancellationToken);
         session.BaselineFailure = diagnosis.FailureClass;
         session.BaselineValidation = diagnosis.RuntimeValidation;
+
+        var failureAssessment = RepairIntelligenceService.Assess(diagnosis);
+        var proxyGenome = RepairIntelligenceService.BuildProxyGenome(
+            session.Original.CreateWorkingCopy());
+        var networkFingerprint = RepairIntelligenceService.BuildNetworkFingerprint(diagnosis);
         if (diagnosis.IsHealthy)
         {
-            return new RepairRunResult { Session = session, Diagnosis = diagnosis };
+            return new RepairRunResult
+            {
+                Session = session,
+                Diagnosis = diagnosis,
+                FailureAssessment = failureAssessment,
+                ProxyGenome = proxyGenome,
+                NetworkFingerprint = networkFingerprint,
+            };
         }
 
         var planned = await PlanAsync(session, diagnosis.FailureClass, maxCandidates, cancellationToken);
         var validated = await ValidateAsync(planned, validator, cancellationToken);
+        var recommended = validated.FirstOrDefault();
         return new RepairRunResult
         {
             Session = session,
             Diagnosis = diagnosis,
             PlannedCandidates = planned,
             ValidatedCandidates = validated,
-            RecommendedCandidate = validated.FirstOrDefault(),
+            RecommendedCandidate = recommended,
+            FailureAssessment = failureAssessment,
+            ProxyGenome = proxyGenome,
+            NetworkFingerprint = networkFingerprint,
+            RecommendationExplanation = recommended is null
+                ? null
+                : RepairIntelligenceService.Explain(recommended, failureAssessment),
         };
     }
 
