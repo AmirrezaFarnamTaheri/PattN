@@ -788,26 +788,79 @@ public class Utils
         return false;
     }
 
+    /// <summary>
+    /// True only when the port can actually be bound on the loopback interface right now.
+    /// PortInUse() is a heuristic over the global endpoint/connection tables: it misses ports held
+    /// by other users, hyper-V/excluded-port ranges and binds on a specific address family, and it is
+    /// not atomic either way. Attempting the bind is the definitive check, so the free-port decision
+    /// uses it and keeps PortInUse() only as a fast path for the requested port.
+    /// </summary>
+    private static bool CanBindLoopbackPort(int port)
+    {
+        try
+        {
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return false;
+        }
+    }
+
     public static int GetFreePort(int defaultPort)
     {
         try
         {
-            if (!PortInUse(defaultPort))
+            if (defaultPort > 0 && !PortInUse(defaultPort) && CanBindLoopbackPort(defaultPort))
             {
                 return defaultPort;
             }
 
-            TcpListener l = new(IPAddress.Loopback, 0);
-            l.Start();
-            var port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
+            // The default is taken (common when several test queues share one base port): walk a
+            // short, bounded range instead of picking one arbitrary port, and verify each candidate
+            // by binding it. Port 0 is the ephemeral request, so the range deliberately starts at 1.
+            for (var candidate = Math.Max(1, defaultPort + 1); candidate <= defaultPort + 64; candidate++)
+            {
+                if (candidate is > 0 and < 65535 && CanBindLoopbackPort(candidate))
+                {
+                    Logging.SaveLog(_tag, $"GetFreePort: {defaultPort} is unavailable, using {candidate}");
+                    return candidate;
+                }
+            }
+
+            if (CanBindLoopbackPort(0))
+            {
+                var listener = new TcpListener(IPAddress.Loopback, 0);
+                listener.Start();
+                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                listener.Stop();
+                if (port > 0 && CanBindLoopbackPort(port))
+                {
+                    return port;
+                }
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            Logging.SaveLog(_tag, ex);
         }
 
-        return 59090;
+        // Previously this returned the hardcoded 59090 unconditionally. Every caller that fell
+        // through to it got the *same* port, which is the worst possible answer for a "find a free
+        // port" helper: two callers would fight over it, and a local inbound could end up bound on a
+        // port another process owns -- the core's logs would then describe traffic that never went
+        // through it. 0 is not bindable by any of these callers, so the configuration fails loudly at
+        // startup instead of silently sharing a port.
+        Logging.SaveLog(_tag, "GetFreePort: no local port could be bound; returning 0 to fail loudly");
+        return 0;
     }
 
     public static (List<IPEndPoint> endpoints, List<TcpConnectionInformation> connections) GetActiveNetworkInfo()
