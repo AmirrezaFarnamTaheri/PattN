@@ -388,7 +388,11 @@ public class NetworkAutomationTests
     public async Task FleetHealth_ShouldRejectOverlappingThresholds()
     {
         var service = new NetworkAutomationService();
-        var genome = new ProxyGenome
+        // Qualified: this file imports both ServiceLib.Reviver.Intelligence (NetworkAutomationService,
+        // ShadowSample, ...) and ServiceLib.Reviver.Models (RepairCandidate, RepairMutation, ...), and
+        // both namespaces declare a ProxyGenome. BuildFleetHealth takes the intelligence one, which is
+        // also the only one with a Key.
+        var genome = new ServiceLib.Reviver.Intelligence.ProxyGenome
         {
             Key = "same",
             Protocol = "VLESS",
@@ -413,7 +417,11 @@ public class NetworkAutomationTests
     public async Task FleetHealth_ShouldCountDuplicateGenomes()
     {
         var service = new NetworkAutomationService();
-        var genome = new ProxyGenome
+        // Qualified: this file imports both ServiceLib.Reviver.Intelligence (NetworkAutomationService,
+        // ShadowSample, ...) and ServiceLib.Reviver.Models (RepairCandidate, RepairMutation, ...), and
+        // both namespaces declare a ProxyGenome. BuildFleetHealth takes the intelligence one, which is
+        // also the only one with a Key.
+        var genome = new ServiceLib.Reviver.Intelligence.ProxyGenome
         {
             Key = "same",
             Protocol = "VLESS",
