@@ -28,3 +28,25 @@ public sealed record EndpointHistorySummary
            && RecentFailureStreak <= policy.MaximumRecentFailureStreak
            && DecayedReliability >= policy.MinimumDecayedReliability;
 }
+
+
+public enum EEndpointLifecycleState
+{
+    Unknown = 0,
+    New = 1,
+    Healthy = 2,
+    Degraded = 3,
+    Dead = 4,
+    Recovered = 5,
+}
+
+public sealed record EndpointLifecycleAssessment
+{
+    public EEndpointLifecycleState State { get; init; } = EEndpointLifecycleState.Unknown;
+    public double Confidence { get; init; }
+    public int Samples { get; init; }
+    public int RecentFailureStreak { get; init; }
+    public double DecayedReliability { get; init; }
+    public DateTimeOffset? LastObservedAt { get; init; }
+    public IReadOnlyList<string> Reasons { get; init; } = [];
+}

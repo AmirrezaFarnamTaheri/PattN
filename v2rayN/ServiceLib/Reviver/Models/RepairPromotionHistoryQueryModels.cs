@@ -39,6 +39,15 @@ public sealed record RepairStrategyHistorySummary
     public int Improved { get; init; }
     public int Stable { get; init; }
     public int Regressed { get; init; }
+    public int RatedPromotions { get; init; }
+    public int HumanConfirmedPositive { get; init; }
+    public int HumanConfirmedNegative { get; init; }
+    public double? SuccessRate { get; init; }
+    public double? HumanConfirmedSuccessRate { get; init; }
+    public double? RollbackRate { get; init; }
+    public double? RecencyWeightedSuccessRate { get; init; }
+    public double? RecencyWeightedLearningSuccessRate { get; init; }
+    public DateTimeOffset? LatestEventAt { get; init; }
 }
 
 public sealed record RepairPromotionHistorySummary
@@ -53,4 +62,24 @@ public sealed record RepairPromotionHistorySummary
     public DateTimeOffset? LatestEventAt { get; init; }
     public IReadOnlyList<RepairStrategyHistorySummary> Strategies { get; init; } = [];
     public IReadOnlyList<RepairPromotionHistoryEntry> Entries { get; init; } = [];
+}
+
+
+public sealed record RepairIncidentTimelineEvent
+{
+    public DateTimeOffset ObservedAt { get; init; }
+    public required string EventKind { get; init; }
+    public string StrategyId { get; init; } = string.Empty;
+    public string CandidateId { get; init; } = string.Empty;
+    public string OutcomeVerdict { get; init; } = "unknown";
+    public IReadOnlyList<string> MutationFields { get; init; } = [];
+    public string Summary { get; init; } = string.Empty;
+}
+
+public sealed record RepairIncidentTimeline
+{
+    public string ProfileId { get; init; } = string.Empty;
+    public DateTimeOffset? StartedAt { get; init; }
+    public DateTimeOffset? EndedAt { get; init; }
+    public IReadOnlyList<RepairIncidentTimelineEvent> Events { get; init; } = [];
 }
