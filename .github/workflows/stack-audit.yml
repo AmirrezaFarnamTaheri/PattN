@@ -7,6 +7,10 @@ name: Stack & Localization Audit
 #      when merged  -> scripts/check_stack_sync.py
 #   2. a view binding a resource key that was deleted from ResUI.resx, which
 #      compiles and throws at window load -> scripts/check_localization.py
+#   3. a sync merge on the stack's aggregation base resolving a *shared* slice file
+#      to an older side (dff02073 dropped five Reviver model members that the
+#      services it kept still call), which payload parity cannot see
+#      -> scripts/check_stack_sync.py (shared-slice check)
 
 on:
   pull_request:
