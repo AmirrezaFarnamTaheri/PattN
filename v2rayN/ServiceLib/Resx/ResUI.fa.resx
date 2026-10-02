@@ -2018,12 +2018,24 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
     <value>نسخه فهرست بازگردانی شد.</value>
   </data>
   <data name="TbPreviewEndpointCleanup" xml:space="preserve"><value>پیش‌نمایش پاک‌سازی</value></data>
-  <data name="TbReviverDiagnosisLine" xml:space="preserve"><value>تشخیص: {0}</value></data>
-  <data name="TbReviverValidationLine" xml:space="preserve"><value>اعتبارسنجی: {0}/{1} تلاش موفق؛ میانه تأخیر {2}؛ اتلاف {3}.</value></data>
-  <data name="TbReviverMutationLine" xml:space="preserve"><value>{0}: {1} → {2} ({3})</value></data>
-  <data name="TbReviverEmptyValue" xml:space="preserve"><value>(خالی)</value></data>
-  <data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve"><value>در حال اعمال پاک‌سازی نقاط پایانی…</value></data>
-  <data name="TbDiscoveryApplyingRetention" xml:space="preserve"><value>در حال اعمال سیاست نگه‌داری چرخه‌عمر…</value></data>
+<data name="TbReviverDiagnosisLine" xml:space="preserve">
+    <value>تشخیص: {0}</value>
+  </data>
+<data name="TbReviverValidationLine" xml:space="preserve">
+    <value>اعتبارسنجی: {0}/{1} تلاش موفق؛ میانهٔ تأخیر {2}؛ افت {3}.</value>
+  </data>
+<data name="TbReviverMutationLine" xml:space="preserve">
+    <value>{0}: {1} → {2} ({3})</value>
+  </data>
+<data name="TbReviverEmptyValue" xml:space="preserve">
+    <value>(خالی)</value>
+  </data>
+<data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve">
+    <value>در حال اعمال پاک‌سازی نقاط پایانی…</value>
+  </data>
+<data name="TbDiscoveryApplyingRetention" xml:space="preserve">
+    <value>در حال اعمال نگه‌داری چرخهٔ عمر…</value>
+  </data>
   <data name="TbSettingsHistoryPolicyAutoRemove" xml:space="preserve"><value>حذف خودکار پراکسی‌های منطبق</value></data>
   <data name="TbSettingsHistoryPolicyAutoRemoveTip" xml:space="preserve"><value>به‌طور پیش‌فرض غیرفعال است. سیاست تاریخی منطبق فقط پروفایل‌های غیرفعال را حذف می‌کند؛ پروفایل فعال همیشه محافظت می‌شود.</value></data>
   <data name="TbNetworkIntelligence" xml:space="preserve"><value>هوشمندی شبکه</value></data>
