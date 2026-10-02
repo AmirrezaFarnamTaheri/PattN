@@ -106,7 +106,7 @@ jobs:
       # build -- a control that silently passes would be worse than no control.
       - name: Shared-slice check has not gone dead (negative control on dff02073)
         run: |
-          if git cat-file -e dff02073^{commit} 2>/dev/null; then
+          if git cat-file -e dff02073 2>/dev/null; then
             if python3 scripts/check_stack_sync.py --check-slice-of dff02073 >/dev/null 2>&1; then
               echo "::error::the shared-slice check accepted a ref that dropped part of the slice"
               exit 1
