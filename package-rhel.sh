@@ -90,15 +90,52 @@ This script only supports: RHEL / Rocky / AlmaLinux / Fedora / CentOS."
 
 install_dependencies() {
   local install_ok=0
+  local sdk_rid=""
+  local sdk_hash=""
+  local sdk_archive=""
+  local sdk_tmp=""
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang dotnet-sdk-10.0 \
-      && install_ok=1
+    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang ca-certificates
+
+    case "$HOST_ARCH" in
+      x86_64)
+        sdk_rid="linux-x64"
+        sdk_hash="$PATTN_DOTNET_SDK_LINUX_X64_SHA512"
+        ;;
+      aarch64)
+        sdk_rid="linux-arm64"
+        sdk_hash="$PATTN_DOTNET_SDK_LINUX_ARM64_SHA512"
+        ;;
+      *)
+        die "Only supports aarch64 / x86_64"
+        ;;
+    esac
+
+    sdk_archive="dotnet-sdk-${PATTN_DOTNET_SDK_VERSION}-${sdk_rid}.tar.gz"
+    sdk_tmp="$(mktemp -d)"
+    rm -rf "$HOME/.dotnet-pattn"
+    mkdir -p "$HOME/.dotnet-pattn"
+    pattn_download_sha512 \
+      "https://builds.dotnet.microsoft.com/dotnet/Sdk/${PATTN_DOTNET_SDK_VERSION}/${sdk_archive}" \
+      "$sdk_tmp/$sdk_archive" \
+      "$sdk_hash"
+    tar -C "$HOME/.dotnet-pattn" -xzf "$sdk_tmp/$sdk_archive"
+    rm -rf "$sdk_tmp"
+
+    export PATH="$HOME/.dotnet-pattn:$PATH"
+    export DOTNET_ROOT="$HOME/.dotnet-pattn"
+
+    [[ "$(dotnet --version)" == "$PATTN_DOTNET_SDK_VERSION" ]] || {
+      echo "Expected locked .NET SDK $PATTN_DOTNET_SDK_VERSION, got $(dotnet --version)" >&2
+      exit 1
+    }
+    install_ok=1
   fi
 
   if [[ "$install_ok" -ne 1 ]]; then
     echo "Could not auto-install dependencies for '$OS_ID'. Make sure these are available:"
-    echo "dotnet-sdk 10.x, curl, unzip, tar, rsync, rpm, rpmdevtools, rpm-build (on Red Hat branch)"
+    echo "curl, unzip, tar, rsync, rpm, rpmdevtools, rpm-build (on Red Hat branch)"
     exit 1
   fi
 }
