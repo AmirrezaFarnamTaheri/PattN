@@ -31,7 +31,7 @@ public sealed class RepairValidationAccumulator
         _failures.Add(failure);
     }
 
-    public RepairValidationEvidence Build()
+    public RepairValidationEvidence Build(bool integritySuspect = false)
     {
         double? median = null;
         if (_latencies.Count > 0)
@@ -51,6 +51,7 @@ public sealed class RepairValidationAccumulator
             MedianLatencyMs = median,
             LossRate = Attempts == 0 ? null : (Attempts - Successes) / (double)Attempts,
             Failures = _failures.ToArray(),
+            IntegritySuspect = integritySuspect,
         };
     }
 }

@@ -37,7 +37,7 @@ public sealed class RepairPromotionService(
         {
             throw new InvalidOperationException("Only runtime-validated repair candidates can be promoted.");
         }
-        if (!candidate.Validation.MeetsQuorum(candidate.RequiredRuntimeSuccesses))
+        if (!candidate.Validation.MeetsQuorumWithoutIntegrityDoubt(candidate.RequiredRuntimeSuccesses))
         {
             throw new InvalidOperationException(
                 "Runtime validation evidence no longer satisfies the quorum used to validate this repair candidate.");

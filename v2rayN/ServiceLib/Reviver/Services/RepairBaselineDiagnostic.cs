@@ -74,6 +74,8 @@ public sealed class RepairBaselineDiagnostic(
             Evidence = evidence.ToArray(),
         };
         var runtime = await runtimeValidator.ValidateAsync(baselineCandidate, cancellationToken);
+        // Diagnostic path only: deliberately MeetsQuorum (not the integrity-checked
+        // variant), because a baseline run is reporting what was observed, not authorising a change.
         if (runtime.MeetsQuorum(_policy.MinimumRuntimeSuccesses))
         {
             return new RepairDiagnosis
