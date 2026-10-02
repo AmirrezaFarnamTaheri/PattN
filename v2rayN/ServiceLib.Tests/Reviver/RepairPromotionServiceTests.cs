@@ -1,3 +1,4 @@
+using ServiceLib.Reviver.Intelligence;
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Promotion;
 using ServiceLib.Reviver.Services;
@@ -555,6 +556,110 @@ public class RepairPromotionServiceTests
         }
 
         await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task PromotionAndRollback_ShouldFeedActualOutcomeIntoStrategyLearning()
+    {
+        var original = new ProfileItem
+        {
+            IndexId = "original",
+            ConfigType = EConfigType.VLESS,
+            Address = "old.example",
+            Port = 443,
+        };
+        var repaired = JsonUtils.DeepCopy(original)!;
+        repaired.Address = "203.0.113.40";
+        var session = new RepairSession { Id = "session", Original = ProfileSnapshot.Capture(original) };
+        var candidate = new RepairCandidate
+        {
+            Id = "candidate",
+            SessionId = session.Id,
+            Profile = repaired,
+            Mutations =
+            [
+                new RepairMutation
+                {
+                    Kind = ERepairMutationKind.ReplaceEndpoint,
+                    Field = nameof(ProfileItem.Address),
+                    From = original.Address,
+                    To = repaired.Address,
+                    Reason = "test",
+                    Confidence = ERepairConfidence.EvidenceBacked,
+                }
+            ],
+            State = ERepairCandidateState.RuntimeValidated,
+            Validation = new RepairValidationEvidence
+            {
+                Attempts = 3,
+                Successes = 3,
+                ConsecutiveSuccesses = 3,
+                MedianLatencyMs = 50,
+            },
+            RequiredRuntimeSuccesses = 2,
+        };
+
+        ProfileItem CreatePromoted(ProfileItem source)
+        {
+            var copy = JsonUtils.DeepCopy(source)!;
+            copy.IndexId = "promoted";
+            return copy;
+        }
+
+        var learning = new RecordingStrategyOutcomeStore();
+        var service = new RepairPromotionService(
+            profileLoader: id => Task.FromResult<ProfileItem?>(id switch
+            {
+                "original" => original,
+                "promoted" => CreatePromoted(repaired),
+                _ => null,
+            }),
+            removeServers: (_, _) => Task.FromResult(0),
+            addServer: (_, child) =>
+            {
+                child.IndexId = "promoted";
+                return Task.FromResult(0);
+            },
+            strategyOutcomes: learning);
+
+        var plan = service.Prepare(session, candidate);
+        var receipt = await service.PromoteAsync(new Config(), plan, makeDefault: false);
+        await service.RollbackAsync(new Config { IndexId = "other" }, receipt);
+
+        await learning.Observations.Count.Should().BeEqualTo(2);
+        await learning.Observations[0].Succeeded.Should().BeTrue();
+        await learning.Observations[0].RolledBack.Should().BeFalse();
+        await learning.Observations[1].Succeeded.Should().BeFalse();
+        await learning.Observations[1].RolledBack.Should().BeTrue();
+        await learning.Observations[1].StrategyId.Should().BeEqualTo(learning.Observations[0].StrategyId);
+        await learning.Observations[0].GenomeKey.Should().NotBeEmpty();
+    }
+
+    private sealed class RecordingStrategyOutcomeStore : IStrategyOutcomeStore
+    {
+        public List<StrategyOutcomeObservation> Observations { get; } = [];
+
+        public Task RecordAsync(
+            StrategyOutcomeObservation observation,
+            CancellationToken cancellationToken = default)
+        {
+            Observations.Add(observation);
+            return Task.CompletedTask;
+        }
+
+        public Task<StrategyEffectivenessSummary> SummarizeAsync(
+            string strategyId,
+            string genomeKey,
+            string networkKey,
+            int maxSamples = 500,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new StrategyEffectivenessSummary
+            {
+                StrategyId = strategyId,
+                Samples = Observations.Count,
+                EffectiveSuccessRate = 0.5d,
+                Confidence = 0.5d,
+            });
     }
 
     private sealed class FailingPromotionHistoryStore : IRepairPromotionHistoryStore
