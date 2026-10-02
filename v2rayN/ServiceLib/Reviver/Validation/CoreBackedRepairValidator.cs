@@ -7,9 +7,12 @@ namespace ServiceLib.Reviver.Validation;
 /// persisted. A candidate is considered revived only after repeated application-level requests traverse the
 /// generated local SOCKS inbound successfully.
 /// </summary>
-public sealed class CoreBackedRepairValidator(RepairPolicy? policy = null) : IRepairCandidateValidator
+public sealed class CoreBackedRepairValidator(
+    RepairPolicy? policy = null,
+    IRepairUploadProbe? uploadProbe = null) : IRepairCandidateValidator
 {
     private readonly RepairPolicy _policy = policy ?? new RepairPolicy();
+    private readonly IRepairUploadProbe _uploadProbe = uploadProbe ?? new HttpRepairUploadProbe();
 
     public async Task<RepairValidationEvidence> ValidateAsync(
         RepairCandidate candidate,
@@ -63,7 +66,32 @@ public sealed class CoreBackedRepairValidator(RepairPolicy? policy = null) : IRe
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var latency = await ConnectionHandler.GetRealPingTime(proxy, cancellationToken);
-                if (latency > 0)
+                if (latency > 0 && _policy.UploadProbeUrl.IsNotEmpty())
+                {
+                    var upload = await _uploadProbe.ProbeAsync(
+                        proxy,
+                        _policy.UploadProbeUrl,
+                        Math.Clamp(_policy.UploadProbeBytes, 1024, 1024 * 1024),
+                        TimeSpan.FromSeconds(Math.Clamp(_policy.UploadProbeTimeoutSeconds, 1, 60)),
+                        cancellationToken);
+                    if (upload.Success)
+                    {
+                        accumulator.AddSuccess(latency, upload.ThroughputMbps);
+                    }
+                    else
+                    {
+                        if (upload.Error.IsNotEmpty())
+                        {
+                            Logging.SaveLog(
+                                $"[{nameof(CoreBackedRepairValidator)}] upload probe failed: {upload.Error}");
+                        }
+                        accumulator.AddFailure(
+                            upload.Stalled
+                                ? ERepairFailureClass.UploadStall
+                                : ERepairFailureClass.ApplicationProbeFailure);
+                    }
+                }
+                else if (latency > 0)
                 {
                     accumulator.AddSuccess(latency);
                 }
