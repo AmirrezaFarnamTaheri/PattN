@@ -9,11 +9,20 @@ public class IntelligenceRetentionTests
     {
         var service = new IntelligenceRetentionService();
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+        var threw = false;
+        try
+        {
             await service.RollupAndPruneAsync(new IntelligenceRetentionPolicy
             {
                 RawRetentionDays = 90,
                 AggregateRetentionDays = 30,
-            }));
+            });
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            threw = true;
+        }
+
+        await threw.Should().BeTrue();
     }
 }
