@@ -60,3 +60,34 @@ public sealed record RepairRecommendationExplanation
     public IReadOnlyList<string> Reasons { get; init; } = [];
     public IReadOnlyList<string> Risks { get; init; } = [];
 }
+
+public enum EIntelligenceSharingMode
+{
+    LocalOnly = 0,
+    AnonymousAggregate = 1,
+}
+
+public sealed record IntelligencePrivacyPolicy
+{
+    public EIntelligenceSharingMode SharingMode { get; init; } = EIntelligenceSharingMode.LocalOnly;
+
+    /// <summary>
+    /// The network fingerprint contains only categorical observation metadata, but remains
+    /// optional because low-entropy fingerprints can still aid correlation across reports.
+    /// </summary>
+    public bool IncludeNetworkFingerprint { get; init; }
+}
+
+public sealed record AnonymousRepairLearningEvent
+{
+    public string Schema { get; init; } = "repair-learning-v1";
+    public string ProxyGenomeFingerprint { get; init; } = string.Empty;
+    public string NetworkFingerprint { get; init; } = string.Empty;
+    public ERepairFailureClass FailureClass { get; init; } = ERepairFailureClass.Unknown;
+    public double FailureConfidenceBucket { get; init; }
+    public string StrategyId { get; init; } = string.Empty;
+    public string OutcomeVerdict { get; init; } = "unknown";
+    public bool HumanConfirmed { get; init; }
+    public DateOnly ObservedDayUtc { get; init; }
+}
+
