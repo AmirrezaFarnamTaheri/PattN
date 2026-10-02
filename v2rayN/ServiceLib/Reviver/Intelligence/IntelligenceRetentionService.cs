@@ -16,6 +16,7 @@ public sealed record IntelligenceRetentionResult
     public int RolledUpRows { get; init; }
     public int DeletedRawRows { get; init; }
     public int DeletedFeedbackRows { get; init; }
+    public int DeletedNetworkFingerprintRows { get; init; }
     public int DeletedAggregateRows { get; init; }
 }
 
@@ -116,6 +117,9 @@ public sealed class IntelligenceRetentionService
         var deletedFeedback = await SQLiteHelper.Instance.ExecuteAsync(
             "DELETE FROM HumanFeedbackHistoryItem WHERE ObservedAtUnixMs < ?",
             feedbackCutoff);
+        var deletedNetworkFingerprints = await SQLiteHelper.Instance.ExecuteAsync(
+            "DELETE FROM NetworkFingerprintHistoryItem WHERE ObservedAtUnixMs < ?",
+            feedbackCutoff);
         var deletedAggregates = await SQLiteHelper.Instance.ExecuteAsync(
             "DELETE FROM StrategyOutcomeAggregateItem WHERE DayBucketUnixSeconds < ?",
             aggregateCutoff);
@@ -125,6 +129,7 @@ public sealed class IntelligenceRetentionService
             RolledUpRows = rolledUp,
             DeletedRawRows = deletedRaw,
             DeletedFeedbackRows = deletedFeedback,
+            DeletedNetworkFingerprintRows = deletedNetworkFingerprints,
             DeletedAggregateRows = deletedAggregates,
         };
     }
