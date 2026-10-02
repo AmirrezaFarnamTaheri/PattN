@@ -32,6 +32,11 @@ public sealed class RepairPromotionHistoryQueryService
             where.Add("CandidateId = ?");
             args.Add(query.CandidateId);
         }
+        if (!query.StrategyId.IsNullOrEmpty())
+        {
+            where.Add("StrategyId = ?");
+            args.Add(query.StrategyId);
+        }
         if (!query.ProfileId.IsNullOrEmpty())
         {
             where.Add("(OriginalProfileId = ? OR PromotedProfileId = ?)");
@@ -64,6 +69,21 @@ public sealed class RepairPromotionHistoryQueryService
             .Select(Project)
             .ToArray();
 
+        var strategies = entries
+            .Where(x => x.StrategyId.IsNotEmpty())
+            .GroupBy(x => x.StrategyId, StringComparer.Ordinal)
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .Select(group => new RepairStrategyHistorySummary
+            {
+                StrategyId = group.Key,
+                Promotions = group.Count(x => x.EventKind == "promoted"),
+                Rollbacks = group.Count(x => x.EventKind == "rolled-back"),
+                Improved = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "improved"),
+                Stable = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "stable"),
+                Regressed = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "regressed"),
+            })
+            .ToArray();
+
         return new RepairPromotionHistorySummary
         {
             TotalEvents = entries.Length,
@@ -74,6 +94,7 @@ public sealed class RepairPromotionHistoryQueryService
             Regressed = entries.Count(x => x.OutcomeVerdict == "regressed"),
             Unknown = entries.Count(x => x.OutcomeVerdict is "" or "unknown"),
             LatestEventAt = entries.Length == 0 ? null : entries[0].ObservedAt,
+            Strategies = strategies,
             Entries = entries,
         };
     }
@@ -85,6 +106,7 @@ public sealed class RepairPromotionHistoryQueryService
             EventKind = row.EventKind,
             SessionId = row.SessionId,
             CandidateId = row.CandidateId,
+            StrategyId = row.StrategyId,
             OriginalProfileId = row.OriginalProfileId,
             PromotedProfileId = row.PromotedProfileId,
             PreviousDefaultProfileId = row.PreviousDefaultProfileId,

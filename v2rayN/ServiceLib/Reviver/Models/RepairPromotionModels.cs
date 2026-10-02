@@ -4,6 +4,7 @@ public sealed record RepairPromotionPlan
 {
     public required string SessionId { get; init; }
     public required string CandidateId { get; init; }
+    public string StrategyId { get; init; } = string.Empty;
     public required string OriginalProfileId { get; init; }
     public string OriginalProfileFingerprint { get; init; } = string.Empty;
     public required ProfileItem ChildProfile { get; init; }
@@ -18,6 +19,7 @@ public sealed record RepairPromotionReceipt
 {
     public required string SessionId { get; init; }
     public required string CandidateId { get; init; }
+    public string StrategyId { get; init; } = string.Empty;
     public required string OriginalProfileId { get; init; }
     public required string PromotedProfileId { get; init; }
     public string? PreviousDefaultProfileId { get; init; }

@@ -92,6 +92,7 @@ public sealed class ReviverService(
             var strategyCount = 0;
             await foreach (var candidate in strategy.GenerateAsync(session, failureClass, cancellationToken).WithCancellation(cancellationToken))
             {
+                candidate.StrategyId = strategy.Id;
                 if (strategyCount >= _policy.MaxCandidatesPerStrategy)
                 {
                     break;
