@@ -204,7 +204,9 @@ def main(argv: list[str]) -> int:
     integration = fetch_ref(args.integration, args.repo).strip()
     for pull in pulls:
         try:
-            head = fetch_ref(pull.head, args.repo).strip()
+            # Reviewers push while a PR is open, so prefer the live head branch over the
+            # head commit GitHub recorded when the PR was opened/last synced.
+            head = fetch_ref(pull.head_ref, args.repo).strip() or fetch_ref(pull.head, args.repo).strip()
             base_ref = pull.base if args.pinned_base else pull.base_ref
             base = fetch_ref(base_ref, args.repo).strip()
             pull.base_sha = base
