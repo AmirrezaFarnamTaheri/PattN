@@ -23,6 +23,19 @@ public class RepairValidationAccumulatorTests
     }
 
     [Test]
+    public async Task Build_ShouldKeepMedianUploadThroughput()
+    {
+        var accumulator = new RepairValidationAccumulator();
+        accumulator.AddSuccess(50, 8);
+        accumulator.AddSuccess(60, 4);
+        accumulator.AddSuccess(70, 12);
+
+        var result = accumulator.Build();
+
+        await result.ThroughputMbps.Should().BeEqualTo(8d);
+    }
+
+    [Test]
     public async Task Build_ShouldMarkSuspectEvidenceWithoutRewritingTheCounts()
     {
         var accumulator = new RepairValidationAccumulator();
