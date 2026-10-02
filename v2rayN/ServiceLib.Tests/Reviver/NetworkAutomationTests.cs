@@ -183,13 +183,22 @@ public class NetworkAutomationTests
         });
 
         await batch.Records.Count.Should().BeEqualTo(1);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Task.Run(() =>
-            service.PrepareShareBatch(rows, new IntelligenceSharingPolicy
+        var threw = false;
+        try
+        {
+            _ = service.PrepareShareBatch(rows, new IntelligenceSharingPolicy
             {
                 ExplicitOptIn = false,
                 Mode = EIntelligencePrivacyMode.AnonymousAggregate,
                 MinimumAggregateSamples = 5,
-            })));
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            threw = true;
+        }
+
+        await threw.Should().BeTrue();
     }
 
     [Test]
