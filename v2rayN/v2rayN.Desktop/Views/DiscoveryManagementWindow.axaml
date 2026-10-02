@@ -486,6 +486,52 @@
                 </DockPanel>
             </TabItem>
 
+
+            <TabItem Header="{x:Static resx:ResUI.TbNetworkIntelligence}">
+                <DockPanel Margin="{StaticResource Margin4}">
+                    <Menu Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+                        <MenuItem MinHeight="44" x:Name="btnRefreshNetworkIntelligence" Header="{x:Static resx:ResUI.TbRefreshNetworkIntelligence}" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbRefreshNetworkIntelligence}" />
+                    </Menu>
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBox x:Name="txtNetworkIntelligenceSummary"
+                                 automation:AutomationProperties.Name="{x:Static resx:ResUI.TbNetworkIntelligence}"
+                                 automation:AutomationProperties.LiveSetting="Polite"
+                                 MinHeight="70"
+                                 Margin="{StaticResource Margin4}"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <TextBox x:Name="txtStrategyLearningSummary"
+                                 automation:AutomationProperties.Name="{x:Static resx:ResUI.TbStrategyLearningSummaryLine}"
+                                 automation:AutomationProperties.LiveSetting="Polite"
+                                 MinHeight="70"
+                                 Margin="{StaticResource Margin4}"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    </StackPanel>
+                    <GroupBox Header="{x:Static resx:ResUI.TbNetworkHeatmap}">
+                        <DataGrid
+                            x:Name="lstNetworkHeatmap"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbNetworkHeatmap}"
+                            AutoGenerateColumns="False"
+                            CanUserResizeColumns="True"
+                            GridLinesVisibility="All"
+                            HeadersVisibility="Column"
+                            IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="90" Binding="{Binding CountryCode}" Header="{x:Static resx:ResUI.LvCountry}" />
+                                <DataGridTextColumn Width="*" Binding="{Binding CarrierKey}" Header="{x:Static resx:ResUI.LvCarrierKey}" />
+                                <DataGridTextColumn Width="90" Binding="{Binding Samples}" Header="{x:Static resx:ResUI.LvSamples}" />
+                                <DataGridTextColumn Width="110" Binding="{Binding IPv4SuccessRate}" Header="{x:Static resx:ResUI.LvIPv4}" />
+                                <DataGridTextColumn Width="110" Binding="{Binding IPv6SuccessRate}" Header="{x:Static resx:ResUI.LvIPv6}" />
+                                <DataGridTextColumn Width="110" Binding="{Binding UploadStallRate}" Header="{x:Static resx:ResUI.LvUploadStall}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </DockPanel>
+            </TabItem>
+
             <TabItem Header="{x:Static resx:ResUI.TbDiscoveryMaintenance}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="{StaticResource Margin4}">
