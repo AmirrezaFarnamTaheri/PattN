@@ -31,15 +31,18 @@ public class RepairExperimentPlannerTests
     [Test]
     public async Task Plan_ShouldPreferIsolatedLowCostArmBeforeMultiMutationArm()
     {
-        var simple = Candidate("simple", "endpoint", nameof(ProfileItem.Address), "203.0.113.10");
-        simple.Evidence =
-        [
-            new RepairEvidence
-            {
-                Kind = "discovery.endpoint",
-                Summary = "observed endpoint",
-            }
-        ];
+        var simple = Candidate(
+            "simple",
+            "endpoint",
+            nameof(ProfileItem.Address),
+            "203.0.113.10",
+            [
+                new RepairEvidence
+                {
+                    Kind = "discovery.endpoint",
+                    Summary = "observed endpoint",
+                }
+            ]);
 
         var complex = new RepairCandidate
         {
@@ -88,7 +91,8 @@ public class RepairExperimentPlannerTests
         string id,
         string strategy,
         string field,
-        string target)
+        string target,
+        IReadOnlyList<RepairEvidence>? evidence = null)
         => new()
         {
             Id = id,
@@ -97,6 +101,7 @@ public class RepairExperimentPlannerTests
             Profile = new ProfileItem(),
             State = ERepairCandidateState.StaticValidated,
             Mutations = [Mutation(field, target, ERepairConfidence.EvidenceBacked)],
+            Evidence = evidence ?? [],
         };
 
     private static RepairMutation Mutation(
