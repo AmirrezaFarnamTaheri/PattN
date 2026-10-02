@@ -14,7 +14,14 @@ Checks, per open pull request:
    review is no longer about the code that would merge.
 2. blob-parity -- for the subset of the PR payload owned by a split stack
    (see --parity-prefix), each payload blob must equal the blob on the
-   integration ref, unless the file is listed in --allow-drift.
+   integration ref, unless the file is listed in --allow-drift. The check does
+   not claim to know which side is newer: split branches and the integration
+   ref have separate lineages (splits stack on the stack's base ref, not on the
+   integration ref), so both `merge-base` ancestry and commit dates misreport
+   direction. Either the PR has not picked up an integration-side change -- the
+   F-01 accident, where merging silently undoes hardening -- or the integration
+   ref has not absorbed the PR's own change yet. Both are real; the diff between
+   the two refs says which.
 3. shared-slice parity -- `--slice-prefix` (default `v2rayN/ServiceLib/Reviver/`)
    is the slice every split PR shares with the integration ref. Two violations:
 
@@ -425,6 +432,14 @@ def main(argv: list[str]) -> int:
                 f"allowlisted={len(pull.allowlisted)} slice-gaps={len(pull.slice_gaps)}"
                 + (f" error={pull.error}" if pull.error else "")
             )
+            if pull.drift:
+                print(
+                    "        drift: payload differs from the integration ref. Which side is newer "
+                    "is not asserted here -- the two branches have separate lineages -- so check "
+                    "`git diff %s %s -- <path>`: either this PR has not picked up an "
+                    "integration-side change, or the integration ref has not absorbed this PR's "
+                    "change yet." % (integration[:10], pull.head[:8])
+                )
             for path in pull.drift:
                 print(f"        drift: {path}")
             for path in pull.allowlisted:
