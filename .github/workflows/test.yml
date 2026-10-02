@@ -66,6 +66,17 @@ jobs:
         # shellcheck source=release-assets.lock.sh
         source ./release-assets.lock.sh
 
+        sdk_version="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["version"])')"
+        sdk_roll_forward="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["rollForward"])')"
+        [[ "$sdk_version" == "$PATTN_DOTNET_SDK_VERSION" ]] || {
+          echo "::error::global.json SDK $sdk_version differs from release lock $PATTN_DOTNET_SDK_VERSION"
+          exit 1
+        }
+        [[ "$sdk_roll_forward" == "disable" ]] || {
+          echo "::error::global.json must require the exact locked SDK (rollForward=disable)"
+          exit 1
+        }
+
         for rid in linux-x64 linux-arm64 linux-riscv64 linux-loongarch64; do
           pattn_xray_sha256 "$rid" >/dev/null
           pattn_singbox_sha256 "$rid" >/dev/null
