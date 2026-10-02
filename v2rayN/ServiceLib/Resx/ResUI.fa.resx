@@ -2017,4 +2017,19 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRollbackApplied" xml:space="preserve">
     <value>نسخه فهرست بازگردانی شد.</value>
   </data>
+  <data name="TbProxyTestHistoryEmpty" xml:space="preserve">
+    <value>هنوز هیچ سابقهٔ ذخیره‌شده‌ای از آزمون پراکسی موجود نیست.</value>
+  </data>
+  <data name="TbProxyTestHistoryRefreshed" xml:space="preserve">
+    <value>سابقهٔ آزمون پراکسی به‌روزرسانی شد.</value>
+  </data>
+  <data name="TbProxyTestHistoryDiagnosticLine" xml:space="preserve">
+    <value>{0}: {1}/{2} موفق ({3:P0})؛ زنجیرهٔ شکست {4}؛ میانگین تأخیر {5:F0} میلی‌ثانیه؛ میانگین سرعت {6}؛ آخرین {7:u}</value>
+  </data>
+  <data name="TbProxyTestHistoryPolicyLine" xml:space="preserve">
+    <value>{0}: {1} شکست / {2} اجرا؛ زنجیره {3}؛ نرخ موفقیت {4:P0}</value>
+  </data>
+  <data name="TbProxyTestHistoryRanked" xml:space="preserve">
+    <value>{0} از {1} پروفایل قابل‌مشاهده با استفاده از سابقهٔ اخیر پایداری رتبه‌بندی شد.</value>
+  </data>
 </root>
