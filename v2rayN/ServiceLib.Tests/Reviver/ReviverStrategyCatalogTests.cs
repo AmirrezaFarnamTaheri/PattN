@@ -41,6 +41,26 @@ public class ReviverStrategyCatalogTests
     }
 
     [Test]
+    public async Task CreateDefault_ShouldIncludeUploadStallStrategyOnlyWhenConfigured()
+    {
+        const string template =
+            """{"tcp":[{"type":"fragment","settings":{"packets":"tlshello","lengths":["1"],"delays":["0"],"maxSplit":"0"}}]}""";
+
+        var without = ReviverStrategyCatalog.CreateDefault(
+            new EmptyCandidateProvider(),
+            new EmptyDnsEvidenceProvider(),
+            new ProfileCoreCompatibility());
+        var with = ReviverStrategyCatalog.CreateDefault(
+            new EmptyCandidateProvider(),
+            new EmptyDnsEvidenceProvider(),
+            new ProfileCoreCompatibility(),
+            template);
+
+        await without.Any(x => x.Id == "upload-stall-finalmask").Should().BeFalse();
+        await with.Any(x => x.Id == "upload-stall-finalmask").Should().BeTrue();
+    }
+
+    [Test]
     public async Task DnsFailurePriorities_ShouldPlaceAddressFamilyRepairBeforeEndpointReplacement()
     {
         var strategies = ReviverStrategyCatalog.CreateDefault(
