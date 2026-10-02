@@ -113,6 +113,38 @@ public class NetworkIntelligenceTests
     }
 
     [Test]
+    public async Task StrategySummary_ShouldIncludeRetainedDailyAggregates()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var day = new DateTimeOffset(now.UtcDateTime.Date.AddDays(-60), TimeSpan.Zero);
+        var aggregates = new[]
+        {
+            new StrategyOutcomeAggregateItem
+            {
+                StrategyId = "endpoint-replacement",
+                GenomeKey = "g",
+                NetworkKey = "n",
+                DayBucketUnixSeconds = day.ToUnixTimeSeconds(),
+                Samples = 10,
+                Successes = 8,
+                HumanConfirmed = 2,
+                HumanConfirmedSuccesses = 2,
+            },
+        };
+
+        var summary = SqliteStrategyOutcomeStore.Summarize(
+            "endpoint-replacement",
+            [],
+            aggregates,
+            now,
+            halfLifeDays: 90d);
+
+        await summary.Samples.Should().BeEqualTo(10);
+        await (summary.EffectiveSuccessRate > 0.80d).Should().BeTrue();
+        await summary.LastObservedAt.Should().BeEqualTo(day);
+    }
+
+    [Test]
     public async Task ExperimentPlanner_ShouldPreferInformationGainPerCostAndRisk()
     {
         var service = new NetworkIntelligenceService();
