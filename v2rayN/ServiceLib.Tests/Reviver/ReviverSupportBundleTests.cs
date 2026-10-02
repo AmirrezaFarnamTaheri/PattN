@@ -129,7 +129,7 @@ public class ReviverSupportBundleTests
                  {
                      host, ip, password, publicKey, path, "profile-private-id", "subscription-private-id",
                      "customer private remarks", "private-user", "private-grpc-service",
-                     "another-private-value", "token=secret", "fingerprint-secret.example",
+                     "another-private-value", "token=secret", "numericToken", "fingerprint-secret.example",
                      "secret.example/private", "customer-secret-key.example",
                      "1234567890123456", "9876543210987654",
                  })
