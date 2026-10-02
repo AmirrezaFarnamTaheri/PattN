@@ -7,6 +7,9 @@ namespace ServiceLib.Reviver.Intelligence;
 
 public sealed class NetworkAutomationService
 {
+    private const int MaxSyncRecords = 10_000;
+    private const int MaxSyncPayloadBytes = 8 * 1024 * 1024;
+
     public IReadOnlyList<RepairCandidate> RemoveConflictingCandidates(IEnumerable<RepairCandidate> candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -131,6 +134,20 @@ public sealed class NetworkAutomationService
         double minimumImprovement = 0.08d,
         int minimumSamples = 3)
     {
+        ArgumentNullException.ThrowIfNull(baseline);
+        ArgumentNullException.ThrowIfNull(candidate);
+        if (minimumSamples < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minimumSamples));
+        }
+        if (!double.IsFinite(minimumImprovement) || minimumImprovement is < 0d or > 1d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minimumImprovement));
+        }
+        if (baseline.Any(x => !IsValidShadowSample(x)) || candidate.Any(x => !IsValidShadowSample(x)))
+        {
+            throw new ArgumentException("Shadow samples must contain finite, non-negative latency values.");
+        }
         if (baseline.Count < minimumSamples || candidate.Count < minimumSamples)
         {
             return new ShadowTestDecision { Reason = "Not enough shadow samples to make a promotion decision." };
@@ -156,7 +173,23 @@ public sealed class NetworkAutomationService
         double healthyThreshold = 0.80d,
         double deadThreshold = 0.10d)
     {
+        ArgumentNullException.ThrowIfNull(proxies);
+        if (!double.IsFinite(healthyThreshold) || healthyThreshold is < 0d or > 1d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(healthyThreshold));
+        }
+        if (!double.IsFinite(deadThreshold) || deadThreshold is < 0d or > 1d || deadThreshold > healthyThreshold)
+        {
+            throw new ArgumentOutOfRangeException(nameof(deadThreshold));
+        }
+
         var rows = proxies.ToArray();
+        if (rows.Any(x => x.Genome is null
+                          || !double.IsFinite(x.SuccessRate)
+                          || x.SuccessRate is < 0d or > 1d))
+        {
+            throw new ArgumentException("Fleet rows require a genome and a finite success rate between 0 and 1.", nameof(proxies));
+        }
         var healthy = rows.Count(x => x.SuccessRate >= healthyThreshold);
         var dead = rows.Count(x => x.SuccessRate <= deadThreshold);
         var degraded = rows.Length - healthy - dead;
@@ -178,7 +211,29 @@ public sealed class NetworkAutomationService
         double autoApplyConfidenceThreshold = 0.85d,
         double maximumMutationRisk = 0.30d)
     {
-        var ranked = options
+        ArgumentNullException.ThrowIfNull(options);
+        if (!double.IsFinite(autoApplyConfidenceThreshold)
+            || autoApplyConfidenceThreshold is < 0d or > 1d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(autoApplyConfidenceThreshold));
+        }
+        if (!double.IsFinite(maximumMutationRisk) || maximumMutationRisk is < 0d or > 1d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumMutationRisk));
+        }
+
+        var supplied = options.ToArray();
+        if (supplied.Any(x => x is null
+                              || x.Id.IsNullOrEmpty()
+                              || !double.IsFinite(x.RuntimeScore)
+                              || !double.IsFinite(x.LearnedSuccessRate)
+                              || !double.IsFinite(x.EvidenceConfidence)
+                              || !double.IsFinite(x.MutationRisk)))
+        {
+            throw new ArgumentException("Optimization options must contain finite metrics and a non-empty ID.", nameof(options));
+        }
+
+        var ranked = supplied
             .Select(x => new
             {
                 Option = x,
@@ -367,7 +422,16 @@ public sealed class NetworkAutomationService
             throw new ArgumentException("Sync encryption requires a 256-bit key.", nameof(key));
         }
 
+        if (records.Count > MaxSyncRecords)
+        {
+            throw new InvalidDataException($"Intelligence sync payload exceeds the {MaxSyncRecords} record limit.");
+        }
+
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(records);
+        if (plaintext.Length > MaxSyncPayloadBytes)
+        {
+            throw new InvalidDataException($"Intelligence sync payload exceeds {MaxSyncPayloadBytes} bytes.");
+        }
         var nonce = RandomNumberGenerator.GetBytes(12);
         var ciphertext = new byte[plaintext.Length];
         var tag = new byte[16];
@@ -396,6 +460,10 @@ public sealed class NetworkAutomationService
         {
             throw new InvalidDataException("Unsupported or truncated intelligence sync payload.");
         }
+        if (payload.Length > MaxSyncPayloadBytes + 29)
+        {
+            throw new InvalidDataException($"Intelligence sync payload exceeds {MaxSyncPayloadBytes} encrypted bytes.");
+        }
 
         var nonce = payload.Slice(1, 12);
         var tag = payload.Slice(13, 16);
@@ -406,7 +474,12 @@ public sealed class NetworkAutomationService
             aes.Decrypt(nonce, ciphertext, tag, plaintext);
         }
 
-        return JsonSerializer.Deserialize<List<AnonymousIntelligenceRecord>>(plaintext) ?? [];
+        var records = JsonSerializer.Deserialize<List<AnonymousIntelligenceRecord>>(plaintext) ?? [];
+        if (records.Count > MaxSyncRecords)
+        {
+            throw new InvalidDataException($"Intelligence sync payload exceeds the {MaxSyncRecords} record limit.");
+        }
+        return records;
     }
 
     public static string BuildManifestPayload(SignedUpdateManifest manifest)
@@ -424,6 +497,11 @@ public sealed class NetworkAutomationService
             .OrderBy(x => x, StringComparer.Ordinal);
         return string.Join("|", fieldTargets);
     }
+
+    private static bool IsValidShadowSample(ShadowSample sample)
+        => sample is not null
+           && (sample.LatencyMs is null
+               || (double.IsFinite(sample.LatencyMs.Value) && sample.LatencyMs.Value >= 0d));
 
     private static double ShadowScore(IReadOnlyList<ShadowSample> samples)
     {
