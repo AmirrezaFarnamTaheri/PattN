@@ -25,11 +25,13 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
         ArgumentNullException.ThrowIfNull(observation);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (observation.StrategyId.IsNullOrEmpty()
-            || observation.GenomeKey.IsNullOrEmpty()
-            || observation.NetworkKey.IsNullOrEmpty())
+        if (!NetworkIntelligenceService.IsSafeStrategyId(observation.StrategyId)
+            || !NetworkIntelligenceService.IsDerivedGenomeKey(observation.GenomeKey)
+            || !NetworkIntelligenceService.IsLocalNetworkKey(observation.NetworkKey))
         {
-            throw new ArgumentException("Strategy learning requires strategy, genome, and network keys.");
+            throw new ArgumentException(
+                "Strategy learning requires a bounded strategy ID, a PattN-derived genome key, " +
+                "and either a PattN-derived network key or the local net:unknown sentinel.");
         }
 
         var row = new StrategyOutcomeHistoryItem
