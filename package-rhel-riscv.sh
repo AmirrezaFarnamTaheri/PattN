@@ -18,7 +18,11 @@ PKGROOT="v2rayN-publish"
 PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 RPM_TOPDIR="${HOME}/rpmbuild"
 DOTNET_RISCV_VERSION="$PATTN_RISCV_DOTNET_VERSION"
-DOTNET_RISCV_BASE="https://github.com/xujiegb/dotnet-riscv/releases/download"
+# Microsoft does not currently publish a .NET 10 RISC-V Linux SDK. The default
+# source is therefore an external bootstrap origin, but the bytes remain locked
+# by PATTN_RISCV_DOTNET_SHA256. Release operators can point this at an
+# organization-controlled immutable mirror without changing the reviewed digest.
+DOTNET_RISCV_BASE="${PATTN_RISCV_DOTNET_BASE:-https://github.com/xujiegb/dotnet-riscv/releases/download}"
 DOTNET_RISCV_FILE="dotnet-sdk-${DOTNET_RISCV_VERSION}-linux-riscv64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_RISCV_BASE}/${DOTNET_RISCV_VERSION}/${DOTNET_RISCV_FILE}"
 

@@ -19,7 +19,10 @@ PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 RPM_TOPDIR="${HOME}/rpmbuild"
 DOTNET_LOONGARCH_VERSION="$PATTN_LOONG_DOTNET_VERSION"
 DOTNET_LOONGARCH_TAG="$PATTN_LOONG_DOTNET_TAG"
-DOTNET_LOONGARCH_BASE="https://github.com/loongson/dotnet/releases/download"
+# Microsoft does not currently publish a .NET 10 LoongArch64 Linux SDK. Keep
+# the vendor bootstrap origin overrideable so release operators can use an
+# organization-controlled immutable mirror while retaining the reviewed digest.
+DOTNET_LOONGARCH_BASE="${PATTN_LOONG_DOTNET_BASE:-https://github.com/loongson/dotnet/releases/download}"
 DOTNET_LOONGARCH_FILE="dotnet-sdk-${DOTNET_LOONGARCH_VERSION}-linux-loongarch64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_LOONGARCH_BASE}/${DOTNET_LOONGARCH_TAG}/${DOTNET_LOONGARCH_FILE}"
 
