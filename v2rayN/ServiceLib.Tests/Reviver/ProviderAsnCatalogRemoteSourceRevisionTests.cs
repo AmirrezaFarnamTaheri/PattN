@@ -68,7 +68,9 @@ public class ProviderAsnCatalogRemoteSourceRevisionTests
             .SequenceEqual([pinB]).Should().BeTrue();
         await revisions.Items[2].ChangeReason.Should().BeEqualTo("remove");
         await revisions.Items[2].AfterFingerprint.Should().BeEqualTo(string.Empty);
-        await (sources.Item is null).Should().BeTrue();
+        await (await sources.GetAsync(registry.Id) is null).Should().BeTrue();
+        await sources.Item.Should().NotBeNull();
+        await sources.Item!.RemovedAtUnixMs.HasValue.Should().BeTrue();
     }
 
     [Test]
