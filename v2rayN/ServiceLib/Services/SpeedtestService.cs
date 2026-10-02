@@ -11,6 +11,11 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     private readonly List<CancellationTokenSource> _runCtsList = [];
     private readonly int _speedTestPageSize = config.SpeedTestItem.SpeedTestPageSize ?? Global.SpeedTestPageSize;
     private readonly TimeSpan _delayInterval = TimeSpan.FromSeconds(config.SpeedTestItem.SpeedTestDelayInterval ?? 1);
+    private readonly ProxyTestHistoryService _historyService = new();
+    private int MixedConcurrencyCount => Math.Clamp(_config.SpeedTestItem.MixedConcurrencyCount, 1, 128);
+    private int TestTimeoutSeconds => Math.Clamp(_config.SpeedTestItem.SpeedTestTimeout, 1, 600);
+    private int RetryEachProxyCount => Math.Clamp(_config.SpeedTestItem.RetryEachProxyCount, 0, 20);
+    private int RetryFailedAfterBatchCount => Math.Clamp(_config.SpeedTestItem.RetryFailedAfterBatchCount, 0, 20);
 
     public Task RunLoop(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
@@ -69,63 +74,313 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         {
             try
             {
-                await ProfileExManager.Instance.SaveTo();
+                try
+                {
+                    await ProfileExManager.Instance.SaveTo();
+                }
+                finally
+                {
+                    await UpdateFunc("", ResUI.SpeedtestingCompleted);
+                }
             }
             finally
             {
-                await UpdateFunc("", ResUI.SpeedtestingCompleted);
-            }
+                lock (_runLock)
+                {
+                    _runCtsList.Remove(runCts);
+                }
 
-            lock (_runLock)
-            {
-                _runCtsList.Remove(runCts);
+                runCts.Dispose();
             }
-
-            runCts.Dispose();
         }
     }
 
     private async Task RunAsync(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
         var lstSelected = await GetClearItem(actionType, selecteds);
-        var completedIds = new ConcurrentDictionary<string, byte>();
+        if (lstSelected.Count == 0)
+        {
+            return;
+        }
+
+        var lastPassItems = lstSelected;
+        var lastCompletedIds = new ConcurrentDictionary<string, byte>();
+        var runId = Guid.NewGuid().ToString("N");
+        var attempt = 1;
+        var finalOutcomesRecorded = false;
 
         try
         {
-            switch (actionType)
+            var failed = await RunAndRecordPassAsync(
+                actionType, lstSelected, attempt, "initial", runId, lastCompletedIds, ct);
+
+            var perProxyRetries = RetryEachProxyCount;
+            for (var retry = 0; retry < perProxyRetries; retry++)
             {
-                case ESpeedActionType.Tcping:
-                    await RunTcpingAsync(lstSelected, completedIds, ct);
-                    break;
+                ct.ThrowIfCancellationRequested();
+                attempt++;
+                lastPassItems = lstSelected;
+                lastCompletedIds = new();
 
-                case ESpeedActionType.Realping:
-                    await RunRealPingBatchAsync(lstSelected, completedIds, 0, ct);
-                    break;
-
-                case ESpeedActionType.UdpTest:
-                    await RunUdpTestBatchAsync(lstSelected, completedIds, 0, ct);
-                    break;
-
-                case ESpeedActionType.Speedtest:
-                    await RunMixedTestAsync(lstSelected, completedIds, 1, true, ct);
-                    break;
-
-                case ESpeedActionType.Mixedtest:
-                    await RunMixedTestAsync(lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, true,
-                        ct);
-                    break;
+                // "Retry each proxy" is intentionally distinct from the failed-batch retry below:
+                // every selected proxy gets another complete measurement, including ones that
+                // previously succeeded. This produces repeated reliability/quality evidence.
+                failed = await RunAndRecordPassAsync(
+                    actionType, lstSelected, attempt, "per-proxy-retry", runId, lastCompletedIds, ct);
             }
+
+            for (var retry = 0;
+                 retry < RetryFailedAfterBatchCount && failed.Count > 0;
+                 retry++)
+            {
+                ct.ThrowIfCancellationRequested();
+                attempt++;
+                lastPassItems = failed;
+                lastCompletedIds = new();
+                failed = await RunAndRecordPassAsync(
+                    actionType, failed, attempt, "failed-batch-retry", runId, lastCompletedIds, ct);
+            }
+
+            await RecordFinalOutcomesAsync(actionType, lstSelected, failed, runId, attempt, ct);
+            finalOutcomesRecorded = true;
+            // A retention value of 0 intentionally means "keep history indefinitely".
+            // Negative values are rejected by the settings UI; PruneAsync is defensive and
+            // treats non-positive values as no pruning for externally edited configurations.
+            await _historyService.PruneAsync(_config.SpeedTestItem.TestHistoryRetentionDays);
+            await ApplyHistoryPolicyAsync(lstSelected, ct);
+            AppEvents.ProfilesChangedRequested.Publish();
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             _ = UpdateFunc("", ResUI.SpeedtestingStop);
-            await SetTestResultAsync(lstSelected.Where(it => !completedIds.ContainsKey(it.IndexId)).ToList(),
-                actionType, ResUI.SpeedtestingSkip).ConfigureAwait(false);
+            await SetTestResultAsync(
+                lastPassItems.Where(it => !lastCompletedIds.ContainsKey(it.IndexId)).ToList(),
+                actionType,
+                ResUI.SpeedtestingSkip).ConfigureAwait(false);
+
+            if (!finalOutcomesRecorded)
+            {
+                try
+                {
+                    await RecordCancelledOutcomesAsync(actionType, lstSelected, runId, attempt);
+                }
+                catch (Exception ex)
+                {
+                    Logging.SaveLog("Failed to persist cancelled proxy-test final outcomes.", ex);
+                }
+            }
         }
         catch (Exception ex)
         {
             Logging.SaveLog(_tag, ex);
             _ = UpdateFunc("", ex.Message);
+        }
+    }
+
+    private async Task<List<ServerTestItem>> RunAndRecordPassAsync(
+        ESpeedActionType actionType,
+        List<ServerTestItem> items,
+        int attempt,
+        string phase,
+        string runId,
+        ConcurrentDictionary<string, byte> completedIds,
+        CancellationToken ct)
+    {
+        foreach (var item in items)
+        {
+            if (item.IndexId.IsNullOrEmpty())
+            {
+                continue;
+            }
+            ProfileExManager.Instance.SetTestDelay(item.IndexId, 0);
+            ProfileExManager.Instance.SetTestSpeed(item.IndexId, 0);
+            ProfileExManager.Instance.SetTestMessage(item.IndexId, string.Empty);
+        }
+
+        switch (actionType)
+        {
+            case ESpeedActionType.Tcping:
+                await RunTcpingAsync(items, completedIds, ct);
+                break;
+            case ESpeedActionType.Realping:
+                await RunRealPingBatchAsync(items, completedIds, 0, ct);
+                break;
+            case ESpeedActionType.UdpTest:
+                await RunUdpTestBatchAsync(items, completedIds, 0, ct);
+                break;
+            case ESpeedActionType.Speedtest:
+                await RunMixedTestAsync(items, completedIds, 1, true, ct);
+                break;
+            case ESpeedActionType.Mixedtest:
+                await RunMixedTestAsync(items, completedIds, MixedConcurrencyCount, true, ct);
+                break;
+        }
+
+        await ProfileExManager.Instance.SaveTo();
+        var profileEx = (await ProfileExManager.Instance.GetProfileExs())
+            .Where(x => x.IndexId.IsNotEmpty())
+            .GroupBy(x => x.IndexId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var records = new List<ProxyTestHistoryItem>(items.Count);
+        var failed = new List<ServerTestItem>();
+
+        foreach (var item in items)
+        {
+            if (item.IndexId.IsNullOrEmpty())
+            {
+                continue;
+            }
+
+            profileEx.TryGetValue(item.IndexId, out var metrics);
+            var completed = completedIds.ContainsKey(item.IndexId);
+            var skipped = completed
+                          && !item.AllowTest
+                          && actionType is ESpeedActionType.Realping or ESpeedActionType.UdpTest;
+            var success = !skipped && completed && actionType switch
+            {
+                ESpeedActionType.Tcping => metrics is not null && metrics.Delay >= 0,
+                ESpeedActionType.Realping or ESpeedActionType.UdpTest => metrics is not null && metrics.Delay > 0,
+                ESpeedActionType.Speedtest or ESpeedActionType.Mixedtest =>
+                    metrics is not null && metrics.Delay > 0 && metrics.Speed > 0,
+                _ => false
+            };
+
+            if (!success && !skipped)
+            {
+                failed.Add(item);
+            }
+
+            records.Add(new ProxyTestHistoryItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ProfileIndexId = item.IndexId,
+                TestedAtUnixMs = now,
+                RunId = runId,
+                ProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(item.Profile),
+                ActionType = (int)actionType,
+                Attempt = attempt,
+                Phase = phase,
+                IsFinalOutcome = false,
+                Success = success,
+                Skipped = skipped,
+                DelayMs = metrics?.Delay ?? 0,
+                Speed = metrics?.Speed ?? 0,
+                Message = metrics?.Message ?? string.Empty,
+                Address = item.Address ?? string.Empty,
+                Port = item.Port,
+                ConfigType = item.ConfigType
+            });
+        }
+
+        await _historyService.RecordAsync(records);
+        return failed;
+    }
+
+    private async Task RecordFinalOutcomesAsync(
+        ESpeedActionType actionType,
+        List<ServerTestItem> testedItems,
+        IReadOnlyCollection<ServerTestItem> failedItems,
+        string runId,
+        int attempt,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await ProfileExManager.Instance.SaveTo();
+        var profileEx = (await ProfileExManager.Instance.GetProfileExs())
+            .Where(x => x.IndexId.IsNotEmpty())
+            .GroupBy(x => x.IndexId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last(), StringComparer.Ordinal);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var records = new List<ProxyTestHistoryItem>(testedItems.Count);
+        var failedIds = failedItems
+            .Where(x => x.IndexId.IsNotEmpty())
+            .Select(x => x.IndexId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var item in testedItems)
+        {
+            if (item.IndexId.IsNullOrEmpty())
+            {
+                continue;
+            }
+
+            profileEx.TryGetValue(item.IndexId, out var metrics);
+            var skipped = !item.AllowTest
+                          && actionType is ESpeedActionType.Realping or ESpeedActionType.UdpTest;
+            var success = !skipped && !failedIds.Contains(item.IndexId);
+            records.Add(new ProxyTestHistoryItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ProfileIndexId = item.IndexId,
+                TestedAtUnixMs = now,
+                RunId = runId,
+                ProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(item.Profile),
+                ActionType = (int)actionType,
+                Attempt = attempt,
+                Phase = "final",
+                IsFinalOutcome = true,
+                Success = success,
+                Skipped = skipped,
+                DelayMs = metrics?.Delay ?? 0,
+                Speed = metrics?.Speed ?? 0,
+                Message = metrics?.Message ?? string.Empty,
+                Address = item.Address ?? string.Empty,
+                Port = item.Port,
+                ConfigType = item.ConfigType
+            });
+        }
+
+        await _historyService.RecordAsync(records);
+    }
+
+    private async Task RecordCancelledOutcomesAsync(
+        ESpeedActionType actionType,
+        List<ServerTestItem> testedItems,
+        string runId,
+        int attempt)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var records = testedItems
+            .Where(item => item.IndexId.IsNotEmpty())
+            .Select(item => new ProxyTestHistoryItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ProfileIndexId = item.IndexId,
+                TestedAtUnixMs = now,
+                RunId = runId,
+                ProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(item.Profile),
+                ActionType = (int)actionType,
+                Attempt = attempt,
+                Phase = "cancelled",
+                IsFinalOutcome = true,
+                Success = false,
+                Skipped = true,
+                Message = "cancelled",
+                Address = item.Address ?? string.Empty,
+                Port = item.Port,
+                ConfigType = item.ConfigType
+            })
+            .ToList();
+
+        await _historyService.RecordAsync(records);
+    }
+
+    private async Task ApplyHistoryPolicyAsync(List<ServerTestItem> testedItems, CancellationToken ct)
+    {
+        if (!_config.SpeedTestItem.HistoryPolicyAutoRemove)
+        {
+            return;
+        }
+
+        var result = await _historyService.ApplyRemovalPolicyAsync(
+            _config,
+            testedItems.Select(x => x.IndexId ?? string.Empty),
+            ct);
+        if (result.RemovedCount > 0 || result.ProtectedCount > 0)
+        {
+            Logging.SaveLog(
+                $"Proxy test history policy matched {result.Matches.Count} profile(s), removed {result.RemovedCount}, and protected {result.ProtectedCount} active profile(s).");
         }
     }
 
@@ -266,13 +521,13 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
             await UpdateFunc("", string.Format(ResUI.SpeedtestingTestFailedPart, lstFailed.Count));
 
-            if (pageSizeNext > _config.SpeedTestItem.MixedConcurrencyCount)
+            if (pageSizeNext > MixedConcurrencyCount)
             {
                 await RunRealPingBatchAsync(lstFailed, completedIds, pageSizeNext, ct);
             }
             else
             {
-                await RunMixedTestAsync(lstSelected, completedIds, _config.SpeedTestItem.MixedConcurrencyCount, false, ct);
+                await RunMixedTestAsync(lstSelected, completedIds, MixedConcurrencyCount, false, ct);
             }
         }
     }
@@ -329,10 +584,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -420,10 +672,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -479,12 +728,32 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
             finally
             {
-                if (processService != null)
-                {
-                    await processService.StopAsync();
-                }
+                await StopAndDisposeProcessAsync(processService);
             }
         });
+    }
+
+    private static async Task StopAndDisposeProcessAsync(ProcessService? processService)
+    {
+        if (processService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await processService.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            // Speed-test cleanup must not leak the temporary core or replace the
+            // measurement/cancellation result with a teardown-only failure.
+            Logging.SaveLog("SpeedtestService process cleanup", ex);
+        }
+        finally
+        {
+            processService.Dispose();
+        }
     }
 
     private async Task<int> DoRealPing(ServerTestItem it,
@@ -519,8 +788,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
         var webProxy = new WebProxy($"socks5://{Global.Loopback}:{it.Port}");
         var url = _config.SpeedTestItem.SpeedTestUrl;
-        var timeout = _config.SpeedTestItem.SpeedTestTimeout;
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(TestTimeoutSeconds));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
         var linkedCt = linkedCts.Token;
         await downloadHandle.DownloadDataAsync(url, webProxy, async (success, msg) =>
@@ -568,7 +836,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         var timer = Stopwatch.StartNew();
         try
         {
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(TestTimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             await clientSocket.ConnectAsync(endPoint, linkedCts.Token).ConfigureAwait(false);
             responseTime = (int)timer.ElapsedMilliseconds;
