@@ -4,6 +4,8 @@ set -euo pipefail
 LOCK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=release-assets.lock.sh
 source "$LOCK_DIR/release-assets.lock.sh"
+# shellcheck source=release-reproducibility.sh
+source "$LOCK_DIR/release-reproducibility.sh"
 
 VERSION_ARG=""
 WITH_CORE="both"
@@ -786,6 +788,10 @@ EOF
   [[ -f "$stage/opt/v2rayN/PattN" ]] && chmod 0755 "$stage/opt/v2rayN/PattN" || true
   [[ -f "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" ]] && chmod 0755 "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" || true
 
+  # Normalize all package payload/control mtimes to the source commit before dpkg-deb.
+  # dpkg-deb honors SOURCE_DATE_EPOCH for archive-member metadata as well.
+  pattn_normalize_tree_mtime "$stage"
+
   deb_out="$OUTPUT_DIR/v2rayn_${VERSION}_${deb_arch}.deb"
   dpkg-deb --root-owner-group --build "$stage" "$deb_out"
   verify_discovery_deb "$deb_out" "$short"
@@ -854,6 +860,7 @@ main() {
   install_dependencies
   prepare_workspace
   resolve_version
+  pattn_init_reproducible_build "$SCRIPT_DIR"
 
   mapfile -t targets < <(select_targets)
 

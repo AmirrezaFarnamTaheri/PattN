@@ -6713,6 +6713,42 @@ namespace ServiceLib.Resx {
             }
         }
 
+        public static string TbSettingsUploadProbeUrl {
+            get { return ResourceManager.GetString("TbSettingsUploadProbeUrl", resourceCulture); }
+        }
+
+        public static string TbSettingsUploadProbeBytes {
+            get { return ResourceManager.GetString("TbSettingsUploadProbeBytes", resourceCulture); }
+        }
+
+        public static string TbSettingsUploadProbeTimeout {
+            get { return ResourceManager.GetString("TbSettingsUploadProbeTimeout", resourceCulture); }
+        }
+
+        public static string TbSettingsUploadStallFinalMask {
+            get { return ResourceManager.GetString("TbSettingsUploadStallFinalMask", resourceCulture); }
+        }
+
+        public static string TbSettingsUploadProbeTip {
+            get { return ResourceManager.GetString("TbSettingsUploadProbeTip", resourceCulture); }
+        }
+
+        public static string TbSettingsUploadStallFinalMaskTip {
+            get { return ResourceManager.GetString("TbSettingsUploadStallFinalMaskTip", resourceCulture); }
+        }
+
+        public static string FillReviverUploadProbeParameterError {
+            get { return ResourceManager.GetString("FillReviverUploadProbeParameterError", resourceCulture); }
+        }
+
+        public static string TbDiscoveryRevisionHistoryUnavailable {
+            get { return ResourceManager.GetString("TbDiscoveryRevisionHistoryUnavailable", resourceCulture); }
+        }
+
+        public static string TbDiscoveryPromotionSummary {
+            get { return ResourceManager.GetString("TbDiscoveryPromotionSummary", resourceCulture); }
+        }
+
         public static string TbDiscoveryReady {
             get {
                 return ResourceManager.GetString("TbDiscoveryReady", resourceCulture);

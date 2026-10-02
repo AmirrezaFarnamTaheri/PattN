@@ -15,7 +15,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (catalog is null)
         {
-            return "Select a catalog to view its audit details.";
+            return ResUI.TbDiscoveryCatalogAuditEmpty;
         }
 
         var audit = catalog.LastAudit;
@@ -63,7 +63,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (revision is null)
         {
-            return "Select a revision to view its details.";
+            return ResUI.TbDiscoveryRevisionDetailsEmpty;
         }
 
         var state = revision.Active
@@ -150,7 +150,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (item is null)
         {
-            return "Select an update to view its saved provenance.";
+            return ResUI.TbDiscoveryRemoteProvenanceDetailsEmpty;
         }
 
         var signature = item.SignatureValidation is null
@@ -244,7 +244,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (item is null)
         {
-            return "Select a source to view its saved health details.";
+            return ResUI.TbDiscoveryRemoteHealthDetailsEmpty;
         }
 
         var checkedAt = item.LastCheckedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "never";
@@ -264,7 +264,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (endpoint is null)
         {
-            return "Select an endpoint to inspect its history.";
+            return ResUI.TbDiscoveryEndpointHistoryEmpty;
         }
 
         var history = endpoint.History;
@@ -284,7 +284,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (item is null)
         {
-            return "Select an event to view its details.";
+            return ResUI.TbDiscoveryPromotionEventDetailsEmpty;
         }
 
         var comparison = item.OutcomeComparison;
@@ -341,7 +341,7 @@ public partial class DiscoveryManagementViewModel
     {
         if (catalog is null)
         {
-            return "Select a retired catalog to view its preserved history.";
+            return ResUI.TbDiscoveryRetiredCatalogDetailsEmpty;
         }
 
         var retiredAt = catalog.UnregisteredAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "unknown";

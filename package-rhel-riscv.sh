@@ -4,6 +4,8 @@ set -euo pipefail
 LOCK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=release-assets.lock.sh
 source "$LOCK_DIR/release-assets.lock.sh"
+# shellcheck source=release-reproducibility.sh
+source "$LOCK_DIR/release-reproducibility.sh"
 
 VERSION_ARG=""
 WITH_CORE="both"
@@ -16,7 +18,11 @@ PKGROOT="v2rayN-publish"
 PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 RPM_TOPDIR="${HOME}/rpmbuild"
 DOTNET_RISCV_VERSION="$PATTN_RISCV_DOTNET_VERSION"
-DOTNET_RISCV_BASE="https://github.com/xujiegb/dotnet-riscv/releases/download"
+# Microsoft does not currently publish a .NET 10 RISC-V Linux SDK. The default
+# source is therefore an external bootstrap origin, but the bytes remain locked
+# by PATTN_RISCV_DOTNET_SHA256. Release operators can point this at an
+# organization-controlled immutable mirror without changing the reviewed digest.
+DOTNET_RISCV_BASE="${PATTN_RISCV_DOTNET_BASE:-https://github.com/xujiegb/dotnet-riscv/releases/download}"
 DOTNET_RISCV_FILE="dotnet-sdk-${DOTNET_RISCV_VERSION}-linux-riscv64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_RISCV_BASE}/${DOTNET_RISCV_VERSION}/${DOTNET_RISCV_FILE}"
 
@@ -713,10 +719,15 @@ package_binary() {
   specfile="${specdir}/v2rayN.spec"
 
   mkdir -p "$sourcedir" "$specdir"
-  tar -C "$workdir" -czf "$sourcedir/$PKGROOT.tar.gz" "$PKGROOT"
+  pattn_normalize_tree_mtime "$workdir/$PKGROOT"
+  pattn_reproducible_tar_gz "$workdir" "$PKGROOT" "$sourcedir/$PKGROOT.tar.gz"
 
   write_spec_file "$specfile"
-  rpmbuild -ba "$specfile" --target "$rpm_target"
+  rpmbuild -ba "$specfile" \
+    --target "$rpm_target" \
+    --define "_buildhost pattn-reproducible" \
+    --define "use_source_date_epoch_as_buildtime 1" \
+    --define "clamp_mtime_to_source_date_epoch 1"
 
   echo "Build done for $short. RPM at:"
   for f in "${RPM_TOPDIR}/RPMS/${archdir}/v2rayN-${VERSION}-1"*.rpm; do
@@ -772,6 +783,7 @@ main() {
   install_dependencies
   prepare_workspace
   resolve_version
+  pattn_init_reproducible_build "$SCRIPT_DIR"
 
   mapfile -t targets < <(select_targets)
 

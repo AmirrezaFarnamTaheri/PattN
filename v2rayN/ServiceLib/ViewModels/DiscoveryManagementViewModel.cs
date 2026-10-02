@@ -388,7 +388,7 @@ public partial class DiscoveryManagementViewModel : MyReactiveObject, ICloseable
             {
                 CatalogRevisions = [];
                 SelectedCatalogRevision = null;
-                CatalogRevisionDetails = $"Revision history unavailable: {ex.Message}";
+                CatalogRevisionDetails = string.Format(ResUI.TbDiscoveryRevisionHistoryUnavailable, ex.Message);
             }
             Logging.SaveLog($"Catalog revision refresh failed: {ex}");
         }
@@ -452,7 +452,7 @@ public partial class DiscoveryManagementViewModel : MyReactiveObject, ICloseable
                 SelectedRetiredCatalogRevision = null;
                 RetiredCatalogDetails = FormatRetiredCatalog(SelectedRetiredCatalog, 0)
                     + Environment.NewLine
-                    + $"Revision history unavailable: {ex.Message}";
+                    + string.Format(ResUI.TbDiscoveryRevisionHistoryUnavailable, ex.Message);
             }
             Logging.SaveLog($"Retired catalog revision refresh failed: {ex}");
         }
