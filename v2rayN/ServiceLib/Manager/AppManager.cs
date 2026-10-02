@@ -151,12 +151,21 @@ public sealed class AppManager
         });
         SQLiteHelper.Instance.CreateTable<RepairPromotionHistoryItem>();
         SQLiteHelper.Instance.CreateTable<StrategyOutcomeHistoryItem>();
+        SQLiteHelper.Instance.CreateTable<HumanFeedbackHistoryItem>();
         SQLiteHelper.Instance.RunInTransaction(db =>
         {
             db.Execute("""
                 CREATE INDEX IF NOT EXISTS IX_StrategyOutcome_ContextTime
                 ON StrategyOutcomeHistoryItem (
                     StrategyId,
+                    GenomeKey,
+                    NetworkKey,
+                    ObservedAtUnixMs DESC
+                )
+                """);
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_HumanFeedback_ContextTime
+                ON HumanFeedbackHistoryItem (
                     GenomeKey,
                     NetworkKey,
                     ObservedAtUnixMs DESC
