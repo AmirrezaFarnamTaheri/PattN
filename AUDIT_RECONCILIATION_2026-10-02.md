@@ -8,15 +8,15 @@ Evaluated live heads at the time of reconciliation:
 
 | PR | Head |
 |---|---|
-| #1 | `fbf8ce2a5a74f008f8f9cb1d360d6ac484e7ca05` |
-| #2 | `d5d8557065a693410738a82b71e692fb352c17b5` |
-| #3 | `808a72590eb1729e79206f90da38366fefe2f82f` |
+| #1 | `7d7998a93d31863f8f498eb961454108d4ee53fd` |
+| #2 | `ed133216a8861e590d44c45262bf68f871153241` |
+| #3 | `38edfca8e1bc3d87f16341b36a70c886e8608245` |
 | #4 | `d3c632f8b86bcf33eaf27b459c5f219f1d9094d4` |
-| #5 | `e2ec05e320cfcbc5c3bf908f9a1f8a58277ce94d` |
-| #6 | `d2c83c73c494a58e505c79da253d030fc9b121a3` |
-| #7 | `127739ef41da6a8f697edc1828c683f9065848aa` |
-| #8 | `14a09a9fd0c44d2bb32cf5dcfe903c8cf4ec4ab0` |
-| #9 | `04d08f53d425373970c238c1e828cef7bf6dac60` |
+| #5 | `ea6d0bce0c4532293cd6bfcf6ed1250a239c8b2a` |
+| #6 | `08624454d5ddd12c2ac9af37aeea7e123c8e07d6` |
+| #7 | `9c9880072316b6a3ecee8207b4b14202d2940665` |
+| #8 | `41df4409f65048a2ed6c9e2337b47257ef5175f2` |
+| #9 | `cdfa6fde9c4282a687a03fec5c688078c3f371bb` |
 
 The review re-checked source, current-head workflow state/logs, split-to-umbrella reconstruction, and the supplied audit reports. Stale report claims are not treated as current defects.
 
@@ -88,6 +88,9 @@ The core Discovery/Reviver architecture is no longer blocked by the headline def
 - Candidate scoring neutralizes NaN/Infinity metrics.
 - Temporary validator/measurement processes are stopped and disposed robustly.
 - Support-bundle unknown keys/values are tokenized and tested for non-leakage.
+- Network-intelligence sharing is explicitly policy-gated: `LocalOnly` is the default and produces no shareable payload; anonymous aggregate events exclude raw endpoint/profile identifiers, bucket confidence, sanitize strategy labels, and omit network fingerprints unless explicitly allowed.
+- Strategy outcome history now includes recency-weighted learning and stronger weight for explicit human confirmation without creating a second history database.
+- The optional upload-stall experiment sends random non-secret bytes only to an operator-configured HTTP(S) endpoint, reports the narrower `UploadStall` signal, and never labels a timeout as DPI/censorship by itself.
 
 ### PR #8 — desktop UI
 
@@ -96,7 +99,9 @@ The core Discovery/Reviver architecture is no longer blocked by the headline def
 - Numeric speed/history inputs are bounded in the view-model.
 - New settings controls have accessible names in both WPF and Avalonia.
 - Umbrella #1 was repaired to include #8's resource-backed DNS repair strings and the two missing Avalonia `.DisposeWith(disposables)` bindings.
-- Persian coverage is substantial; full locale parity is still open below.
+- The evidence-gated upload probe/finalMask controls are exposed in both WPF and Avalonia, validated for HTTP(S)/payload/timeout/template bounds, and localized in English/Persian.
+- Discovery empty states and promotion/revision summaries that had duplicate hard-coded English now use resource-backed strings.
+- Persian coverage is substantial; full human-reviewed translation parity across the other supported cultures is still open below.
 
 ### PR #9 — release engineering
 
@@ -111,6 +116,9 @@ The core Discovery/Reviver architecture is no longer blocked by the headline def
 - Release output includes SHA-256 inventories, SPDX metadata, SLSA-style provenance metadata, and detached signatures.
 - ZIP packaging has an explicit deterministic two-build self-check using the source commit timestamp.
 - The current-head RPM failure was reproduced from logs: UBI10 lacked ICU before the locked .NET SDK started. `libicu` is now installed in the RHEL build path and declared as an RPM runtime dependency for x64/arm64, RISC-V, and LoongArch packages.
+- DEB/RPM builds now normalize `SOURCE_DATE_EPOCH`, payload mtimes, tar ordering/ownership, gzip headers and RPM build metadata; pull-request CI performs a second native-package build and requires byte-for-byte equality.
+- macOS pull-request CI now rebuilds the unsigned `PattN.app` payload twice and compares deterministic ZIPs. Signed/notarized DMGs are intentionally treated as trust-bearing containers rather than byte-for-byte reproducibility targets because timestamped code-signing/notarization material is expected to differ.
+- RISC-V/LoongArch SDK origins are documented in `EXOTIC_TOOLCHAIN_PROVENANCE.md`; release operators can redirect both SDKs to organization-controlled immutable mirrors while retaining the reviewed digest locks.
 
 ## Umbrella reconstruction check
 
@@ -167,60 +175,55 @@ Do not claim this fixed until the client trust root is deliberately selected and
 
 ### 2. Full release reproducibility beyond ZIP
 
-**Status: partially complete.**
+**Status: repository-controlled payloads substantially complete.**
 
-ZIPs are deterministic and self-checked. Toolchains and external inputs are pinned, and release provenance captures the source SHA/workflow. DEB/RPM/DMG have integrity/provenance controls but are not yet proven byte-for-byte reproducible across independent builders. A future reproducibility gate should normalize package timestamps/build metadata and compare independent-builder hashes.
+ZIPs are deterministic and self-checked. DEB/RPM now normalize source/build timestamps and metadata and are rebuilt twice in pull-request CI with byte-for-byte comparison. macOS pull-request CI performs the same two-build comparison on the unsigned `PattN.app` payload using deterministic ZIPs.
+
+The final signed/notarized DMG is not treated as a byte-for-byte reproducibility target: Apple code signing, secure timestamps, notarization and stapling intentionally inject trust material that can vary between otherwise identical payloads. The reproducibility contract is therefore the unsigned app payload plus signed-release provenance/checksums, not equality of the post-notarization container.
 
 ### 3. Exotic toolchain provenance
 
-**Status: residual supply-chain risk, integrity mitigated.**
+**Status: repository-side controls complete; upstream availability remains external.**
 
-RISC-V/LoongArch SDK/images are digest-pinned before use. The RISC-V .NET SDK distribution point is still a personal/external repository. Prefer official vendor artifacts when available; otherwise mirror the reviewed bytes into organization-controlled immutable storage without weakening current digest checks.
+RISC-V/LoongArch SDK/images remain digest-pinned before use. Microsoft still does not publish the required .NET 10 Linux SDKs for these architectures, so the reviewed external/vendor origins cannot be replaced with a Microsoft artifact today. `EXOTIC_TOOLCHAIN_PROVENANCE.md` records the provenance and risk, and both package families accept organization-controlled immutable mirror overrides without changing the reviewed digest.
+
+When an official vendor artifact becomes available, replacing the bootstrap origin remains a normal dependency migration rather than an untracked audit defect.
 
 ### 4. Runtime/history privacy controls
 
-**Status: open product/privacy design.**
+**Status: privacy boundary implemented; no remote sharing transport exists.**
 
-Support-bundle export is tokenized, but local history legitimately stores operational endpoint/profile identifiers required for diagnostics. Before adding network fingerprints, carrier learning, sync, or sharing:
-- define a local-only/private/anonymous policy;
-- prohibit credentials, UUIDs, subscription URLs, and raw support-bundle secrets from intelligence features;
-- prefer opaque keyed tokens for correlation;
-- expose clear/disable controls;
-- preserve retention bounds.
+The intelligence model now has an explicit `IntelligencePrivacyPolicy` with `LocalOnly` as the default. In that mode no shareable learning event is produced. The only approved anonymous event shape excludes credentials, UUIDs, subscription URLs, endpoint hostnames/IPs and raw support-bundle secrets; strategy labels are sanitized/hashed when needed, confidence is bucketed, timestamps are reduced to a UTC day, and network fingerprints are opt-in even inside anonymous aggregate mode.
 
-No global/anonymous sharing or multi-device sync should be implemented before this policy exists.
+Operational local history still stores identifiers needed for local diagnostics and rollback; those records remain subject to lifecycle-retention/maintenance controls. No global sharing, sync or upload transport has been added.
 
 ### 5. Context-aware network intelligence / uplink-stall experiments
 
-**Status: evidence-gated future work.**
+**Status: safe bounded experiment implemented; transport-level ACK introspection intentionally out of scope.**
 
-Some field/research evidence supports stateful/asymmetric blocking patterns, including flows that survive handshake but fail after a small packet budget. That does not justify a universal "six packets", carrier rule, exact FinalMask offset, or static IP policy.
+PattN now supports an operator-configured HTTP(S) upload probe through the temporary candidate proxy. It sends random non-secret bytes, bounds payload and timeout, distinguishes HTTP/application failure from timeout, repeats through the existing runtime-attempt policy, and emits only the narrower `UploadStall` classification after application reachability. The optional Xray finalMask candidate is local/operator-supplied and must pass the same real-core validation quorum before promotion. Both WPF and Avalonia expose these settings with validation.
 
-The next safe implementation is a controlled bidirectional experiment against a cooperating endpoint, recording:
-- handshake result;
-- acknowledged upload byte/chunk count;
-- downstream response;
-- failure phase;
-- IPv4/IPv6;
-- repeated trials and time window.
-
-Only after reproducible differentiation from congestion, packet loss, server overload, and route failure should a new failure subtype/evidence type feed Reviver. Any mitigation candidate must still pass real-core validation and the existing strategy evidence gate.
+This deliberately does **not** infer carrier/DPI/censorship, does not encode a universal packet count or static IP rule, and does not claim transport-level acknowledged-byte telemetry that `HttpClient` cannot supply. Any deeper packet/ACK experiment still requires a cooperating endpoint/protocol fixture and separate evidence review.
 
 ### 6. Strategy learning / rollback intelligence
 
-**Status: foundation implemented, context learning open.**
+**Status: recency/human-feedback learning implemented; live validation remains authoritative.**
 
-Per-strategy promotions, rollbacks and outcome verdicts are already persisted. Do not create a second strategy-history database. Future ranking may add recency decay and privacy-preserving context buckets, but current live validation must remain authoritative; historical similarity alone must never promote a repair.
+Per-strategy promotions, rollbacks, automatic outcome verdicts and explicit human confirmation are persisted in the existing history. Summaries now compute recency-weighted success and a learning rate that gives explicit human confirmation higher weight. The experiment planner remains bounded/conflict-aware.
+
+Historical/context similarity is intentionally **not** allowed to promote an unvalidated repair or override live real-core evidence. Privacy-preserving context buckets may later be used only as a bounded ordering/tie-break signal if a reproducible fixture demonstrates value.
 
 ### 7. Localization parity
 
-**Status: non-blocking UX follow-up.**
+**Status: resource safety implemented; human translation parity remains open.**
 
-User-visible Discovery/Reviver/DNS-repair strings should all be resource-backed and translated across supported cultures. Persian is substantially covered; other cultures still rely on English fallback and some Discovery-management status/error summaries remain hardcoded. Add resource-key/placeholder parity CI when completing this work.
+Resource-key/placeholder parity CI exists. New Reviver/upload-probe controls and the duplicated Discovery empty-state/revision/promotion summaries are resource-backed, with Persian translations. The remaining supported cultures still rely on neutral English fallback for many of the newer Discovery/Reviver keys.
+
+Do not auto-fill those files with unreviewed machine translations merely to make a percentage reach 100%; completion here requires human-reviewed translations for Azerbaijani, French, Hungarian, Indonesian, Russian, Simplified Chinese and Traditional Chinese.
 
 ### 8. DNS root KSK rollover live review
 
-**Status: date-gated, not executable before the event.**
+**Status: date-gated; follow-up scheduled for 2026-10-11.**
 
 The repository already contains KSK-2024 and a scheduled authenticated IANA source check. On/after 2026-10-11, run the scheduled source check against the live post-rollover IANA state, retain the evidence artifact, and update the verified date only after review. The workflow is intentionally fail-closed after the rollover date until this happens.
 
