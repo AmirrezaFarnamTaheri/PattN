@@ -70,7 +70,7 @@ jobs:
         run: python3 scripts/check_test_assertions.py
 
   stack-sync:
-    name: Split-stack integrity (base ancestry + blob parity)
+    name: Split-stack integrity (ancestry + blob parity + shared slice)
     runs-on: ubuntu-latest
     steps:
       # Pinned to the same full commit SHA the repo's other workflows use: the
@@ -82,7 +82,7 @@ jobs:
       # No setup-python: ubuntu-latest's python3 is >= 3.11, which is all these
       # stdlib-only gates need -- and actions/setup-python is not pinned anywhere
       # in this repo, so there is no SHA here I could honestly reuse.
-      - name: Split PRs contain their base tip and match the integration ref
+      - name: Split PRs contain their base tip, match the integration ref and keep the shared slice
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,8 +92,26 @@ jobs:
       # Those PRs are legitimately "behind" until they are resynced, and that finding belongs to no PR
       # under review -- so on a push the gate enforces the invariant that actually reverts hardening when
       # a split merges late (blob parity), and ancestry stays where it is actionable: the PR event.
-      - name: Split PRs match the integration ref (parity only after a base move)
+      - name: Split PRs match the integration ref and keep the shared slice (parity only after a base move)
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/check_stack_sync.py --skip-base-ancestry
+
+      # Executable negative control for the shared-slice check: it must flag a ref that is
+      # known to have dropped part of the slice. dff02073 is the merge that did exactly that
+      # on 2026-10-02 (three Reviver model files rewound to their pre-merge blob, 17 lines of
+      # hardening among them); it is named here as a *control*, not as live state. If history
+      # is ever rewritten and the commit disappears, the step says so instead of failing the
+      # build -- a control that silently passes would be worse than no control.
+      - name: Shared-slice check has not gone dead (negative control on dff02073)
+        run: |
+          if git cat-file -e dff02073^{commit} 2>/dev/null; then
+            if python3 scripts/check_stack_sync.py --check-slice-of dff02073 >/dev/null 2>&1; then
+              echo "::error::the shared-slice check accepted a ref that dropped part of the slice"
+              exit 1
+            fi
+            echo "control ok: dff02073 is flagged (expected exit 1)"
+          else
+            echo "control skipped: dff02073 is not in this clone (history rewritten?)"
+          fi
