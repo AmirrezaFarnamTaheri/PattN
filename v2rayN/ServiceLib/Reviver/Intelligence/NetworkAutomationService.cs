@@ -259,22 +259,38 @@ public sealed class NetworkAutomationService
         TimeSpan maximumManifestAge)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        if (!Version.TryParse(NormalizeVersion(manifest.Version), out var target)
-            || !Version.TryParse(NormalizeVersion(currentVersion), out var current)
-            || !Version.TryParse(NormalizeVersion(manifest.MinimumVersion), out var minimum))
+        if (!TryParsePattNVersion(manifest.Version, out var target)
+            || !TryParsePattNVersion(currentVersion, out var current)
+            || !TryParsePattNVersion(manifest.MinimumVersion, out var minimum))
         {
             return new UpdateManifestVerification { Error = "Manifest or current version is invalid." };
         }
-        if (target < current)
+        if (target.CompareTo(current) < 0)
         {
             return new UpdateManifestVerification { Error = "Update manifest would downgrade the application." };
         }
-        if (current < minimum)
+        if (target.CompareTo(minimum) < 0)
+        {
+            return new UpdateManifestVerification { Error = "Target version is below the manifest's minimum supported version." };
+        }
+        if (current.CompareTo(minimum) < 0)
         {
             return new UpdateManifestVerification { Error = "Current application is below the manifest's minimum supported version." };
         }
+        if (maximumManifestAge <= TimeSpan.Zero)
+        {
+            return new UpdateManifestVerification { Error = "Maximum manifest age must be positive." };
+        }
 
-        var published = DateTimeOffset.FromUnixTimeSeconds(manifest.PublishedAtUnixSeconds);
+        DateTimeOffset published;
+        try
+        {
+            published = DateTimeOffset.FromUnixTimeSeconds(manifest.PublishedAtUnixSeconds);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return new UpdateManifestVerification { Error = "Manifest publication time is invalid." };
+        }
         var age = DateTimeOffset.UtcNow - published;
         if (age < TimeSpan.FromMinutes(-5) || age > maximumManifestAge)
         {
@@ -419,10 +435,57 @@ public sealed class NetworkAutomationService
         return successRate * 0.8d + latencyQuality * 0.2d;
     }
 
-    private static string NormalizeVersion(string value)
+    private static bool TryParsePattNVersion(string value, out PattNVersion version)
     {
+        version = default;
+        if (value.IsNullOrEmpty())
+        {
+            return false;
+        }
+
         var clean = value.Trim().TrimStart('v', 'V');
-        var dash = clean.IndexOf('-');
-        return dash >= 0 ? clean[..dash] : clean;
+        var parts = clean.Split('-', 2, StringSplitOptions.None);
+        var numeric = parts[0].Split('.', StringSplitOptions.None);
+        if (numeric.Length != 3
+            || numeric.Any(x => x.Length == 0 || x.Any(ch => !char.IsAsciiDigit(ch)))
+            || !int.TryParse(numeric[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var major)
+            || !int.TryParse(numeric[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var minor)
+            || !int.TryParse(numeric[2], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var patch))
+        {
+            return false;
+        }
+
+        var pattnRevision = 0;
+        if (parts.Length == 2)
+        {
+            var suffix = parts[1];
+            if (suffix.Length < 2
+                || suffix[0] is not ('P' or 'p')
+                || !int.TryParse(
+                    suffix.AsSpan(1),
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out pattnRevision))
+            {
+                return false;
+            }
+        }
+
+        version = new PattNVersion(major, minor, patch, pattnRevision);
+        return true;
+    }
+
+    private readonly record struct PattNVersion(int Major, int Minor, int Patch, int PattNRevision)
+        : IComparable<PattNVersion>
+    {
+        public int CompareTo(PattNVersion other)
+        {
+            var value = Major.CompareTo(other.Major);
+            if (value != 0) return value;
+            value = Minor.CompareTo(other.Minor);
+            if (value != 0) return value;
+            value = Patch.CompareTo(other.Patch);
+            return value != 0 ? value : PattNRevision.CompareTo(other.PattNRevision);
+        }
     }
 }
