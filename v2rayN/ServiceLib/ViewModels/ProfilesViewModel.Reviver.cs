@@ -115,7 +115,20 @@ public partial class ProfilesViewModel
             var cancellationToken = timeout.Token;
 
             await using var engine = new DiscoveryEngineService();
-            var policy = new RepairPolicy();
+            var policy = new RepairPolicy
+            {
+                UploadProbeUrl = _config.SpeedTestItem.UploadProbeUrl?.Trim() ?? string.Empty,
+                UploadProbeBytes = Math.Clamp(
+                    _config.SpeedTestItem.UploadProbeBytes,
+                    1024,
+                    1024 * 1024),
+                UploadProbeTimeoutSeconds = Math.Clamp(
+                    _config.SpeedTestItem.UploadProbeTimeoutSeconds,
+                    1,
+                    60),
+                UploadStallFinalMaskJson =
+                    _config.SpeedTestItem.UploadStallFinalMaskJson?.Trim() ?? string.Empty,
+            };
             var compatibility = new ProfileCoreCompatibility();
             var invariants = new ProfileInvariantRegistry();
             var validator = new CoreBackedRepairValidator(policy);
