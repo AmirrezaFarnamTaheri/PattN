@@ -2017,4 +2017,26 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRollbackApplied" xml:space="preserve">
     <value>نسخه فهرست بازگردانی شد.</value>
   </data>
+  <data name="TbPreviewEndpointCleanup" xml:space="preserve"><value>پیش‌نمایش پاک‌سازی</value></data>
+  <data name="TbReviverDiagnosisLine" xml:space="preserve"><value>تشخیص: {0}</value></data>
+  <data name="TbReviverValidationLine" xml:space="preserve"><value>اعتبارسنجی: {0}/{1} تلاش موفق؛ میانه تأخیر {2}؛ اتلاف {3}.</value></data>
+  <data name="TbReviverMutationLine" xml:space="preserve"><value>{0}: {1} → {2} ({3})</value></data>
+  <data name="TbReviverEmptyValue" xml:space="preserve"><value>(خالی)</value></data>
+  <data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve"><value>در حال اعمال پاک‌سازی نقاط پایانی…</value></data>
+  <data name="TbDiscoveryApplyingRetention" xml:space="preserve"><value>در حال اعمال سیاست نگه‌داری چرخه‌عمر…</value></data>
+  <data name="TbSettingsHistoryPolicyAutoRemove" xml:space="preserve"><value>حذف خودکار پراکسی‌های منطبق</value></data>
+  <data name="TbSettingsHistoryPolicyAutoRemoveTip" xml:space="preserve"><value>به‌طور پیش‌فرض غیرفعال است. سیاست تاریخی منطبق فقط پروفایل‌های غیرفعال را حذف می‌کند؛ پروفایل فعال همیشه محافظت می‌شود.</value></data>
+  <data name="TbNetworkIntelligence" xml:space="preserve"><value>هوشمندی شبکه</value></data>
+  <data name="TbRefreshNetworkIntelligence" xml:space="preserve"><value>تازه‌سازی هوشمندی</value></data>
+  <data name="TbNetworkIntelligenceSummaryEmpty" xml:space="preserve"><value>هنوز هیچ مشاهدهٔ محلی هوشمندی شبکه ثبت نشده است.</value></data>
+  <data name="TbNetworkIntelligenceSummaryLine" xml:space="preserve"><value>{0} مشاهده · نشانه‌های توقف بارگذاری {1} · اطمینان آخرین مشاهده {2:P0} · آخرین مشاهده {3}</value></data>
+  <data name="TbStrategyLearningSummaryEmpty" xml:space="preserve"><value>هنوز هیچ شاهدی از نتیجهٔ راهبردها ثبت نشده است.</value></data>
+  <data name="TbStrategyLearningSummaryLine" xml:space="preserve"><value>راهبردهای آموخته‌شدهٔ برتر: {0}</value></data>
+  <data name="TbNetworkHeatmap" xml:space="preserve"><value>تجمیع سلامت شبکه</value></data>
+  <data name="LvCountry" xml:space="preserve"><value>کشور</value></data>
+  <data name="LvCarrierKey" xml:space="preserve"><value>کلید ناشناس اپراتور</value></data>
+  <data name="LvSamples" xml:space="preserve"><value>نمونه‌ها</value></data>
+  <data name="LvIPv4" xml:space="preserve"><value>موفقیت IPv4</value></data>
+  <data name="LvIPv6" xml:space="preserve"><value>موفقیت IPv6</value></data>
+  <data name="LvUploadStall" xml:space="preserve"><value>توقف بارگذاری</value></data>
 </root>
