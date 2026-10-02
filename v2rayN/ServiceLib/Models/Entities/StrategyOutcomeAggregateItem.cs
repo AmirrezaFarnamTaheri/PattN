@@ -14,6 +14,7 @@ public class StrategyOutcomeAggregateItem
     public int Successes { get; set; }
     public int Rollbacks { get; set; }
     public int HumanConfirmed { get; set; }
+    public int HumanConfirmedSuccesses { get; set; }
     public double LatencySumMs { get; set; }
     public int LatencySamples { get; set; }
 }
