@@ -29,6 +29,8 @@ public enum ERepairFailureClass
     ApplicationProbeFailure,
     PerformanceDegraded,
     IntermittentFailure,
+    UplinkStall,
+    DpiInterferenceSuspected,
 }
 
 public enum ERepairMutationKind

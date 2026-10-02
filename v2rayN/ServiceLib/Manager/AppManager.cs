@@ -150,6 +150,19 @@ public sealed class AppManager
                 """);
         });
         SQLiteHelper.Instance.CreateTable<RepairPromotionHistoryItem>();
+        SQLiteHelper.Instance.CreateTable<StrategyOutcomeHistoryItem>();
+        SQLiteHelper.Instance.RunInTransaction(db =>
+        {
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_StrategyOutcome_ContextTime
+                ON StrategyOutcomeHistoryItem (
+                    StrategyId,
+                    GenomeKey,
+                    NetworkKey,
+                    ObservedAtUnixMs DESC
+                )
+                """);
+        });
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRegistryItem>();
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRevisionItem>();
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRemoteSourceItem>();
