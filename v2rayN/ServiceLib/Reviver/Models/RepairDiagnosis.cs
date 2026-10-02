@@ -23,4 +23,9 @@ public sealed record RepairRunResult
     public IReadOnlyList<RepairCandidate> PlannedCandidates { get; init; } = [];
     public IReadOnlyList<RepairCandidate> ValidatedCandidates { get; init; } = [];
     public RepairCandidate? RecommendedCandidate { get; init; }
+    public RepairFailureAssessment? FailureAssessment { get; init; }
+    public ProxyGenome? ProxyGenome { get; init; }
+    public NetworkObservationFingerprint? NetworkFingerprint { get; init; }
+    public RepairRecommendationExplanation? RecommendationExplanation { get; init; }
+    public RepairExperimentPlan? ExperimentPlan { get; init; }
 }

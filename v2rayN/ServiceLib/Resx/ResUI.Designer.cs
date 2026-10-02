@@ -6899,6 +6899,12 @@ namespace ServiceLib.Resx {
             }
         }
 
+        public static string TbReviverConfidenceLine {
+            get {
+                return ResourceManager.GetString("TbReviverConfidenceLine", resourceCulture);
+            }
+        }
+
         public static string TbReviverMutationLine {
             get {
                 return ResourceManager.GetString("TbReviverMutationLine", resourceCulture);
