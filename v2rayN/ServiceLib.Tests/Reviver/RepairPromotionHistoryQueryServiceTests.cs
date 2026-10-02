@@ -72,7 +72,7 @@ public class RepairPromotionHistoryQueryServiceTests
             },
         };
 
-        var summary = RepairPromotionHistoryQueryService.Summarize(rows);
+        var summary = RepairPromotionHistoryQueryService.Summarize(rows, now.AddMinutes(5));
 
         await summary.TotalEvents.Should().BeEqualTo(2);
         await summary.Promotions.Should().BeEqualTo(1);
@@ -84,12 +84,48 @@ public class RepairPromotionHistoryQueryServiceTests
         await summary.Strategies[0].Promotions.Should().BeEqualTo(1);
         await summary.Strategies[0].Rollbacks.Should().BeEqualTo(1);
         await summary.Strategies[0].Improved.Should().BeEqualTo(1);
+        await summary.Strategies[0].RatedPromotions.Should().BeEqualTo(1);
+        await summary.Strategies[0].SuccessRate.Should().BeEqualTo(1d);
+        await summary.Strategies[0].RollbackRate.Should().BeEqualTo(1d);
+        await summary.Strategies[0].RecencyWeightedSuccessRate.Should().BeEqualTo(1d);
         await summary.Entries[0].EventKind.Should().BeEqualTo("rolled-back");
         await summary.Entries[1].StrategyId.Should().BeEqualTo("endpoint-replacement");
         await summary.Entries[1].Mutations.Count.Should().BeEqualTo(1);
         await summary.Entries[1].BaselineValidation!.Successes.Should().BeEqualTo(1);
         await summary.Entries[1].CandidateValidation!.Successes.Should().BeEqualTo(3);
         await summary.Entries[1].OutcomeComparison!.Verdict.Should().BeEqualTo("improved");
+    }
+
+    [Test]
+    public async Task Summarize_ShouldDownWeightOldStrategyOutcomes()
+    {
+        var now = new DateTimeOffset(2026, 10, 2, 0, 0, 0, TimeSpan.Zero);
+        var rows = new[]
+        {
+            new RepairPromotionHistoryItem
+            {
+                Id = "recent-success",
+                EventKind = "promoted",
+                StrategyId = "dns-address-family",
+                OutcomeVerdict = "improved",
+                ObservedAtUnixMs = now.ToUnixTimeMilliseconds(),
+            },
+            new RepairPromotionHistoryItem
+            {
+                Id = "old-regression",
+                EventKind = "promoted",
+                StrategyId = "dns-address-family",
+                OutcomeVerdict = "regressed",
+                ObservedAtUnixMs = now.AddDays(-90).ToUnixTimeMilliseconds(),
+            },
+        };
+
+        var summary = RepairPromotionHistoryQueryService.Summarize(rows, now);
+        var strategy = summary.Strategies.Single();
+
+        await strategy.SuccessRate.Should().BeEqualTo(0.5d);
+        await (strategy.RecencyWeightedSuccessRate > strategy.SuccessRate).Should().BeTrue();
+        await strategy.RatedPromotions.Should().BeEqualTo(2);
     }
 
     [Test]
