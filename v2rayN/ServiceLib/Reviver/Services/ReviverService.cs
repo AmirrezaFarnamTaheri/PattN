@@ -43,22 +43,50 @@ public sealed class ReviverService(
 
         var session = StartSession(profile);
         var diagnosis = await diagnostic.DiagnoseAsync(session, cancellationToken);
+        RepairMetrics.RecordDiagnosis(diagnosis);
         session.BaselineFailure = diagnosis.FailureClass;
         session.BaselineValidation = diagnosis.RuntimeValidation;
+
+        var failureAssessment = RepairIntelligenceService.Assess(diagnosis);
+        var proxyGenome = RepairIntelligenceService.BuildProxyGenome(
+            session.Original.CreateWorkingCopy());
+        var networkFingerprint = RepairIntelligenceService.BuildNetworkFingerprint(diagnosis);
         if (diagnosis.IsHealthy)
         {
-            return new RepairRunResult { Session = session, Diagnosis = diagnosis };
+            return new RepairRunResult
+            {
+                Session = session,
+                Diagnosis = diagnosis,
+                FailureAssessment = failureAssessment,
+                ProxyGenome = proxyGenome,
+                NetworkFingerprint = networkFingerprint,
+            };
         }
 
         var planned = await PlanAsync(session, diagnosis.FailureClass, maxCandidates, cancellationToken);
-        var validated = await ValidateAsync(planned, validator, cancellationToken);
+        RepairMetrics.RecordPlanned(planned.Count);
+        var experimentPlan = RepairExperimentPlanner.Plan(
+            diagnosis.FailureClass,
+            planned,
+            failureAssessment);
+        var validationOrder = RepairExperimentPlanner.OrderForValidation(planned, experimentPlan);
+        var validated = await ValidateAsync(validationOrder, validator, cancellationToken);
+        RepairMetrics.RecordValidated(validated.Count);
+        var recommended = validated.FirstOrDefault();
         return new RepairRunResult
         {
             Session = session,
             Diagnosis = diagnosis,
             PlannedCandidates = planned,
             ValidatedCandidates = validated,
-            RecommendedCandidate = validated.FirstOrDefault(),
+            RecommendedCandidate = recommended,
+            FailureAssessment = failureAssessment,
+            ProxyGenome = proxyGenome,
+            NetworkFingerprint = networkFingerprint,
+            RecommendationExplanation = recommended is null
+                ? null
+                : RepairIntelligenceService.Explain(recommended, failureAssessment),
+            ExperimentPlan = experimentPlan,
         };
     }
 
@@ -92,6 +120,7 @@ public sealed class ReviverService(
             var strategyCount = 0;
             await foreach (var candidate in strategy.GenerateAsync(session, failureClass, cancellationToken).WithCancellation(cancellationToken))
             {
+                candidate.StrategyId = strategy.Id;
                 if (strategyCount >= _policy.MaxCandidatesPerStrategy)
                 {
                     break;
@@ -137,7 +166,8 @@ public sealed class ReviverService(
             }
 
             candidate.Validation = await validator.ValidateAsync(candidate, cancellationToken);
-            if (candidate.Validation.MeetsQuorum(_policy.MinimumRuntimeSuccesses))
+            candidate.RequiredRuntimeSuccesses = _policy.MinimumRuntimeSuccesses;
+            if (candidate.Validation.MeetsQuorumWithoutIntegrityDoubt(candidate.RequiredRuntimeSuccesses))
             {
                 candidate.State = ERepairCandidateState.RuntimeValidated;
                 validated.Add(candidate);
