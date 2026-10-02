@@ -1,8 +1,13 @@
 package dnssec
 
 import (
+	"encoding/base64"
+	"encoding/hex"
+	"strings"
 	"testing"
 	"time"
+
+	"pattn-discovery/internal/dnswire"
 )
 
 func TestIANARootTrustAnchorsIncludeCurrentAndSuccessorKSKs(t *testing.T) {
@@ -19,6 +24,54 @@ func TestIANARootTrustAnchorsIncludeCurrentAndSuccessorKSKs(t *testing.T) {
 	}
 }
 
+
+func TestIanaKSK2024PublishedDNSKEYMatchesEmbeddedTrustAnchor(t *testing.T) {
+	// IANA-published KSK-2024 (key tag 38696). This is an offline
+	// pre-rollover continuity fixture: it binds the successor DNSKEY material
+	// to the exact SHA-256 DS digest embedded in PattN without relying on the
+	// future 2026-10-11 root RRSIG state.
+	const publicKeyBase64 = "AwEAAa96jeuknZlaeSrvyAJj6ZHv28hhOKkx3rLGXVaC6rXTsDc449/cidltpkyGwCJNnOAlFNKF2jBosZBU5eeHspaQWOmOElZsjICMQMC3aeHbGiShvZsx4wMYSjH8e7Vrhbu6irwCzVBApESjbUdpWWmEnhathWu1jo+siFUiRAAxm9qyJNg/wOZqqzL/dL/q8PkcRU5oUKEpUge71M3ej2/7CPqpdVwuMoTvoB+ZOT4YeGyxMvHmbrxlFzGOHOijtzN+u1TQNatX2XBuzZNQ1K+s2CXkPIZo7s6JgZyvaBevYtxPvYLw4z9mR7K2vaF18UYH9Z9GNUUeayffKC73PYc="
+	const expectedDigest = "683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16"
+
+	publicKey, err := base64.StdEncoding.DecodeString(publicKeyBase64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rdata := append([]byte{0x01, 0x01, 3, 8}, publicKey...)
+	record := dnswire.ResourceRecord{
+		Name: ".", Type: dnswire.TypeDNSKEY, Class: dnswire.ClassIN, RawData: rdata,
+	}
+	key, err := ParseDNSKEY(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.KeyTag != 38696 {
+		t.Fatalf("KSK-2024 key tag=%d want 38696", key.KeyTag)
+	}
+
+	digest, err := DNSKEYDigest(".", rdata, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.ToUpper(hex.EncodeToString(digest)); got != expectedDigest {
+		t.Fatalf("KSK-2024 SHA-256 DS digest=%s want %s", got, expectedDigest)
+	}
+
+	snapshot := IANARootTrustAnchorSnapshot()
+	var embedded *TrustAnchor
+	for i := range snapshot.Anchors {
+		if snapshot.Anchors[i].KeyTag == 38696 {
+			embedded = &snapshot.Anchors[i]
+			break
+		}
+	}
+	if embedded == nil {
+		t.Fatal("embedded trust-anchor snapshot is missing KSK-2024")
+	}
+	if strings.ToUpper(embedded.Digest) != expectedDigest {
+		t.Fatalf("embedded KSK-2024 digest=%s want %s", embedded.Digest, expectedDigest)
+	}
+}
 
 func TestIANARootTrustAnchorAuditIsCurrentBeforeScheduledRollover(t *testing.T) {
 	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
