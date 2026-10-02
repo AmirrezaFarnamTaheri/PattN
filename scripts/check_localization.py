@@ -20,6 +20,8 @@ Rules:
   R2  master-resx keys and Designer members agree in both directions
   R3  no culture resx defines a key absent from the master resx; the `--culture` locale is
       additionally reported (and required) to cover every master key
+  R4  every culture explicitly carries every Discovery/Reviver feature key, so feature
+      additions cannot silently fall back because a locale file was forgotten
 
 Usage:
     scripts/check_localization.py [--culture en] [--json]
@@ -54,6 +56,20 @@ AT_RE = re.compile(r"@([A-Za-z_]\w*)\.([A-Za-z_]\w*)")
 DOTTED_RE = re.compile(r"\bResx\.([A-Za-z_]\w*)\.([A-Za-z_]\w*)")
 
 SOURCE_EXT = (".xaml", ".axaml", ".cs")
+
+FEATURE_PREFIXES = (
+    "TbDiscovery",
+    "TbReviver",
+    "TbDNSRepair",
+    "TbSettingsUpload",
+    "FillReviver",
+    "menuDiscovery",
+    "TbProxyTestHistory",
+)
+
+
+def is_feature_key(name: str) -> bool:
+    return name.startswith(FEATURE_PREFIXES)
 
 
 @dataclass
@@ -252,7 +268,13 @@ def build_report(limit: set[str] | None, culture: str) -> list[tuple[Surface, Re
                         )
                     )
 
-        for rel in surface.culture_files(limit):
+        # If the master resource changed, scan every culture even in PR-scoped
+        # mode. Otherwise a PR could add a new feature key to ResUI.resx without
+        # touching locale files and the scoped gate would never inspect them.
+        culture_limit = None if limit is None or master_rel in (limit or set()) else limit
+        feature_keys = {key for key in keys if is_feature_key(key)}
+
+        for rel in surface.culture_files(culture_limit):
             text = read(rel)
             if text is None:
                 continue
@@ -269,6 +291,17 @@ def build_report(limit: set[str] | None, culture: str) -> list[tuple[Surface, Re
             for extra in sorted(names - keys):
                 report.findings.append(
                     Finding("R3", surface.name, rel, extra, "culture resx defines a key absent from master")
+                )
+            for missing in sorted(feature_keys - names):
+                report.findings.append(
+                    Finding(
+                        "R4",
+                        surface.name,
+                        rel,
+                        missing,
+                        "Discovery/Reviver feature key is missing from this culture; "
+                        "an explicit translated or fallback value is required",
+                    )
                 )
             if culture_name == culture:
                 for missing in sorted(keys - names):
