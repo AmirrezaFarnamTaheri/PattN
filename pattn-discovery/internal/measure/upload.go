@@ -46,9 +46,12 @@ var nonPublicProbePrefixes = []netip.Prefix{
 // destination is dialed without any resolver round-trip (finding F-07).
 var probeResolver netResolver = net.DefaultResolver
 
-// netResolver is the resolution surface the probe needs (net.Resolver satisfies it).
+// netResolver is the resolution surface the probe needs. The signature is the real three-argument
+// net.Resolver.LookupNetIP: an earlier draft here carried a fourth *net.LookupOptions parameter,
+// which does not exist on that method (and whose type was only added to net in Go 1.28), so the
+// interface matched nothing and the package failed to compile.
 type netResolver interface {
-	LookupNetIP(ctx context.Context, network, host string, opts *net.LookupOptions) ([]netip.Addr, error)
+	LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error)
 }
 
 type UploadProbeOptions struct {
@@ -142,7 +145,10 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 		// negotiates HTTP/2 only through ALPN.
 		NextProtos: []string{"h2", "http/1.1"},
 	}
-	if host := parsed.Hostname(); netip.ParseAddr(host) == (netip.Addr{}) {
+	// Only a named host needs an explicit SNI name; an IP literal gets no ServerName (the URL's
+	// host is already the dial target). net.ParseIP is used instead of netip.ParseAddr here because
+	// the latter returns two values and cannot be compared inline.
+	if host := parsed.Hostname(); net.ParseIP(host) == nil {
 		tlsConfig.ServerName = host
 	}
 	transport := &http.Transport{

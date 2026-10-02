@@ -173,6 +173,8 @@ type stubResolver struct {
 	lookup func(context.Context, string, string) ([]netip.Addr, error)
 }
 
-func (r stubResolver) LookupNetIP(ctx context.Context, network, host string, _ *net.LookupOptions) ([]netip.Addr, error) {
+// LookupNetIP matches net.Resolver's three-argument signature exactly; anything wider and the stub
+// stops satisfying netResolver.
+func (r stubResolver) LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error) {
 	return r.lookup(ctx, network, host)
 }
