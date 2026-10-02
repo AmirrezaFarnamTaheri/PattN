@@ -98,7 +98,7 @@ public class NetworkIntelligenceTests
         var now = DateTimeOffset.UtcNow;
         var decayed = NetworkIntelligenceService.ApplyEvidenceDecay(0.8d, now.AddDays(-45), now, 45d);
 
-        await (Math.Abs(decayed - 0.4d) < 0.0001d).Should().BeTrue("decay must halve the score after one half-life");
+        await (Math.Abs(decayed - 0.4d) < 0.0001d).Should().BeTrue().Because("decay must halve the score after one half-life");
     }
 
     [Test]
@@ -130,7 +130,7 @@ public class NetworkIntelligenceTests
         var summary = SqliteStrategyOutcomeStore.Summarize("ipv6", rows, now);
 
         await summary.Samples.Should().BeEqualTo(2);
-        await (Math.Abs(summary.EffectiveSuccessRate - (2d / 3d)) < 0.0001d).Should().BeTrue("success rate must be the sample mean");
+        await (Math.Abs(summary.EffectiveSuccessRate - (2d / 3d)) < 0.0001d).Should().BeTrue().Because("success rate must be the sample mean");
     }
 
     [Test]
@@ -251,7 +251,7 @@ public class NetworkIntelligenceTests
     }
 
     [Test]
-    public void HashToken_ShouldBeKeyedDeterministicAndNotAnUnsaltedDigest()
+    public async Task HashToken_ShouldBeKeyedDeterministicAndNotAnUnsaltedDigest()
     {
         var key = new byte[32];
         System.Security.Cryptography.RandomNumberGenerator.Fill(key);
@@ -279,6 +279,6 @@ public class NetworkIntelligenceTests
         await c.CarrierKey.Should().NotBeEqualTo(a.CarrierKey);
 
         await NetworkIntelligenceService.IsKeyedDerivedNetworkKey(a.Key).Should().BeTrue();
-        await NetworkIntelligenceService.IsDerivedNetworkKey("net:v1:" + unsalted).Should().BeTrue("legacy rows stay readable");
+        await NetworkIntelligenceService.IsDerivedNetworkKey("net:v1:" + unsalted).Should().BeTrue().Because("legacy rows stay readable");
     }
 }

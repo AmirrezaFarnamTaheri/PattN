@@ -454,10 +454,10 @@ public class NetworkAutomationTests
         var asReinstall = service.VerifyUpdateManifest(
             manifest, artifact, key, "7.25.2", TimeSpan.FromDays(14), allowSameVersionReinstall: true);
 
-        await sameVersion.Valid.Should().BeFalse("an equal version is not an upgrade");
+        await sameVersion.Valid.Should().BeFalse().Because("an equal version is not an upgrade");
         await sameVersion.Error.Contains("reinstall", StringComparison.OrdinalIgnoreCase)
-            .Should().BeTrue("the refusal must name the way out");
-        await asReinstall.Valid.Should().BeTrue("an explicit reinstall flow may re-verify the same build");
+            .Should().BeTrue().Because("the refusal must name the way out");
+        await asReinstall.Valid.Should().BeTrue().Because("an explicit reinstall flow may re-verify the same build");
     }
 
     [Test]
@@ -514,7 +514,7 @@ public class NetworkAutomationTests
             manifest, artifact, signer.ExportSubjectPublicKeyInfo(), "1.2.3", TimeSpan.FromDays(14),
             allowSameVersionReinstall: true);
 
-        await naiveCaller.Valid.Should().BeTrue("the signature and hash do check out; the guard is only as good as its inputs");
+        await naiveCaller.Valid.Should().BeTrue().Because("the signature and hash do check out; the guard is only as good as its inputs");
     }
 
     private static SignedUpdateManifest Sign(SignedUpdateManifest manifest, ECDsa signer)
