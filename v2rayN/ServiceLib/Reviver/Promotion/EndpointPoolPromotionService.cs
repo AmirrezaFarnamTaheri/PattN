@@ -29,7 +29,7 @@ public sealed class EndpointPoolPromotionService(IEndpointPoolStore pool)
         }
         if (candidate.State != ERepairCandidateState.RuntimeValidated
             || candidate.Validation is null
-            || !candidate.Validation.MeetsQuorum())
+            || !candidate.Validation.MeetsQuorumWithoutIntegrityDoubt())
         {
             throw new InvalidOperationException("Only runtime-validated endpoint repairs can be promoted to the endpoint pool.");
         }
