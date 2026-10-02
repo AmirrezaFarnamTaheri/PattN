@@ -10,6 +10,7 @@ public sealed class SQLiteHelper
     private SQLiteConnection _db;
     private SQLiteAsyncConnection _dbAsync;
     private readonly string _configDB = "guiNDB.db";
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
 
     public string DatabasePath => _connstr;
 
@@ -22,59 +23,80 @@ public sealed class SQLiteHelper
 
     public CreateTableResult CreateTable<T>()
     {
-        return _db.CreateTable<T>();
+        _writeGate.Wait();
+        try
+        {
+            return _db.CreateTable<T>();
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
-    public async Task<int> InsertAllAsync(IEnumerable models)
-    {
-        return await _dbAsync.InsertAllAsync(models, runInTransaction: true).ConfigureAwait(false);
-    }
+    public Task<int> InsertAllAsync(IEnumerable models)
+        => WithWriteGateAsync(() => _dbAsync.InsertAllAsync(models, runInTransaction: true));
 
-    public async Task<int> InsertAsync(object model)
-    {
-        return await _dbAsync.InsertAsync(model);
-    }
+    public Task<int> InsertAsync(object model)
+        => WithWriteGateAsync(() => _dbAsync.InsertAsync(model));
 
-    public async Task<int> ReplaceAsync(object model)
-    {
-        return await _dbAsync.InsertOrReplaceAsync(model);
-    }
+    public Task<int> ReplaceAsync(object model)
+        => WithWriteGateAsync(() => _dbAsync.InsertOrReplaceAsync(model));
 
-    public async Task<int> UpdateAsync(object model)
-    {
-        return await _dbAsync.UpdateAsync(model);
-    }
+    public Task<int> UpdateAsync(object model)
+        => WithWriteGateAsync(() => _dbAsync.UpdateAsync(model));
 
-    public async Task<int> UpdateAllAsync(IEnumerable models)
-    {
-        return await _dbAsync.UpdateAllAsync(models, runInTransaction: true).ConfigureAwait(false);
-    }
+    public Task<int> UpdateAllAsync(IEnumerable models)
+        => WithWriteGateAsync(() => _dbAsync.UpdateAllAsync(models, runInTransaction: true));
 
-    public async Task<int> DeleteAsync(object model)
-    {
-        return await _dbAsync.DeleteAsync(model);
-    }
+    public Task<int> DeleteAsync(object model)
+        => WithWriteGateAsync(() => _dbAsync.DeleteAsync(model));
 
-    public async Task<int> DeleteAllAsync<T>()
-    {
-        return await _dbAsync.DeleteAllAsync<T>();
-    }
+    public Task<int> DeleteAllAsync<T>()
+        => WithWriteGateAsync(() => _dbAsync.DeleteAllAsync<T>());
 
-    public async Task<int> ExecuteAsync(string sql, params object[] args)
-    {
-        return await _dbAsync.ExecuteAsync(sql, args);
-    }
+    public Task<int> ExecuteAsync(string sql, params object[] args)
+        => WithWriteGateAsync(() => _dbAsync.ExecuteAsync(sql, args));
 
     public void RunInTransaction(Action<SQLiteConnection> action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        _db.RunInTransaction(() => action(_db));
+        _writeGate.Wait();
+        try
+        {
+            _db.RunInTransaction(() => action(_db));
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
     public Task RunInTransactionAsync(Action<SQLiteConnection> action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        return _dbAsync.RunInTransactionAsync(action);
+        return WithWriteGateAsync(() => _dbAsync.RunInTransactionAsync(action));
+    }
+
+    /// <summary>
+    /// Serializes a maintenance operation against every application write routed through this helper.
+    /// The callback must use the supplied synchronous connection for write operations so it does not
+    /// recursively acquire the write gate.
+    /// </summary>
+    public async Task RunExclusiveWriteAsync(
+        Func<SQLiteConnection, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await action(_db).ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
     public async Task<List<T>> QueryAsync<T>(string sql, params object[] args) where T : new()
@@ -89,28 +111,62 @@ public sealed class SQLiteHelper
 
     public async Task DisposeDbConnectionAsync()
     {
-        await Task.Run(() =>
+        await _writeGate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            try
+            await Task.Run(() =>
             {
-                _db?.Close();
-                _db?.Dispose();
-            }
-            finally
-            {
-                _db = null;
-            }
+                try
+                {
+                    _db?.Close();
+                    _db?.Dispose();
+                }
+                finally
+                {
+                    _db = null;
+                }
 
-            try
-            {
-                var conn = _dbAsync?.GetConnection();
-                conn?.Close();
-                conn?.Dispose();
-            }
-            finally
-            {
-                _dbAsync = null;
-            }
-        });
+                try
+                {
+                    var conn = _dbAsync?.GetConnection();
+                    conn?.Close();
+                    conn?.Dispose();
+                }
+                finally
+                {
+                    _dbAsync = null;
+                }
+            });
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
+    private async Task<T> WithWriteGateAsync<T>(Func<Task<T>> action)
+    {
+        await _writeGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
+    private async Task WithWriteGateAsync(Func<Task> action)
+    {
+        await _writeGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 }
