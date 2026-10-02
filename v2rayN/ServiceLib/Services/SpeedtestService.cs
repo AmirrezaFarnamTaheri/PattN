@@ -584,10 +584,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -675,10 +672,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -734,12 +728,32 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
             finally
             {
-                if (processService != null)
-                {
-                    await processService.StopAsync();
-                }
+                await StopAndDisposeProcessAsync(processService);
             }
         });
+    }
+
+    private static async Task StopAndDisposeProcessAsync(ProcessService? processService)
+    {
+        if (processService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await processService.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            // Speed-test cleanup must not leak the temporary core or replace the
+            // measurement/cancellation result with a teardown-only failure.
+            Logging.SaveLog("SpeedtestService process cleanup", ex);
+        }
+        finally
+        {
+            processService.Dispose();
+        }
     }
 
     private async Task<int> DoRealPing(ServerTestItem it,
