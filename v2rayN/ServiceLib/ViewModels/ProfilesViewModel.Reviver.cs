@@ -143,7 +143,8 @@ public partial class ProfilesViewModel
             var strategies = ReviverStrategyCatalog.CreateDefault(
                 candidateProvider,
                 new DiscoveryDnsRepairEvidenceProvider(engine),
-                compatibility);
+                compatibility,
+                policy.UploadStallFinalMaskJson);
             var reviver = new ReviverService(
                 new ProfileNormalizer(),
                 invariants,
