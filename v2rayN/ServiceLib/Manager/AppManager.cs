@@ -151,6 +151,7 @@ public sealed class AppManager
         });
         SQLiteHelper.Instance.CreateTable<RepairPromotionHistoryItem>();
         SQLiteHelper.Instance.CreateTable<StrategyOutcomeHistoryItem>();
+        SQLiteHelper.Instance.CreateTable<StrategyOutcomeAggregateItem>();
         SQLiteHelper.Instance.CreateTable<HumanFeedbackHistoryItem>();
         SQLiteHelper.Instance.RunInTransaction(db =>
         {
@@ -161,6 +162,15 @@ public sealed class AppManager
                     GenomeKey,
                     NetworkKey,
                     ObservedAtUnixMs DESC
+                )
+                """);
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_StrategyOutcomeAggregate_ContextDay
+                ON StrategyOutcomeAggregateItem (
+                    StrategyId,
+                    GenomeKey,
+                    NetworkKey,
+                    DayBucketUnixSeconds DESC
                 )
                 """);
             db.Execute("""
