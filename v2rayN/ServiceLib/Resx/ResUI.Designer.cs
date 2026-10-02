@@ -6741,6 +6741,14 @@ namespace ServiceLib.Resx {
             get { return ResourceManager.GetString("FillReviverUploadProbeParameterError", resourceCulture); }
         }
 
+        public static string TbDiscoveryRevisionHistoryUnavailable {
+            get { return ResourceManager.GetString("TbDiscoveryRevisionHistoryUnavailable", resourceCulture); }
+        }
+
+        public static string TbDiscoveryPromotionSummary {
+            get { return ResourceManager.GetString("TbDiscoveryPromotionSummary", resourceCulture); }
+        }
+
         public static string TbDiscoveryReady {
             get {
                 return ResourceManager.GetString("TbDiscoveryReady", resourceCulture);
