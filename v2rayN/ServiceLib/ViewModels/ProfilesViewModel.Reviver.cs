@@ -16,6 +16,7 @@ public partial class ProfilesViewModel
     private readonly SemaphoreSlim _reviverRunGate = new(1, 1);
     private CancellationTokenSource? _reviverCts;
     private RepairRunResult? _lastReviverRun;
+    private RepairPromotionReceipt? _lastReviverReceipt;
 
     public Interaction<string, string?> SaveSupportBundleInteraction { get; } = new();
 
@@ -24,6 +25,9 @@ public partial class ProfilesViewModel
 
     [Reactive]
     public partial bool HasReviverResult { get; set; }
+
+    [Reactive]
+    public partial bool HasReviverFeedbackTarget { get; set; }
 
     [Reactive]
     public partial bool ReviverCancelable { get; set; }
@@ -37,6 +41,8 @@ public partial class ProfilesViewModel
     public ReactiveCommand<RxVoid, RxVoid> ReviveSelectedProfileCmd { get; private set; } = null!;
     public ReactiveCommand<RxVoid, RxVoid> CancelReviverCmd { get; private set; } = null!;
     public ReactiveCommand<RxVoid, RxVoid> ExportReviverSupportBundleCmd { get; private set; } = null!;
+    public ReactiveCommand<RxVoid, RxVoid> ConfirmReviverWorkedCmd { get; private set; } = null!;
+    public ReactiveCommand<RxVoid, RxVoid> ConfirmReviverFailedCmd { get; private set; } = null!;
 
     private void InitializeReviverCommands()
     {
@@ -53,6 +59,10 @@ public partial class ProfilesViewModel
             x => x.HasReviverResult,
             x => x.ReviverBusy,
             (hasResult, busy) => hasResult && !busy);
+        var canFeedback = this.WhenAnyValue(
+            x => x.HasReviverFeedbackTarget,
+            x => x.ReviverBusy,
+            (hasTarget, busy) => hasTarget && !busy);
 
         ReviveSelectedProfileCmd = ReactiveCommand.CreateFromTask(ReviveSelectedProfileAsync, canStart);
         CancelReviverCmd = ReactiveCommand.CreateFromTask(async () =>
@@ -61,6 +71,12 @@ public partial class ProfilesViewModel
             await Task.CompletedTask;
         }, canCancel);
         ExportReviverSupportBundleCmd = ReactiveCommand.CreateFromTask(ExportReviverSupportBundleAsync, canExport);
+        ConfirmReviverWorkedCmd = ReactiveCommand.CreateFromTask(
+            () => RecordReviverFeedbackAsync(worked: true),
+            canFeedback);
+        ConfirmReviverFailedCmd = ReactiveCommand.CreateFromTask(
+            () => RecordReviverFeedbackAsync(worked: false),
+            canFeedback);
     }
 
     public void CancelReviver()
@@ -106,7 +122,9 @@ public partial class ProfilesViewModel
             }
 
             _lastReviverRun = null;
+            _lastReviverReceipt = null;
             HasReviverResult = false;
+            HasReviverFeedbackTarget = false;
             ReviverBusy = true;
             ReviverCancelable = true;
             SetReviverStatus(ResUI.TbReviverDiagnosing);
@@ -116,7 +134,20 @@ public partial class ProfilesViewModel
             var cancellationToken = timeout.Token;
 
             await using var engine = new DiscoveryEngineService();
-            var policy = new RepairPolicy();
+            var policy = new RepairPolicy
+            {
+                UploadProbeUrl = _config.SpeedTestItem.UploadProbeUrl?.Trim() ?? string.Empty,
+                UploadProbeBytes = Math.Clamp(
+                    _config.SpeedTestItem.UploadProbeBytes,
+                    1024,
+                    1024 * 1024),
+                UploadProbeTimeoutSeconds = Math.Clamp(
+                    _config.SpeedTestItem.UploadProbeTimeoutSeconds,
+                    1,
+                    60),
+                UploadStallFinalMaskJson =
+                    _config.SpeedTestItem.UploadStallFinalMaskJson?.Trim() ?? string.Empty,
+            };
             var compatibility = new ProfileCoreCompatibility();
             var invariants = new ProfileInvariantRegistry();
             var validator = new CoreBackedRepairValidator(policy);
@@ -135,7 +166,8 @@ public partial class ProfilesViewModel
             var strategies = ReviverStrategyCatalog.CreateDefault(
                 candidateProvider,
                 new DiscoveryDnsRepairEvidenceProvider(engine),
-                compatibility);
+                compatibility,
+                policy.UploadStallFinalMaskJson);
             var reviver = new ReviverService(
                 new ProfileNormalizer(),
                 invariants,
@@ -193,6 +225,8 @@ public partial class ProfilesViewModel
                 makeDefault: false,
                 CancellationToken.None);
 
+            _lastReviverReceipt = receipt;
+            HasReviverFeedbackTarget = true;
             _pendingSelectIndexId = receipt.PromotedProfileId;
             await RefreshServers();
             SetReviverStatus(ResUI.TbReviverPromoted);
@@ -212,6 +246,31 @@ public partial class ProfilesViewModel
             ReviverCancelable = false;
             ReviverBusy = false;
             _reviverRunGate.Release();
+        }
+    }
+
+    private async Task RecordReviverFeedbackAsync(bool worked)
+    {
+        var receipt = _lastReviverReceipt;
+        if (receipt is null || !HasReviverFeedbackTarget)
+        {
+            SetReviverStatus(ResUI.TbReviverFeedbackUnavailable);
+            return;
+        }
+
+        try
+        {
+            await new RepairHumanFeedbackService().RecordAsync(
+                receipt,
+                worked,
+                CancellationToken.None);
+            HasReviverFeedbackTarget = false;
+            SetReviverStatus(ResUI.TbReviverFeedbackRecorded);
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(nameof(RecordReviverFeedbackAsync), ex);
+            SetReviverStatus(ResUI.TbReviverAnalysisFailed);
         }
     }
 
@@ -261,6 +320,14 @@ public partial class ProfilesViewModel
                 ResUI.TbReviverDiagnosisLine,
                 HumanizeIdentifier(run.Diagnosis.FailureClass.ToString()))
         };
+
+        if (run.FailureAssessment is { } assessment)
+        {
+            lines.Add(string.Format(
+                CultureInfo.CurrentCulture,
+                ResUI.TbReviverConfidenceLine,
+                assessment.Confidence));
+        }
 
         if (candidate.Validation is { } validation)
         {

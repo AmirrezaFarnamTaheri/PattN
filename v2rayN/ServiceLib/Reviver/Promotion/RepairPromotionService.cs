@@ -229,6 +229,7 @@ public sealed class RepairPromotionService(
             NetworkKey = plan.NetworkKey,
         };
 
+        RepairMetrics.RecordPromotion(plan.StrategyId);
         if (strategyOutcomes is not null)
         {
             try
@@ -383,6 +384,7 @@ public sealed class RepairPromotionService(
             }
         }
 
+        RepairMetrics.RecordRollback(receipt.StrategyId);
         if (strategyOutcomes is not null
             && receipt.StrategyId.IsNotEmpty()
             && receipt.GenomeKey.IsNotEmpty()

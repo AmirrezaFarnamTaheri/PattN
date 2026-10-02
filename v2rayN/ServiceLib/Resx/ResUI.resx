@@ -2847,4 +2847,7 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
 <data name="TbDNSRollbackEarlierAvailable" xml:space="preserve">
     <value>DNS repair rolled back one level. An earlier applied DNS repair is still available for rollback.</value>
   </data>
+  <data name="TbReviverConfidenceLine" xml:space="preserve">
+    <value>Evidence confidence: {0:P0}</value>
+  </data>
 </root>

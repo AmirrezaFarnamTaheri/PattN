@@ -2066,6 +2066,9 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbProxyTestHistoryRanked" xml:space="preserve">
     <value>{0} از {1} پروفایل قابل‌مشاهده با استفاده از سابقهٔ اخیر پایداری رتبه‌بندی شد.</value>
   </data>
+  <data name="TbReviverConfidenceLine" xml:space="preserve">
+    <value>اطمینان شواهد: {0:P0}</value>
+  </data>
 <data name="TbDNSNoResolverTelemetry" xml:space="preserve">
     <value>هنوز داده‌ای از پایش حل‌کننده‌های DNS موجود نیست.</value>
   </data>
@@ -2290,6 +2293,9 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   </data>
 <data name="TbDiscoveryInspectSpki" xml:space="preserve">
     <value>برای مشاهدهٔ SPKI، کلید فعلی سرور را بررسی کنید.</value>
+  </data>
+  <data name="TbRepairHistory" xml:space="preserve">
+    <value>تاریخچهٔ ترمیم</value>
   </data>
 <data name="TbDiscoveryMaintenance" xml:space="preserve">
     <value>نگه‌داری</value>

@@ -14,7 +14,9 @@ on:
       - '.github/workflows/stack-audit.yml'
       - 'scripts/check_stack_sync.py'
       - 'scripts/check_localization.py'
+      - 'scripts/check_test_assertions.py'
       - 'v2rayN/ServiceLib/Resx/**'
+      - 'v2rayN/ServiceLib.Tests/**'
       - 'v2rayN/ServiceLib/Discovery/**'
       - 'v2rayN/ServiceLib/Reviver/**'
       - 'v2rayN/ServiceLib/Helper/SqliteHelper.cs'
@@ -52,6 +54,16 @@ jobs:
       - name: Whole tree (push / manual)
         if: github.event_name != 'pull_request'
         run: python3 scripts/check_localization.py
+
+  test-assertions:
+    name: Test-source assertion hygiene
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to the SHA this repository uses elsewhere; the integrity step to the left of
+      # this file rejects any `uses:` that is not a 40-hex commit digest.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: No message arguments on no-argument TUnit assertions, no await in non-async methods
+        run: python3 scripts/check_test_assertions.py
 
   stack-sync:
     name: Split-stack integrity (base ancestry + blob parity)
