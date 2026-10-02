@@ -66,7 +66,18 @@ jobs:
       # No setup-python: ubuntu-latest's python3 is >= 3.11, which is all these
       # stdlib-only gates need -- and actions/setup-python is not pinned anywhere
       # in this repo, so there is no SHA here I could honestly reuse.
-      - name: Every open split PR must contain its base tip and match the integration ref
+      - name: Split PRs contain their base tip and match the integration ref
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/check_stack_sync.py
+
+      # A push to the integration branch (or my-releases) advances the base of every PR stacked on it.
+      # Those PRs are legitimately "behind" until they are resynced, and that finding belongs to no PR
+      # under review -- so on a push the gate enforces the invariant that actually reverts hardening when
+      # a split merges late (blob parity), and ancestry stays where it is actionable: the PR event.
+      - name: Split PRs match the integration ref (parity only after a base move)
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_stack_sync.py --skip-base-ancestry
