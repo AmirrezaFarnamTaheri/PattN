@@ -2482,4 +2482,7 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbProxyTestHistoryRanked" xml:space="preserve">
     <value>{0} از {1} پروفایل قابل‌مشاهده با استفاده از سابقهٔ اخیر پایداری رتبه‌بندی شد.</value>
   </data>
+  <data name="TbReviverConfidenceLine" xml:space="preserve">
+    <value>اطمینان شواهد: {0:P0}</value>
+  </data>
 </root>
