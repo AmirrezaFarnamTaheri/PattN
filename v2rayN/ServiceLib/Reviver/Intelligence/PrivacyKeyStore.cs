@@ -82,9 +82,10 @@ internal static class PrivacyKeyStore
         {
             // The durable writer is async by design; this is a one-shot, one-file write on the
             // construction path, so waiting on it is bounded and cannot deadlock on our own thread.
+            // DurableAtomicFile.WriteAsync returns Task, not ValueTask, so there is nothing to
+            // unwrap: AsTask() does not exist on Task and the compiler said so.
             DurableAtomicFile
                 .WriteAsync(path, created, cancellationToken: CancellationToken.None)
-                .AsTask()
                 .GetAwaiter()
                 .GetResult();
         }

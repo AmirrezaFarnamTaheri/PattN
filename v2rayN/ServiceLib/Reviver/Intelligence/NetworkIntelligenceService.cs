@@ -497,8 +497,11 @@ public sealed class NetworkIntelligenceService
         }
 
         Span<byte> mac = stackalloc byte[32];
-        if (!System.Security.Cryptography.HMACSHA256.TryComputeHash(
-                _privacyKey,
+        // `HMACSHA256` exposes no static TryComputeHash (that shape belongs to
+        // CryptographicOperations, which takes a KeyArea); the keyed type computes the MAC through
+        // an instance, which is also what keeps the incrementally-updated hash inside this scope.
+        using var hmac = new System.Security.Cryptography.HMACSHA256(_privacyKey);
+        if (!hmac.TryComputeHash(
                 Encoding.UTF8.GetBytes(value),
                 mac,
                 out var written)
