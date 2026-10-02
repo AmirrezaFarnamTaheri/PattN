@@ -40,6 +40,19 @@ func TestRequestCancelForUnknownRequestReturnsBoundedError(t *testing.T) {
 	}
 }
 
+
+func TestOversizedNDJSONFrameEmitsTerminalProtocolError(t *testing.T) {
+	in := strings.NewReader(strings.Repeat("x", maxRequestFrameBytes+1))
+	var out bytes.Buffer
+	err := run(context.Background(), in, &out)
+	if err == nil {
+		t.Fatal("expected oversized frame error")
+	}
+	if !strings.Contains(out.String(), `"frame_too_large"`) {
+		t.Fatalf("missing terminal framing response: %q", out.String())
+	}
+}
+
 func FuzzNDJSONFraming(f *testing.F) {
 	f.Add([]byte("{\"v\":1,\"id\":\"a\",\"method\":\"engine.version\"}\n"))
 	f.Add([]byte("{bad}\n"))
