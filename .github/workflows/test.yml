@@ -168,6 +168,8 @@ jobs:
         trap 'rm -f "$tmp" "$download_src" "$download_dst"' EXIT
         printf 'verified-download-payload\n' > "$download_src"
         download_sha="$(pattn_sha256_file "$download_src")"
+        download_sha512="$(pattn_sha512_file "$download_src")"
+        download_blob="$(pattn_git_blob_sha1 "$download_src")"
         pattn_download_sha256 "file://$download_src" "$download_dst" "$download_sha"
         cmp "$download_src" "$download_dst"
 
@@ -181,7 +183,7 @@ jobs:
           exit 1
         }
 
-        pattn_download_sha512 "file://$download_src" "$download_dst" "$good_sha512"
+        pattn_download_sha512 "file://$download_src" "$download_dst" "$download_sha512"
         cmp "$download_src" "$download_dst"
         if pattn_download_sha512 "file://$download_src" "$download_dst" "$(printf '0%.0s' {1..128})"; then
           echo "::error::SHA-512 download negative self-test unexpectedly passed"
@@ -192,7 +194,7 @@ jobs:
           exit 1
         }
 
-        pattn_download_git_blob "file://$download_src" "$download_dst" "$good_blob"
+        pattn_download_git_blob "file://$download_src" "$download_dst" "$download_blob"
         cmp "$download_src" "$download_dst"
         if pattn_download_git_blob "file://$download_src" "$download_dst" "0000000000000000000000000000000000000000"; then
           echo "::error::Git-blob download negative self-test unexpectedly passed"
