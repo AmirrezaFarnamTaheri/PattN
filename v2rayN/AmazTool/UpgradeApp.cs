@@ -40,9 +40,11 @@ internal class UpgradeApp
 
         Console.WriteLine(Resx.Resource.StartUnzipping);
         StringBuilder sb = new();
+        var aborted = false;
+        var selfRenamed = false;
+        var thisAppOldFile = $"{Utils.GetExePath()}.tmp";
         try
         {
-            var thisAppOldFile = $"{Utils.GetExePath()}.tmp";
             File.Delete(thisAppOldFile);
             var splitKey = "/";
 
@@ -69,41 +71,90 @@ internal class UpgradeApp
                     if (string.Equals(Utils.GetExePath(), Utils.GetPath(fullName), StringComparison.OrdinalIgnoreCase))
                     {
                         File.Move(Utils.GetExePath(), thisAppOldFile);
+                        selfRenamed = true;
                     }
 
-                    var entryOutputPath = Utils.GetPath(fullName);
+                    var entryOutputPath = ArchivePathGuard.ResolveUnderRoot(Utils.StartupPath(), fullName);
                     Directory.CreateDirectory(Path.GetDirectoryName(entryOutputPath)!);
-                    //In the bin folder, if the file already exists, it will be skipped
-                    if (fullName.StartsWith("bin") && File.Exists(entryOutputPath))
+                    //In the bin folder, if the file already exists, it will be skipped.
+                    //Match the directory, not the prefix: "bin.zip" is not inside "bin/".
+                    if ((fullName == "bin" || fullName.StartsWith("bin/")) && File.Exists(entryOutputPath))
                     {
                         continue;
                     }
 
-                    TryExtractToFile(entry, entryOutputPath);
+                    if (!TryExtractToFile(entry, entryOutputPath))
+                    {
+                        throw new IOException($"Failed to extract update entry '{entry.FullName}'.");
+                    }
 
                     Console.WriteLine(entryOutputPath);
                 }
                 catch (Exception ex)
                 {
+                    // A single failed entry leaves the install tree half-updated; that is not a
+                    // successful update and must never reach StartV2RayN().
+                    aborted = true;
                     sb.Append(ex.StackTrace);
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine(Resx.Resource.FailedUpgrade + ex.StackTrace);
-            //return;
+            aborted = true;
+            sb.Append(ex.ToString());
         }
-        if (sb.Length > 0)
+        if (aborted)
         {
+            RestoreSelfIfRenamed(selfRenamed, thisAppOldFile);
             Console.WriteLine(Resx.Resource.FailedUpgrade + sb.ToString());
-            //return;
+            Utils.Waiting(3); // the caller may have closed the console before this is readable
+            return;
         }
 
         Console.WriteLine(Resx.Resource.Restartv2rayN);
         Utils.Waiting(2);
 
         Utils.StartV2RayN();
+    }
+
+    /// <summary>
+    /// The updater renames the running AmazTool.exe to AmazTool.exe.tmp before overwriting itself.
+    /// If the update then fails, that rename has to be undone or the application is left without a
+    /// launcher until the user restores it by hand.
+    /// </summary>
+    private static void RestoreSelfIfRenamed(bool selfRenamed, string thisAppOldFile)
+    {
+        if (!selfRenamed)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!File.Exists(thisAppOldFile))
+            {
+                return;
+            }
+
+            var target = Utils.GetExePath();
+            try
+            {
+                File.Move(thisAppOldFile, target);
+            }
+            catch
+            {
+                // The new AmazTool.exe is in the way (possibly only partially written). Delete it
+                // only now, so there is never a moment where no executable exists at all.
+                File.Delete(target);
+                File.Move(thisAppOldFile, target);
+            }
+            Console.WriteLine(Resx.Resource.RestoreUpgradeSelf);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(Resx.Resource.FailedRestoreUpgradeSelf + ex.Message);
+        }
     }
 
     private static bool TryExtractToFile(ZipArchiveEntry entry, string outputPath)

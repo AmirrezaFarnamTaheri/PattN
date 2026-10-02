@@ -153,6 +153,7 @@ public class DownloaderHelper
         };
 
         await using var downloader = new Downloader.DownloadService(downloadOpt);
+        Exception? completionError = null;
         downloader.DownloadStarted += (sender, value) =>
         {
             state = state with
@@ -173,15 +174,28 @@ public class DownloaderHelper
         };
         downloader.DownloadFileCompleted += (sender, value) =>
         {
-            state = state with
-            {
-                Completed = true,
-                Error = value.Error,
-            };
-            onProgress.Invoke(state);
+            // Delay the public completion notification until the downloaded bytes have
+            // passed the optional integrity check below.
+            completionError = value.Error;
         };
 
         await downloader.DownloadFileTaskAsync(request.FileUrl, request.FilePath, cancellationToken);
+        if (completionError is not null)
+        {
+            throw completionError;
+        }
+
+        if (request.ExpectedSha256.IsNotEmpty())
+        {
+            DownloadIntegrity.VerifySha256(request.FilePath, request.ExpectedSha256!);
+        }
+
+        state = state with
+        {
+            Completed = true,
+            Error = null,
+        };
+        onProgress.Invoke(state);
     }
 
     public async Task DownloadSmallFilesAsync(IWebProxy? webProxy, List<FileDownloadRequest> requests, Action<ReadOnlyMemory<FileDownloadState>> onProgress, CancellationToken cancellationToken = default)

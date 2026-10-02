@@ -18,6 +18,8 @@ public class GitHubReleaseAsset
 
     [JsonPropertyName("size")] public int Size { get; set; }
 
+    [JsonPropertyName("digest")] public string? Digest { get; set; }
+
     [JsonPropertyName("download_count")] public int DownloadCount { get; set; }
 
     [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
