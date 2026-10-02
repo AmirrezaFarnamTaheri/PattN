@@ -179,12 +179,47 @@ jobs:
           --repository "$GITHUB_REPOSITORY"
         python3 - "$dependency_sbom" <<'PY'
         import json
+        import re
         import sys
+        from pathlib import Path
+
         doc = json.load(open(sys.argv[1], encoding="utf-8"))
         assert doc["spdxVersion"] == "SPDX-2.3"
         packages = doc.get("packages", [])
         assert any(p["name"] == "ReactiveUI" for p in packages), "NuGet dependency inventory missing ReactiveUI"
-        assert any(p["externalRefs"][0]["referenceLocator"].startswith("pkg:golang/") for p in packages), "Go dependency inventory empty"
+
+        # The Go inventory must mirror pattn-discovery/go.mod, not merely be non-empty. The previous
+        # form asserted "at least one pkg:golang/ entry" unconditionally, which can never hold for a
+        # module with no third-party requirements -- and pattn-discovery is stdlib-only by design --
+        # so the job failed on a tree that satisfied its own premise, naming no real defect. Now every
+        # declared requirement must be present, and nothing may be present that is not declared.
+        declared = []
+        in_block = False
+        for raw in Path("pattn-discovery/go.mod").read_text(encoding="utf-8").splitlines():
+            line = raw.split("//", 1)[0].strip()
+            if not line:
+                continue
+            if line == "require (":
+                in_block = True
+                continue
+            if in_block and line == ")":
+                in_block = False
+                continue
+            if in_block:
+                declared.append(line.split()[0])
+                continue
+            match = re.fullmatch(r"require\s+(\S+)\s+\S+", line)
+            if match:
+                declared.append(match.group(1))
+
+        purls = [p["externalRefs"][0]["referenceLocator"] for p in packages
+                 if p.get("externalRefs")
+                 and p["externalRefs"][0]["referenceLocator"].startswith("pkg:golang/")]
+        for name in declared:
+            assert any(purl.startswith(f"pkg:golang/{name}@") for purl in purls), f"Go dependency inventory missing {name}"
+        assert len(purls) == len(declared), (
+            f"Go dependency inventory has {len(purls)} entries for {len(declared)} declared requirements"
+        )
         PY
         zip_tree="$RUNNER_TEMP/deterministic zip tree"
         mkdir -p "$zip_tree/sub dir"
