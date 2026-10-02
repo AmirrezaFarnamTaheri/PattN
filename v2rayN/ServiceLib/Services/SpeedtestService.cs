@@ -12,8 +12,10 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     private readonly int _speedTestPageSize = config.SpeedTestItem.SpeedTestPageSize ?? Global.SpeedTestPageSize;
     private readonly TimeSpan _delayInterval = TimeSpan.FromSeconds(config.SpeedTestItem.SpeedTestDelayInterval ?? 1);
     private readonly ProxyTestHistoryService _historyService = new();
-    private int MixedConcurrencyCount => Math.Max(1, _config.SpeedTestItem.MixedConcurrencyCount);
-    private int TestTimeoutSeconds => Math.Max(1, _config.SpeedTestItem.SpeedTestTimeout);
+    private int MixedConcurrencyCount => Math.Clamp(_config.SpeedTestItem.MixedConcurrencyCount, 1, 128);
+    private int TestTimeoutSeconds => Math.Clamp(_config.SpeedTestItem.SpeedTestTimeout, 1, 600);
+    private int RetryEachProxyCount => Math.Clamp(_config.SpeedTestItem.RetryEachProxyCount, 0, 20);
+    private int RetryFailedAfterBatchCount => Math.Clamp(_config.SpeedTestItem.RetryFailedAfterBatchCount, 0, 20);
 
     public Task RunLoop(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
@@ -112,7 +114,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             var failed = await RunAndRecordPassAsync(
                 actionType, lstSelected, attempt, "initial", runId, lastCompletedIds, ct);
 
-            var perProxyRetries = Math.Max(0, _config.SpeedTestItem.RetryEachProxyCount);
+            var perProxyRetries = RetryEachProxyCount;
             for (var retry = 0; retry < perProxyRetries; retry++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -128,7 +130,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
 
             for (var retry = 0;
-                 retry < Math.Max(0, _config.SpeedTestItem.RetryFailedAfterBatchCount) && failed.Count > 0;
+                 retry < RetryFailedAfterBatchCount && failed.Count > 0;
                  retry++)
             {
                 ct.ThrowIfCancellationRequested();
