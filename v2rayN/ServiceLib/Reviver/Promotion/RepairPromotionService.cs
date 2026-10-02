@@ -1,3 +1,4 @@
+using ServiceLib.Reviver.Intelligence;
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Normalization;
 using ServiceLib.Reviver.Services;
@@ -14,7 +15,10 @@ public sealed class RepairPromotionService(
     Func<string, Task<ProfileItem?>>? profileLoader = null,
     Func<Config, List<ProfileItem>, Task<int>>? removeServers = null,
     Func<Config, Task<int>>? saveConfig = null,
-    Func<Config, ProfileItem, Task<int>>? addServer = null)
+    Func<Config, ProfileItem, Task<int>>? addServer = null,
+    IStrategyOutcomeStore? strategyOutcomes = null,
+    NetworkIntelligenceService? intelligence = null,
+    Func<NetworkFingerprint?>? currentNetwork = null)
 {
     private readonly Func<string, Task<ProfileItem?>> _profileLoader =
         profileLoader ?? (id => AppManager.Instance.GetProfileItem(id));
@@ -24,6 +28,8 @@ public sealed class RepairPromotionService(
         saveConfig ?? (config => ConfigHandler.SaveConfig(config));
     private readonly Func<Config, ProfileItem, Task<int>> _addServer =
         addServer ?? ((config, profile) => ConfigHandler.AddServer(config, profile));
+    private readonly NetworkIntelligenceService _intelligence =
+        intelligence ?? new NetworkIntelligenceService();
 
     public RepairPromotionPlan Prepare(RepairSession session, RepairCandidate candidate)
     {
@@ -72,6 +78,9 @@ public sealed class RepairPromotionService(
             OriginalProfileId = session.Original.IndexId,
             OriginalProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(
                 session.Original.CreateWorkingCopy()),
+            StrategyId = NetworkIntelligenceService.StrategyIdFor(candidate),
+            GenomeKey = _intelligence.BuildGenome(candidate.Profile).Key,
+            NetworkKey = currentNetwork?.Invoke()?.Key ?? "net:unknown",
             ChildProfile = child,
             Mutations = candidate.Mutations.ToArray(),
             BaselineValidation = session.BaselineValidation,
@@ -215,7 +224,32 @@ public sealed class RepairPromotionService(
             PromotedProfileId = child.IndexId,
             PreviousDefaultProfileId = previousDefault,
             BecameDefault = makeDefault,
+            StrategyId = plan.StrategyId,
+            GenomeKey = plan.GenomeKey,
+            NetworkKey = plan.NetworkKey,
         };
+
+        if (strategyOutcomes is not null)
+        {
+            try
+            {
+                await strategyOutcomes.RecordAsync(new StrategyOutcomeObservation
+                {
+                    StrategyId = receipt.StrategyId,
+                    GenomeKey = receipt.GenomeKey,
+                    NetworkKey = receipt.NetworkKey,
+                    Succeeded = true,
+                    RolledBack = false,
+                    HumanConfirmed = false,
+                    LatencyMs = plan.Validation?.MedianLatencyMs,
+                    ObservedAt = receipt.PromotedAt,
+                }, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog($"Repair strategy learning write failed after promotion: {ex}");
+            }
+        }
 
         if (historyStore is not null)
         {
@@ -345,6 +379,30 @@ public sealed class RepairPromotionService(
                 throw new InvalidOperationException(
                     "Failed to remove the promoted repair profile during rollback.",
                     removalError);
+            }
+        }
+
+        if (strategyOutcomes is not null
+            && receipt.StrategyId.IsNotEmpty()
+            && receipt.GenomeKey.IsNotEmpty()
+            && receipt.NetworkKey.IsNotEmpty())
+        {
+            try
+            {
+                await strategyOutcomes.RecordAsync(new StrategyOutcomeObservation
+                {
+                    StrategyId = receipt.StrategyId,
+                    GenomeKey = receipt.GenomeKey,
+                    NetworkKey = receipt.NetworkKey,
+                    Succeeded = false,
+                    RolledBack = true,
+                    HumanConfirmed = false,
+                    ObservedAt = DateTimeOffset.UtcNow,
+                }, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog($"Repair strategy learning write failed after rollback: {ex}");
             }
         }
 
