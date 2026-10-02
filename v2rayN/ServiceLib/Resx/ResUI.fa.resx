@@ -2498,4 +2498,6 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbSettingsUploadProbeTip" xml:space="preserve"><value>اختیاری. PattN داده‌های تصادفی و غیرمحرمانه را از طریق پراکسی نامزد به این نشانی HTTP(S) ارسال می‌کند. خالی بودن، تشخیص توقف بارگذاری را غیرفعال می‌کند.</value></data>
   <data name="TbSettingsUploadStallFinalMaskTip" xml:space="preserve"><value>اختیاری. الگوی JSON محلی finalMask برای Xray فقط پس از مشاهدهٔ توقف بارگذاری امتحان می‌شود و پیش از ارتقا باید اعتبارسنجی عادی هستهٔ واقعی را بگذراند.</value></data>
   <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>تنظیمات آزمون بارگذاری Reviver را بررسی کنید: نشانی باید HTTP(S) معتبر باشد، حجم داده ۱۰۲۴ تا ۱۰۴۸۵۷۶ بایت، مهلت ۱ تا ۶۰ ثانیه و finalMask در صورت تنظیم باید آرایهٔ tcp غیرخالی داشته باشد.</value></data>
+  <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>سابقهٔ بازنگری در دسترس نیست: {0}</value></data>
+  <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} رویداد · {1} ارتقا · {2} بازگردانی · {3} بهبود · {4} پایدار · {5} پسرفت</value></data>
 </root>
