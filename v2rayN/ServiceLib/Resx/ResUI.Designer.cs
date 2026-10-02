@@ -6905,6 +6905,18 @@ namespace ServiceLib.Resx {
             }
         }
 
+        public static string TbReviverFeedbackUnavailable {
+            get {
+                return ResourceManager.GetString("TbReviverFeedbackUnavailable", resourceCulture);
+            }
+        }
+
+        public static string TbReviverFeedbackRecorded {
+            get {
+                return ResourceManager.GetString("TbReviverFeedbackRecorded", resourceCulture);
+            }
+        }
+
         public static string TbReviverMutationLine {
             get {
                 return ResourceManager.GetString("TbReviverMutationLine", resourceCulture);
