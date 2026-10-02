@@ -29,7 +29,7 @@ public class NetworkIntelligenceTests
     }
 
     [Test]
-    public async Task UplinkProbeEvidence_ShouldClassifyPostTlsUploadStall()
+    public async Task UplinkProbeEvidence_Alone_ShouldNotClaimAsymmetricUplinkStall()
     {
         var service = new NetworkIntelligenceService();
         var assessment = service.ClassifyUplinkProbe(new DiscoveryUplinkProbeResult
@@ -45,7 +45,27 @@ public class NetworkIntelligenceTests
             DurationMs = 2500,
         });
 
-        await assessment.FailureClass.Should().BeEqualTo(ERepairFailureClass.UplinkStall);
+        await assessment.FailureClass.Should().BeEqualTo(ERepairFailureClass.ApplicationProbeFailure);
+        await (assessment.Confidence < 0.90d).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DerivedKeyValidators_ShouldRejectRawAndLocalOnlySentinelForExport()
+    {
+        var service = new NetworkIntelligenceService();
+        var network = service.BuildFingerprint(new NetworkObservation { Carrier = "carrier" });
+        var genome = service.BuildGenome(new ProfileItem
+        {
+            ConfigType = EConfigType.VLESS,
+            Address = "example.com",
+        });
+
+        await NetworkIntelligenceService.IsDerivedNetworkKey(network.Key).Should().BeTrue();
+        await NetworkIntelligenceService.IsDerivedGenomeKey(genome.Key).Should().BeTrue();
+        await NetworkIntelligenceService.IsDerivedNetworkKey("net:unknown").Should().BeFalse();
+        await NetworkIntelligenceService.IsLocalNetworkKey("net:unknown").Should().BeTrue();
+        await NetworkIntelligenceService.IsDerivedNetworkKey("carrier.example").Should().BeFalse();
+        await NetworkIntelligenceService.IsDerivedGenomeKey("example.com").Should().BeFalse();
     }
 
     [Test]
