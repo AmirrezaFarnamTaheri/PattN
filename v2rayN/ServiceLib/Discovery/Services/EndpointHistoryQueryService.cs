@@ -121,6 +121,77 @@ public sealed class EndpointHistoryQueryService : IEndpointHistoryQueryService
         };
     }
 
+    public static EndpointLifecycleAssessment AssessLifecycle(EndpointHistoryDetail detail)
+    {
+        ArgumentNullException.ThrowIfNull(detail);
+        var points = detail.Points
+            .OrderByDescending(x => x.ObservedAt)
+            .ToArray();
+        var summary = detail.Summary;
+        if (points.Length == 0 || summary is null)
+        {
+            return new EndpointLifecycleAssessment();
+        }
+
+        var reasons = new List<string>();
+        EEndpointLifecycleState state;
+        double confidence;
+
+        if (points.Length < 2)
+        {
+            state = EEndpointLifecycleState.New;
+            confidence = 0.45d;
+            reasons.Add("insufficient-history");
+        }
+        else if (points[0].Qualified && points.Skip(1).Any(x => !x.Qualified))
+        {
+            state = EEndpointLifecycleState.Recovered;
+            confidence = Math.Clamp(0.55d + summary.DecayedReliability * 0.4d, 0d, 1d);
+            reasons.Add("latest-qualified-after-prior-failure");
+        }
+        else if (!points[0].Qualified
+                 && (summary.RecentFailureStreak >= 3 || summary.DecayedReliability <= 0.20d))
+        {
+            state = EEndpointLifecycleState.Dead;
+            confidence = Math.Clamp(
+                0.55d + Math.Min(0.3d, summary.RecentFailureStreak * 0.08d)
+                + (1d - summary.DecayedReliability) * 0.15d,
+                0d,
+                1d);
+            reasons.Add(summary.RecentFailureStreak >= 3
+                ? "repeated-recent-failures"
+                : "very-low-decayed-reliability");
+        }
+        else if (points[0].Qualified
+                 && summary.RecentFailureStreak == 0
+                 && summary.DecayedReliability >= 0.80d)
+        {
+            state = EEndpointLifecycleState.Healthy;
+            confidence = Math.Clamp(0.55d + summary.DecayedReliability * 0.4d, 0d, 1d);
+            reasons.Add("recent-qualified-high-reliability");
+        }
+        else
+        {
+            state = EEndpointLifecycleState.Degraded;
+            confidence = Math.Clamp(
+                0.45d + Math.Abs(summary.DecayedReliability - 0.5d) * 0.3d,
+                0d,
+                0.85d);
+            reasons.Add("mixed-or-degraded-history");
+        }
+
+        return new EndpointLifecycleAssessment
+        {
+            State = state,
+            Confidence = Math.Round(confidence, 4),
+            Samples = summary.Samples,
+            RecentFailureStreak = summary.RecentFailureStreak,
+            DecayedReliability = summary.DecayedReliability,
+            LastObservedAt = summary.LastObservedAt,
+            Reasons = reasons,
+        };
+    }
+
     private static string NormalizeHost(string? value)
         => (value ?? string.Empty).Trim().Trim('[', ']').TrimEnd('.').ToLowerInvariant();
 
