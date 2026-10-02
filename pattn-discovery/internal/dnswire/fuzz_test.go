@@ -23,7 +23,21 @@ func FuzzParseMessage(f *testing.F) {
 		if len(packet) >= 2 {
 			id = binary.BigEndian.Uint16(packet[:2])
 		}
-		_, _ = ParseMessage(packet, id, "example.com", TypeA)
+		message, err := ParseMessage(packet, id, "example.com", TypeA)
+		if err == nil {
+			if message.Header.ID != id {
+				t.Fatalf("successful parse changed transaction ID: got %d want %d", message.Header.ID, id)
+			}
+			if len(message.Answers) != int(message.Header.ANCount) {
+				t.Fatalf("answer count mismatch: parsed=%d header=%d", len(message.Answers), message.Header.ANCount)
+			}
+			if len(message.Authorities) != int(message.Header.NSCount) {
+				t.Fatalf("authority count mismatch: parsed=%d header=%d", len(message.Authorities), message.Header.NSCount)
+			}
+			if len(message.Additionals) != int(message.Header.ARCount) {
+				t.Fatalf("additional count mismatch: parsed=%d header=%d", len(message.Additionals), message.Header.ARCount)
+			}
+		}
 	})
 }
 
@@ -42,6 +56,9 @@ func FuzzReadName(f *testing.F) {
 			return
 		}
 		offset := int(rawOffset) % (len(packet) + 1)
-		_, _, _ = readName(packet, offset)
+		_, next, err := readName(packet, offset)
+		if err == nil && (next <= offset || next > len(packet)) {
+			t.Fatalf("successful name parse returned invalid next offset: start=%d next=%d len=%d", offset, next, len(packet))
+		}
 	})
 }
