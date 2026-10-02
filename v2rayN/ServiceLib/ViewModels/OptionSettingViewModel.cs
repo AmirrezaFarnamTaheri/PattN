@@ -2,6 +2,14 @@ namespace ServiceLib.ViewModels;
 
 public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
 {
+    private const int MaximumMixedConcurrency = 128;
+    private const int MaximumSpeedTestTimeoutSeconds = 600;
+    private const int MaximumRetryCount = 20;
+    private const int MaximumHistoryRetentionDays = 3650;
+    private const int MaximumHistoryPolicyCount = 1000;
+    private const int MinimumUploadProbeBytes = 1024;
+    private const int MaximumUploadProbeBytes = 1024 * 1024;
+    private const int MaximumUploadProbeTimeoutSeconds = 60;
     public event EventHandler? RequestClose;
 
     #region Core
@@ -58,6 +66,17 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
     [Reactive] public partial string SpeedPingTestUrl { get; set; }
     [Reactive] public partial string UdpTestTarget { get; set; }
     [Reactive] public partial int MixedConcurrencyCount { get; set; }
+    [Reactive] public partial int RetryEachProxyCount { get; set; }
+    [Reactive] public partial int RetryFailedAfterBatchCount { get; set; }
+    [Reactive] public partial int TestHistoryRetentionDays { get; set; }
+    [Reactive] public partial int HistoryPolicyFailureCount { get; set; }
+    [Reactive] public partial int HistoryPolicyWindowCount { get; set; }
+    [Reactive] public partial int HistoryPolicyConsecutiveFailures { get; set; }
+    [Reactive] public partial bool HistoryPolicyAutoRemove { get; set; }
+    [Reactive] public partial string UploadProbeUrl { get; set; }
+    [Reactive] public partial int UploadProbeBytes { get; set; }
+    [Reactive] public partial int UploadProbeTimeoutSeconds { get; set; }
+    [Reactive] public partial string UploadStallFinalMaskJson { get; set; }
     [Reactive] public partial bool EnableHWA { get; set; }
     [Reactive] public partial string SubConvertUrl { get; set; }
     [Reactive] public partial int MainGirdOrientation { get; set; }
@@ -189,6 +208,17 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         SpeedTestTimeout = _config.SpeedTestItem.SpeedTestTimeout;
         SpeedTestUrl = _config.SpeedTestItem.SpeedTestUrl;
         MixedConcurrencyCount = _config.SpeedTestItem.MixedConcurrencyCount;
+        RetryEachProxyCount = _config.SpeedTestItem.RetryEachProxyCount;
+        RetryFailedAfterBatchCount = _config.SpeedTestItem.RetryFailedAfterBatchCount;
+        TestHistoryRetentionDays = Math.Max(0, _config.SpeedTestItem.TestHistoryRetentionDays);
+        HistoryPolicyFailureCount = _config.SpeedTestItem.HistoryPolicyFailureCount;
+        HistoryPolicyWindowCount = _config.SpeedTestItem.HistoryPolicyWindowCount;
+        HistoryPolicyConsecutiveFailures = _config.SpeedTestItem.HistoryPolicyConsecutiveFailures;
+        HistoryPolicyAutoRemove = _config.SpeedTestItem.HistoryPolicyAutoRemove;
+        UploadProbeUrl = _config.SpeedTestItem.UploadProbeUrl ?? string.Empty;
+        UploadProbeBytes = _config.SpeedTestItem.UploadProbeBytes;
+        UploadProbeTimeoutSeconds = _config.SpeedTestItem.UploadProbeTimeoutSeconds;
+        UploadStallFinalMaskJson = _config.SpeedTestItem.UploadStallFinalMaskJson ?? string.Empty;
         SpeedPingTestUrl = _config.SpeedTestItem.SpeedPingTestUrl;
         UdpTestTarget = _config.SpeedTestItem.UdpTestTarget;
         EnableHWA = _config.GuiItem.EnableHWA;
@@ -305,6 +335,34 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
             NoticeManager.Instance.Enqueue(ResUI.FillFragmentParameterError);
             return;
         }
+        var hasWindowPolicy = HistoryPolicyFailureCount > 0 || HistoryPolicyWindowCount > 0;
+        var hasAnyHistoryPolicy = hasWindowPolicy || HistoryPolicyConsecutiveFailures > 0;
+        if (!TryNormalizeUploadStallFinalMask(UploadStallFinalMaskJson, out var normalizedUploadStallFinalMask)
+            || !IsValidUploadProbeUrl(UploadProbeUrl)
+            || UploadProbeBytes is < MinimumUploadProbeBytes or > MaximumUploadProbeBytes
+            || UploadProbeTimeoutSeconds is < 1 or > MaximumUploadProbeTimeoutSeconds)
+        {
+            NoticeManager.Instance.Enqueue(ResUI.FillReviverUploadProbeParameterError);
+            return;
+        }
+        if (MixedConcurrencyCount is <= 0 or > MaximumMixedConcurrency
+            || SpeedTestTimeout is <= 0 or > MaximumSpeedTestTimeoutSeconds
+            || RetryEachProxyCount is < 0 or > MaximumRetryCount
+            || RetryFailedAfterBatchCount is < 0 or > MaximumRetryCount
+            || TestHistoryRetentionDays is < 0 or > MaximumHistoryRetentionDays
+            || HistoryPolicyFailureCount is < 0 or > MaximumHistoryPolicyCount
+            || HistoryPolicyWindowCount is < 0 or > MaximumHistoryPolicyCount
+            || HistoryPolicyConsecutiveFailures is < 0 or > MaximumHistoryPolicyCount
+            || (hasWindowPolicy
+                && (HistoryPolicyFailureCount <= 0
+                    || HistoryPolicyWindowCount <= 0
+                    || HistoryPolicyFailureCount > HistoryPolicyWindowCount))
+            || (HistoryPolicyAutoRemove && !hasAnyHistoryPolicy))
+        {
+            NoticeManager.Instance.Enqueue(ResUI.FillSpeedTestParameterError);
+            return;
+        }
+
         var needReboot = EnableStatistics != _config.GuiItem.EnableStatistics
                           || DisplayRealTimeSpeed != _config.GuiItem.DisplayRealTimeSpeed
                         || EnableDragDropSort != _config.UiItem.EnableDragDropSort
@@ -363,6 +421,17 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         _config.UiItem.CurrentFontFamily = CurrentFontFamily;
         _config.SpeedTestItem.SpeedTestTimeout = SpeedTestTimeout;
         _config.SpeedTestItem.MixedConcurrencyCount = MixedConcurrencyCount;
+        _config.SpeedTestItem.RetryEachProxyCount = RetryEachProxyCount;
+        _config.SpeedTestItem.RetryFailedAfterBatchCount = RetryFailedAfterBatchCount;
+        _config.SpeedTestItem.TestHistoryRetentionDays = TestHistoryRetentionDays;
+        _config.SpeedTestItem.HistoryPolicyFailureCount = HistoryPolicyFailureCount;
+        _config.SpeedTestItem.HistoryPolicyWindowCount = HistoryPolicyWindowCount;
+        _config.SpeedTestItem.HistoryPolicyConsecutiveFailures = HistoryPolicyConsecutiveFailures;
+        _config.SpeedTestItem.HistoryPolicyAutoRemove = HistoryPolicyAutoRemove;
+        _config.SpeedTestItem.UploadProbeUrl = UploadProbeUrl.TrimEx();
+        _config.SpeedTestItem.UploadProbeBytes = UploadProbeBytes;
+        _config.SpeedTestItem.UploadProbeTimeoutSeconds = UploadProbeTimeoutSeconds;
+        _config.SpeedTestItem.UploadStallFinalMaskJson = normalizedUploadStallFinalMask;
         _config.SpeedTestItem.SpeedTestUrl = SpeedTestUrl;
         _config.SpeedTestItem.SpeedPingTestUrl = SpeedPingTestUrl;
         _config.SpeedTestItem.UdpTestTarget = UdpTestTarget;
@@ -408,6 +477,43 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         else
         {
             NoticeManager.Instance.Enqueue(ResUI.OperationFailed);
+        }
+    }
+
+    private static bool IsValidUploadProbeUrl(string? value)
+    {
+        if (value.IsNullOrEmpty())
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
+
+    private static bool TryNormalizeUploadStallFinalMask(string? value, out string normalized)
+    {
+        normalized = value?.Trim() ?? string.Empty;
+        if (normalized.IsNullOrEmpty())
+        {
+            return true;
+        }
+
+        try
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(normalized);
+            if (node is not System.Text.Json.Nodes.JsonObject obj
+                || obj["tcp"] is not System.Text.Json.Nodes.JsonArray { Count: > 0 })
+            {
+                return false;
+            }
+
+            normalized = obj.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

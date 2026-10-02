@@ -35,15 +35,16 @@ internal class UI
         return true;
     }
 
-    public static bool? SaveFileDialog(out string fileName, string filter)
+    public static bool? SaveFileDialog(out string fileName, string filter, string? suggestedFileName = null)
     {
         fileName = string.Empty;
 
         SaveFileDialog fileDialog = new()
         {
             Filter = filter,
-            FilterIndex = 2,
-            RestoreDirectory = true
+            FilterIndex = 1,
+            RestoreDirectory = true,
+            FileName = suggestedFileName ?? string.Empty
         };
         if (fileDialog.ShowDialog() != true)
         {
