@@ -176,6 +176,33 @@ jobs:
           exit 1
         fi
 
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed SHA-256 verification left an unverified output file"
+          exit 1
+        }
+
+        pattn_download_sha512 "file://$download_src" "$download_dst" "$good_sha512"
+        cmp "$download_src" "$download_dst"
+        if pattn_download_sha512 "file://$download_src" "$download_dst" "$(printf '0%.0s' {1..128})"; then
+          echo "::error::SHA-512 download negative self-test unexpectedly passed"
+          exit 1
+        fi
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed SHA-512 verification left an unverified output file"
+          exit 1
+        }
+
+        pattn_download_git_blob "file://$download_src" "$download_dst" "$good_blob"
+        cmp "$download_src" "$download_dst"
+        if pattn_download_git_blob "file://$download_src" "$download_dst" "0000000000000000000000000000000000000000"; then
+          echo "::error::Git-blob download negative self-test unexpectedly passed"
+          exit 1
+        fi
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed Git-blob verification left an unverified output file"
+          exit 1
+        }
+
         if grep -nE           'refs/heads/(master|main|release|rule-set)|releases/latest/download|dot\.net/v1/dotnet-install|bin/Release/net10\.0|MIN_KERNEL='           package-*.sh; then
           echo "::error::release packager reintroduced a mutable asset URL, hardcoded TFM path, or kernel heuristic"
           exit 1
