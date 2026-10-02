@@ -51,7 +51,9 @@ public sealed class IntelligenceRetentionService
             await SQLiteHelper.Instance.RunExclusiveWriteAsync(db =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var rows = db.Table<StrategyOutcomeHistoryItem>()
+                db.RunInTransaction(() =>
+                {
+                    var rows = db.Table<StrategyOutcomeHistoryItem>()
                     .Where(x => x.ObservedAtUnixMs < rawCutoff)
                     .OrderBy(x => x.ObservedAtUnixMs)
                     .Take(policy.BatchSize)
@@ -109,10 +111,11 @@ public sealed class IntelligenceRetentionService
                     }
                 }
 
-                foreach (var row in rows)
-                {
-                    batchDeleted += db.Delete(row);
-                }
+                    foreach (var row in rows)
+                    {
+                        batchDeleted += db.Delete(row);
+                    }
+                });
                 return Task.CompletedTask;
             }, cancellationToken);
 
