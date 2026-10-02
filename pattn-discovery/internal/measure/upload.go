@@ -281,14 +281,17 @@ func (b *pacedUploadBody) Read(p []byte) (int, error) {
 func (b *pacedUploadBody) Close() error { return nil }
 
 func isPublicProbeAddress(addr netip.Addr) bool {
-	if !addr.IsValid()
-		|| !addr.IsGlobalUnicast()
-		|| addr.IsUnspecified()
-		|| addr.IsLoopback()
-		|| addr.IsPrivate()
-		|| addr.IsLinkLocalUnicast()
-		|| addr.IsLinkLocalMulticast()
-		|| addr.IsMulticast() {
+	// Go requires the '{' on the `if` line: this condition was once rewritten onto continuation
+	// lines and the brace went missing, which the compiler reports as
+	// "syntax error: unexpected ||, expected }" for every operator after the first.
+	if !addr.IsValid() ||
+		!addr.IsGlobalUnicast() ||
+		addr.IsUnspecified() ||
+		addr.IsLoopback() ||
+		addr.IsPrivate() ||
+		addr.IsLinkLocalUnicast() ||
+		addr.IsLinkLocalMulticast() ||
+		addr.IsMulticast() {
 		return false
 	}
 	for _, prefix := range nonPublicProbePrefixes {
