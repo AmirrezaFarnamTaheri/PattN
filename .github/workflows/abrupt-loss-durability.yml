@@ -28,6 +28,7 @@ jobs:
   process-kill:
     name: real SQLite/file process-kill recovery
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       ITERATIONS: ${{ inputs.iterations || '5' }}
     steps:
