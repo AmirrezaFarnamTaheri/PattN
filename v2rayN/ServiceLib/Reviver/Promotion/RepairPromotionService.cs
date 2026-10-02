@@ -1,5 +1,7 @@
 using ServiceLib.Reviver.Models;
+using ServiceLib.Reviver.Normalization;
 using ServiceLib.Reviver.Services;
+using ServiceLib.Services;
 
 namespace ServiceLib.Reviver.Promotion;
 
@@ -11,7 +13,8 @@ public sealed class RepairPromotionService(
     IRepairPromotionHistoryStore? historyStore = null,
     Func<string, Task<ProfileItem?>>? profileLoader = null,
     Func<Config, List<ProfileItem>, Task<int>>? removeServers = null,
-    Func<Config, Task<int>>? saveConfig = null)
+    Func<Config, Task<int>>? saveConfig = null,
+    Func<Config, ProfileItem, Task<int>>? addServer = null)
 {
     private readonly Func<string, Task<ProfileItem?>> _profileLoader =
         profileLoader ?? (id => AppManager.Instance.GetProfileItem(id));
@@ -19,6 +22,9 @@ public sealed class RepairPromotionService(
         removeServers ?? ((config, profiles) => ConfigHandler.RemoveServers(config, profiles));
     private readonly Func<Config, Task<int>> _saveConfig =
         saveConfig ?? (config => ConfigHandler.SaveConfig(config));
+    private readonly Func<Config, ProfileItem, Task<int>> _addServer =
+        addServer ?? ((config, profile) => ConfigHandler.AddServer(config, profile));
+
     public RepairPromotionPlan Prepare(RepairSession session, RepairCandidate candidate)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -30,6 +36,23 @@ public sealed class RepairPromotionService(
         if (candidate.State != ERepairCandidateState.RuntimeValidated || candidate.Validation is null)
         {
             throw new InvalidOperationException("Only runtime-validated repair candidates can be promoted.");
+        }
+        if (!candidate.Validation.MeetsQuorumWithoutIntegrityDoubt(candidate.RequiredRuntimeSuccesses))
+        {
+            throw new InvalidOperationException(
+                "Runtime validation evidence no longer satisfies the quorum used to validate this repair candidate.");
+        }
+
+        var baseline = session.Original.CreateWorkingCopy();
+        var declaredFields = candidate.Mutations
+            .Select(x => x.Field)
+            .Where(x => x.IsNotEmpty())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (!ProfileMutationGuard.ChangesOnly(baseline, candidate.Profile, declaredFields))
+        {
+            throw new InvalidOperationException(
+                "Repair candidate contains profile changes that are not declared by its mutation list.");
         }
 
         var child = JsonUtils.DeepCopy(candidate.Profile)
@@ -46,7 +69,10 @@ public sealed class RepairPromotionService(
         {
             SessionId = session.Id,
             CandidateId = candidate.Id,
+            StrategyId = candidate.StrategyId,
             OriginalProfileId = session.Original.IndexId,
+            OriginalProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(
+                session.Original.CreateWorkingCopy()),
             ChildProfile = child,
             Mutations = candidate.Mutations.ToArray(),
             BaselineValidation = session.BaselineValidation,
@@ -66,6 +92,18 @@ public sealed class RepairPromotionService(
         ArgumentNullException.ThrowIfNull(plan);
         cancellationToken.ThrowIfCancellationRequested();
 
+        var source = await _profileLoader(plan.OriginalProfileId)
+            ?? throw new InvalidOperationException("The source profile no longer exists; promotion was cancelled.");
+        if (plan.OriginalProfileFingerprint.IsNotEmpty()
+            && !string.Equals(
+                ProxyTestHistoryService.ComputeProfileFingerprint(source),
+                plan.OriginalProfileFingerprint,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "The source profile changed after repair validation; promotion was cancelled.");
+        }
+
         var previousDefault = config.IndexId;
         var child = plan.ChildProfile;
         if (child.IndexId.IsNotEmpty())
@@ -73,10 +111,52 @@ public sealed class RepairPromotionService(
             throw new InvalidOperationException("Promotion plan was already consumed or modified: child already has an ID.");
         }
 
-        var result = await ConfigHandler.AddServer(config, child);
+        var result = await _addServer(config, child);
         if (result != 0 || child.IndexId.IsNullOrEmpty())
         {
             throw new InvalidOperationException("PattN failed to persist the repaired child profile.");
+        }
+
+        try
+        {
+            var sourceAfterInsert = await _profileLoader(plan.OriginalProfileId);
+            if (sourceAfterInsert is null
+                || (plan.OriginalProfileFingerprint.IsNotEmpty()
+                    && !string.Equals(
+                        ProxyTestHistoryService.ComputeProfileFingerprint(sourceAfterInsert),
+                        plan.OriginalProfileFingerprint,
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "The source profile changed while the repaired child was being persisted.");
+            }
+        }
+        catch (Exception sourceRaceError)
+        {
+            var compensationErrors = new List<Exception>();
+            try
+            {
+                if (await _removeServers(config, [child]) != 0)
+                {
+                    compensationErrors.Add(new InvalidOperationException(
+                        "Failed to remove the repaired child after detecting a concurrent source change."));
+                }
+            }
+            catch (Exception ex)
+            {
+                compensationErrors.Add(ex);
+            }
+
+            if (compensationErrors.Count > 0)
+            {
+                throw new AggregateException(
+                    "The source profile changed during promotion and repaired-child cleanup was incomplete.",
+                    [sourceRaceError, .. compensationErrors]);
+            }
+
+            throw new InvalidOperationException(
+                "The source profile changed during promotion; the repaired child was removed. Prepare and validate a fresh repair.",
+                sourceRaceError);
         }
 
         try
@@ -132,11 +212,14 @@ public sealed class RepairPromotionService(
         {
             SessionId = plan.SessionId,
             CandidateId = plan.CandidateId,
+            StrategyId = plan.StrategyId,
             OriginalProfileId = plan.OriginalProfileId,
             PromotedProfileId = child.IndexId,
             PreviousDefaultProfileId = previousDefault,
             BecameDefault = makeDefault,
         };
+
+        RepairMetrics.RecordPromotion(plan.StrategyId);
 
         if (historyStore is not null)
         {
@@ -147,6 +230,10 @@ public sealed class RepairPromotionService(
             catch (Exception ex)
             {
                 Logging.SaveLog($"Repair promotion history write failed: {ex}");
+                throw new InvalidOperationException(
+                    "Repair promotion completed, but promotion history could not be persisted; " +
+                    "the promoted profile remains installed and state reconciliation is required.",
+                    ex);
             }
         }
 
@@ -162,6 +249,19 @@ public sealed class RepairPromotionService(
         var promoted = await _profileLoader(receipt.PromotedProfileId);
         var wasDefault = string.Equals(config.IndexId, receipt.PromotedProfileId, StringComparison.Ordinal);
         var previousDefault = receipt.PreviousDefaultProfileId ?? string.Empty;
+
+        if (wasDefault && !receipt.BecameDefault)
+        {
+            throw new InvalidOperationException(
+                "The promoted profile was selected after promotion; rollback will not overwrite that newer user choice.");
+        }
+
+        if (wasDefault && previousDefault.IsNullOrEmpty())
+        {
+            throw new InvalidOperationException(
+                "The promoted profile is currently selected, but the rollback receipt has no previous default. " +
+                "Select another live profile before rolling back so the active selection cannot become empty.");
+        }
 
         // Validate the replacement before touching durable state. A stale receipt must never make
         // the config point at a profile that no longer exists, nor may it name the child being removed.
@@ -252,6 +352,8 @@ public sealed class RepairPromotionService(
             }
         }
 
+        RepairMetrics.RecordRollback(receipt.StrategyId);
+
         if (historyStore is not null)
         {
             try
@@ -261,6 +363,10 @@ public sealed class RepairPromotionService(
             catch (Exception ex)
             {
                 Logging.SaveLog($"Repair rollback history write failed: {ex}");
+                throw new InvalidOperationException(
+                    "Repair rollback completed, but rollback history could not be persisted; " +
+                    "the profile state is already changed and history reconciliation is required.",
+                    ex);
             }
         }
     }

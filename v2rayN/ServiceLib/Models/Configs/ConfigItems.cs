@@ -172,6 +172,12 @@ public class SpeedTestItem
     public int HistoryPolicyWindowCount { get; set; }
     public int HistoryPolicyConsecutiveFailures { get; set; }
     public bool HistoryPolicyAutoRemove { get; set; }
+
+    // Optional Reviver in-band upload verification. Empty URL keeps legacy behavior.
+    public string UploadProbeUrl { get; set; } = string.Empty;
+    public int UploadProbeBytes { get; set; } = 16 * 1024;
+    public int UploadProbeTimeoutSeconds { get; set; } = 8;
+    public string UploadStallFinalMaskJson { get; set; } = string.Empty;
 }
 
 [Serializable]
