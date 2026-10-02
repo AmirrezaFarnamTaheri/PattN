@@ -153,4 +153,10 @@
   <data name="Information" xml:space="preserve">
     <value>提示</value>
   </data>
+  <data name="RestoreUpgradeSelf" xml:space="preserve">
+    <value>已還原原來的 AmazTool 可執行文件，PattN 仍可啟動。</value>
+  </data>
+  <data name="FailedRestoreUpgradeSelf" xml:space="preserve">
+    <value>還原原來的 AmazTool 可執行文件失敗：</value>
+  </data>
 </root>
