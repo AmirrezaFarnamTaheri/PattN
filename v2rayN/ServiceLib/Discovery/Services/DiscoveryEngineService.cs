@@ -106,6 +106,39 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
         return await InvokeAsync<DiscoveryEndpointProbeResponse>("endpoint.probe", request, cancellationToken);
     }
 
+    public async Task<DiscoveryUplinkProbeResult> ProbeUplinkAsync(
+        DiscoveryUplinkProbeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri)
+            || !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Uplink probe URL must be an absolute HTTPS URL.", nameof(request));
+        }
+        if (request.TotalBytes is < 1 or > 1024 * 1024)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Uplink probe bytes must be between 1 and 1048576.");
+        }
+        if (request.Chunks is < 2 or > 64)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Uplink probe chunks must be between 2 and 64.");
+        }
+        if (request.TimeoutMs is < 1 or > 60_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Uplink probe timeout must be between 1 and 60000 ms.");
+        }
+        if (request.InterChunkDelayMs is < 0 or > 1000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Uplink probe inter-chunk delay must be between 0 and 1000 ms.");
+        }
+
+        return await InvokeAsync<DiscoveryUplinkProbeResult>(
+            "network.uplink.probe",
+            request,
+            cancellationToken);
+    }
+
     public async Task<DiscoveryDnsTraceResult> TraceDnsAsync(
         DiscoveryDeepDnsRequest request,
         CancellationToken cancellationToken = default)
