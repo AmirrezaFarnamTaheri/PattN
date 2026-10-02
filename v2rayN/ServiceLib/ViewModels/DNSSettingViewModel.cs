@@ -49,23 +49,23 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
     [Reactive] public partial bool RayCustomDNSEnableCompatible { get; set; }
     [Reactive] public partial bool SBCustomDNSEnableCompatible { get; set; }
 
-    [Reactive] public partial string DnsHealthSummary { get; set; } = "No resolver telemetry yet.";
-    [Reactive] public partial string DnsCatalogStatus { get; set; } = "Catalog status not loaded.";
+    [Reactive] public partial string DnsHealthSummary { get; set; } = ResUI.TbDNSNoResolverTelemetry;
+    [Reactive] public partial string DnsCatalogStatus { get; set; } = ResUI.TbDNSCatalogStatusNotLoaded;
     [Reactive] public partial string DnsResolverDetails { get; set; } = string.Empty;
-    [Reactive] public partial string DnsHealthLastUpdated { get; set; } = "Never";
+    [Reactive] public partial string DnsHealthLastUpdated { get; set; } = ResUI.TbDNSNever;
     [Reactive] public partial string DnsHealthError { get; set; } = string.Empty;
     [Reactive] public partial bool DnsHealthBusy { get; set; }
     [Reactive] public partial IReadOnlyList<DnsResolverOption> DnsResolverOptions { get; set; } = [];
     [Reactive] public partial DnsResolverOption? SelectedDnsResolver { get; set; }
-    [Reactive] public partial string DnsRepairPreview { get; set; } = "Refresh DNS health, choose a resolver, then preview the exact changes.";
+    [Reactive] public partial string DnsRepairPreview { get; set; } = ResUI.TbDNSRepairPreviewInitial;
     [Reactive] public partial string DnsRepairStatus { get; set; } = string.Empty;
     [Reactive] public partial bool DnsRepairBusy { get; set; }
     [Reactive] public partial bool DnsRepairCanPreview { get; set; }
     [Reactive] public partial bool DnsRepairCanApply { get; set; }
     [Reactive] public partial bool DnsRepairCanRollback { get; set; }
-    [Reactive] public partial string DnsResolverTrendDetails { get; set; } = "No resolver history yet. Refresh DNS health to collect observations.";
-    [Reactive] public partial string DnsOperationHistory { get; set; } = "No DNS or repair actions yet.";
-    [Reactive] public partial string DnsHistoryLastUpdated { get; set; } = "Never";
+    [Reactive] public partial string DnsResolverTrendDetails { get; set; } = ResUI.TbDNSNoResolverHistory;
+    [Reactive] public partial string DnsOperationHistory { get; set; } = ResUI.TbDNSNoOperationHistory;
+    [Reactive] public partial string DnsHistoryLastUpdated { get; set; } = ResUI.TbDNSNever;
     [Reactive] public partial string DnsHistoryError { get; set; } = string.Empty;
 
     public bool IsSimpleDNSEnabled => !(RayCustomDNSEnableCompatible && SBCustomDNSEnableCompatible);
@@ -119,8 +119,8 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             {
                 _dnsRepairPlan = null;
                 DnsRepairPreview = SelectedDnsResolver is null
-                    ? "Select a resolver after a live DNS health refresh."
-                    : $"Selected {SelectedDnsResolver.DisplayName}. Preview before applying.";
+                    ? ResUI.TbDNSSelectResolverAfterRefresh
+                    : string.Format(ResUI.TbDNSSelectedResolverPreviewFormat, SelectedDnsResolver.DisplayName);
                 DnsRepairStatus = string.Empty;
                 UpdateDnsRepairCommandState();
             });
@@ -169,7 +169,7 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             _dnsRepairReceipt = await _dnsSettingsRepair.GetLatestActiveReceiptAsync();
             if (_dnsRepairReceipt is not null)
             {
-                DnsRepairStatus = $"A DNS repair from catalog {_dnsRepairReceipt.CatalogVersion} can be rolled back if the applied settings are still unchanged.";
+                DnsRepairStatus = string.Format(ResUI.TbDNSRollbackAvailableFormat, _dnsRepairReceipt.CatalogVersion);
             }
             UpdateDnsRepairCommandState();
             await RefreshDnsHistoryAsync();
@@ -218,29 +218,37 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             && snapshot.CatalogValid
             && snapshot.CatalogStaleCount == 0;
         DnsHealthSummary = snapshot.Resolvers.Count == 0
-            ? "No resolver telemetry yet."
-            : $"{snapshot.HealthyCount} healthy · {snapshot.WatchCount} watch · {snapshot.DegradedCount} degraded";
+            ? ResUI.TbDNSNoResolverTelemetry
+            : string.Format(ResUI.TbDNSHealthSummaryFormat, snapshot.HealthyCount, snapshot.WatchCount, snapshot.DegradedCount);
 
         if (!snapshot.CatalogAuditKnown)
         {
             DnsCatalogStatus = snapshot.CatalogVersion.IsNullOrEmpty()
-                ? "Catalog audit not run yet."
-                : $"Catalog {snapshot.CatalogVersion} · telemetry cached; catalog freshness not yet audited";
+                ? ResUI.TbDNSCatalogAuditNotRun
+                : string.Format(ResUI.TbDNSCatalogFreshnessUnauditedFormat, snapshot.CatalogVersion);
         }
         else
         {
-            var freshness = snapshot.CatalogStaleCount == 0 ? "fresh" : $"{snapshot.CatalogStaleCount} stale";
-            var validity = snapshot.CatalogValid ? "valid" : "invalid";
-            var auditedAt = snapshot.CatalogAuditedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "unknown time";
-            DnsCatalogStatus = $"Catalog {snapshot.CatalogVersion} · {validity} · {freshness} (max age {snapshot.CatalogMaxAgeDays} days) · audited {auditedAt}";
+            var freshness = snapshot.CatalogStaleCount == 0
+                ? ResUI.TbDNSFresh
+                : string.Format(ResUI.TbDNSStaleFormat, snapshot.CatalogStaleCount);
+            var validity = snapshot.CatalogValid ? ResUI.TbDNSValid : ResUI.TbDNSInvalid;
+            var auditedAt = snapshot.CatalogAuditedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? ResUI.TbDNSUnknownTime;
+            DnsCatalogStatus = string.Format(
+                ResUI.TbDNSCatalogAuditSummaryFormat,
+                snapshot.CatalogVersion,
+                validity,
+                freshness,
+                snapshot.CatalogMaxAgeDays,
+                auditedAt);
         }
 
         DnsResolverDetails = snapshot.Resolvers.Count == 0
-            ? "Use Refresh to run non-gating resolver diagnostics."
+            ? ResUI.TbDNSResolverDiagnosticsHint
             : string.Join(Environment.NewLine, snapshot.Resolvers.Select(x => x.DisplayLine));
 
         DnsHealthLastUpdated = snapshot.RefreshedAt is null
-            ? "Never"
+            ? ResUI.TbDNSNever
             : snapshot.RefreshedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
         if (!snapshot.Error.IsNullOrEmpty())
@@ -256,15 +264,15 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
         {
             var snapshot = await _dnsHistory.LoadAsync();
             DnsResolverTrendDetails = snapshot.ResolverTrends.Count == 0
-                ? "No resolver history yet. Refresh DNS health to collect observations."
+                ? ResUI.TbDNSNoResolverHistory
                 : string.Join(Environment.NewLine, snapshot.ResolverTrends.Select(x => x.DisplayLine));
 
             DnsOperationHistory = snapshot.Events.Count == 0
-                ? "No DNS or repair actions yet."
+                ? ResUI.TbDNSNoOperationHistory
                 : string.Join(Environment.NewLine, snapshot.Events.Select(x => x.DisplayLine));
 
             DnsHistoryLastUpdated = snapshot.NewestAt is null
-                ? "Never"
+                ? ResUI.TbDNSNever
                 : snapshot.NewestAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
         }
         catch (Exception ex)
@@ -278,7 +286,7 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
         var selected = SelectedDnsResolver;
         if (selected is null)
         {
-            DnsRepairStatus = "Choose a resolver first.";
+            DnsRepairStatus = ResUI.TbDNSChooseResolverFirst;
             UpdateDnsRepairCommandState();
             return;
         }
@@ -304,32 +312,32 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             _dnsRepairPlan = _dnsSettingsRepair.Prepare(_config, recommendation, _dnsRepairCatalogVersion);
             var lines = new List<string>
             {
-                $"Resolver: {selected.Name}",
-                $"Policy: {selected.Policy}",
-                $"Current health: {selected.HealthClass} / {selected.Quality}",
-                $"Catalog: {_dnsRepairCatalogVersion}",
-                $"RemoteDNS: {_dnsRepairPlan.Before.RemoteDNS} -> {_dnsRepairPlan.After.RemoteDNS}",
-                $"BootstrapDNS: {_dnsRepairPlan.Before.BootstrapDNS} -> {_dnsRepairPlan.After.BootstrapDNS}",
-                $"Changed fields: {string.Join(", ", _dnsRepairPlan.Changes)}",
+                string.Format(ResUI.TbDNSRepairPreviewResolverFormat, selected.Name),
+                string.Format(ResUI.TbDNSRepairPreviewPolicyFormat, selected.Policy),
+                string.Format(ResUI.TbDNSRepairPreviewHealthFormat, selected.HealthClass, selected.Quality),
+                string.Format(ResUI.TbDNSRepairPreviewCatalogFormat, _dnsRepairCatalogVersion),
+                string.Format(ResUI.TbDNSRepairPreviewRemoteFormat, _dnsRepairPlan.Before.RemoteDNS, _dnsRepairPlan.After.RemoteDNS),
+                string.Format(ResUI.TbDNSRepairPreviewBootstrapFormat, _dnsRepairPlan.Before.BootstrapDNS, _dnsRepairPlan.After.BootstrapDNS),
+                string.Format(ResUI.TbDNSRepairPreviewChangedFieldsFormat, string.Join(", ", _dnsRepairPlan.Changes)),
             };
 
             if (!_dnsRepairCatalogEligible)
             {
-                lines.Add("Apply blocked: resolver catalog audit is missing, invalid, or stale.");
+                lines.Add(ResUI.TbDNSRepairBlockedCatalog);
             }
             if (!selected.IsSafeToApply)
             {
-                lines.Add("Apply blocked: current resolver telemetry does not meet the live safety gate.");
+                lines.Add(ResUI.TbDNSRepairBlockedTelemetry);
             }
             if (!IsSimpleDNSEnabled)
             {
-                lines.Add("Apply blocked: Simple DNS is currently disabled by custom DNS settings.");
+                lines.Add(ResUI.TbDNSRepairBlockedSimpleDns);
             }
 
             DnsRepairPreview = string.Join(Environment.NewLine, lines);
             DnsRepairStatus = _dnsRepairCatalogEligible && selected.IsSafeToApply && IsSimpleDNSEnabled
-                ? "Preview ready. Apply persists immediately; Cancel does not undo it. Use Rollback if needed."
-                : "Preview ready, but Apply is blocked by the current safety gate.";
+                ? ResUI.TbDNSRepairPreviewReady
+                : ResUI.TbDNSRepairPreviewBlocked;
         }
         catch (Exception ex)
         {
@@ -347,13 +355,13 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
     {
         if (_dnsRepairPlan is null || SelectedDnsResolver is null)
         {
-            DnsRepairStatus = "Preview the current resolver before applying.";
+            DnsRepairStatus = ResUI.TbDNSRepairPreviewFirst;
             UpdateDnsRepairCommandState();
             return;
         }
         if (!_dnsRepairCatalogEligible || !SelectedDnsResolver.IsSafeToApply || !IsSimpleDNSEnabled)
         {
-            DnsRepairStatus = "Apply is blocked until Simple DNS is enabled and a fresh valid catalog with safe live resolver telemetry is available.";
+            DnsRepairStatus = ResUI.TbDNSApplySafetyBlocked;
             UpdateDnsRepairCommandState();
             return;
         }
@@ -373,14 +381,14 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
 
             if (!ReferenceEquals(plan, _dnsRepairPlan) || SelectedDnsResolver is null)
             {
-                DnsRepairStatus = "The DNS repair preview changed while confirming. Preview again before applying.";
+                DnsRepairStatus = ResUI.TbDNSPreviewChangedDuringConfirm;
                 return;
             }
 
             _dnsRepairReceipt = await _dnsSettingsRepair.ApplyAsync(_config, plan);
             RemoteDNS = _dnsRepairReceipt.Applied.RemoteDNS ?? string.Empty;
             BootstrapDNS = _dnsRepairReceipt.Applied.BootstrapDNS ?? string.Empty;
-            DnsRepairStatus = $"Applied {SelectedDnsResolver.Name}. The previous Simple DNS snapshot is available for rollback.";
+            DnsRepairStatus = string.Format(ResUI.TbDNSAppliedResolverFormat, SelectedDnsResolver.Name);
             _dnsRepairPlan = null;
             await RefreshDnsHistoryAsync();
         }
@@ -399,7 +407,7 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
     {
         if (_dnsRepairReceipt is null)
         {
-            DnsRepairStatus = "There is no applied DNS repair to roll back.";
+            DnsRepairStatus = ResUI.TbDNSNoRepairToRollback;
             UpdateDnsRepairCommandState();
             return;
         }
@@ -419,8 +427,8 @@ public partial class DNSSettingViewModel : MyReactiveObject, ICloseable
             BootstrapDNS = _dnsRepairReceipt.Before.BootstrapDNS ?? string.Empty;
             _dnsRepairReceipt = await _dnsSettingsRepair.GetLatestActiveReceiptAsync();
             DnsRepairStatus = _dnsRepairReceipt is null
-                ? "DNS repair rolled back to the exact previous Simple DNS snapshot."
-                : "DNS repair rolled back one level. An earlier applied DNS repair is still available for rollback.";
+                ? ResUI.TbDNSRollbackExact
+                : ResUI.TbDNSRollbackEarlierAvailable;
             _dnsRepairPlan = null;
             await RefreshDnsHistoryAsync();
         }
