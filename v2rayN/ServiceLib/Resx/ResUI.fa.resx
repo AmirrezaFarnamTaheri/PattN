@@ -2491,4 +2491,11 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbReviverFeedbackRecorded" xml:space="preserve">
     <value>بازخورد ترمیم ثبت شد.</value>
   </data>
+  <data name="TbSettingsUploadProbeUrl" xml:space="preserve"><value>نشانی آزمون بارگذاری Reviver</value></data>
+  <data name="TbSettingsUploadProbeBytes" xml:space="preserve"><value>حجم دادهٔ آزمون بارگذاری Reviver (بایت)</value></data>
+  <data name="TbSettingsUploadProbeTimeout" xml:space="preserve"><value>مهلت آزمون بارگذاری Reviver (ثانیه)</value></data>
+  <data name="TbSettingsUploadStallFinalMask" xml:space="preserve"><value>الگوی finalMask برای توقف بارگذاری</value></data>
+  <data name="TbSettingsUploadProbeTip" xml:space="preserve"><value>اختیاری. PattN داده‌های تصادفی و غیرمحرمانه را از طریق پراکسی نامزد به این نشانی HTTP(S) ارسال می‌کند. خالی بودن، تشخیص توقف بارگذاری را غیرفعال می‌کند.</value></data>
+  <data name="TbSettingsUploadStallFinalMaskTip" xml:space="preserve"><value>اختیاری. الگوی JSON محلی finalMask برای Xray فقط پس از مشاهدهٔ توقف بارگذاری امتحان می‌شود و پیش از ارتقا باید اعتبارسنجی عادی هستهٔ واقعی را بگذراند.</value></data>
+  <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>تنظیمات آزمون بارگذاری Reviver را بررسی کنید: نشانی باید HTTP(S) معتبر باشد، حجم داده ۱۰۲۴ تا ۱۰۴۸۵۷۶ بایت، مهلت ۱ تا ۶۰ ثانیه و finalMask در صورت تنظیم باید آرایهٔ tcp غیرخالی داشته باشد.</value></data>
 </root>

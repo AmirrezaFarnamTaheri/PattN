@@ -2842,4 +2842,11 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbReviverFeedbackRecorded" xml:space="preserve">
     <value>Repair feedback recorded.</value>
   </data>
+  <data name="TbSettingsUploadProbeUrl" xml:space="preserve"><value>Reviver upload probe URL</value></data>
+  <data name="TbSettingsUploadProbeBytes" xml:space="preserve"><value>Reviver upload probe payload bytes</value></data>
+  <data name="TbSettingsUploadProbeTimeout" xml:space="preserve"><value>Reviver upload probe timeout (seconds)</value></data>
+  <data name="TbSettingsUploadStallFinalMask" xml:space="preserve"><value>Upload-stall finalMask template</value></data>
+  <data name="TbSettingsUploadProbeTip" xml:space="preserve"><value>Optional. PattN posts random, non-secret bytes through the candidate proxy to this HTTP(S) endpoint. Empty disables upload-stall classification.</value></data>
+  <data name="TbSettingsUploadStallFinalMaskTip" xml:space="preserve"><value>Optional. A local Xray finalMask JSON template is tried only after an observed upload stall and must pass normal real-core validation before promotion.</value></data>
+  <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>Check the Reviver upload probe settings: URL must be HTTP(S), payload 1024–1048576 bytes, timeout 1–60 seconds, and finalMask (when set) must contain a non-empty tcp array.</value></data>
 </root>

@@ -119,6 +119,10 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.HistoryPolicyWindowCount, v => v.txtHistoryPolicyWindowCount.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.HistoryPolicyConsecutiveFailures, v => v.txtHistoryPolicyConsecutiveFailures.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.HistoryPolicyAutoRemove, v => v.togHistoryPolicyAutoRemove.IsChecked).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeUrl, v => v.txtUploadProbeUrl.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeBytes, v => v.txtUploadProbeBytes.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeTimeoutSeconds, v => v.txtUploadProbeTimeoutSeconds.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadStallFinalMaskJson, v => v.txtUploadStallFinalMaskJson.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.SubConvertUrl, v => v.cmbSubConvertUrl.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.MainGirdOrientation, view => view.cmbMainGirdOrientation.SelectedIndex).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.GeoFileSourceUrl, v => v.cmbGetFilesSourceUrl.Text).DisposeWith(disposables);
