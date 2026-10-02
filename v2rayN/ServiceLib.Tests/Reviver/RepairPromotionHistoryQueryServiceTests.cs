@@ -129,6 +129,41 @@ public class RepairPromotionHistoryQueryServiceTests
     }
 
     [Test]
+    public async Task Summarize_ShouldWeightHumanConfirmationAboveAutomaticOutcome()
+    {
+        var now = new DateTimeOffset(2026, 10, 2, 0, 0, 0, TimeSpan.Zero);
+        var rows = new[]
+        {
+            new RepairPromotionHistoryItem
+            {
+                Id = "auto-success",
+                EventKind = "promoted",
+                StrategyId = "endpoint-replacement",
+                OutcomeVerdict = "improved",
+                ObservedAtUnixMs = now.ToUnixTimeMilliseconds(),
+            },
+            new RepairPromotionHistoryItem
+            {
+                Id = "human-negative",
+                EventKind = "human-confirmed",
+                StrategyId = "endpoint-replacement",
+                OutcomeVerdict = "regressed",
+                ObservedAtUnixMs = now.ToUnixTimeMilliseconds(),
+            },
+        };
+
+        var summary = RepairPromotionHistoryQueryService.Summarize(rows, now);
+        var strategy = summary.Strategies.Single();
+
+        await strategy.SuccessRate.Should().BeEqualTo(1d);
+        await strategy.HumanConfirmedPositive.Should().BeEqualTo(0);
+        await strategy.HumanConfirmedNegative.Should().BeEqualTo(1);
+        await strategy.HumanConfirmedSuccessRate.Should().BeEqualTo(0d);
+        await strategy.RecencyWeightedSuccessRate.Should().BeEqualTo(1d);
+        await strategy.RecencyWeightedLearningSuccessRate.Should().BeEqualTo(1d / 3d);
+    }
+
+    [Test]
     public async Task Summarize_ShouldRejectMalformedHistoricalEvidence()
     {
         var rows = new[]
