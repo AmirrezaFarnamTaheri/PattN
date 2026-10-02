@@ -625,7 +625,7 @@ BugURL:         https://github.com/patterniha/PattN/issues
 ExclusiveArch:  aarch64 x86_64
 Source0:        __PKGROOT__.tar.gz
 
-Requires:       cairo, pango, openssl, mesa-libEGL, mesa-libGL
+Requires:       cairo, pango, openssl, mesa-libEGL, mesa-libGL, libicu
 Requires:       glibc >= 2.39
 Requires:       fontconfig >= 2.15.0
 Requires:       desktop-file-utils >= 0.26
