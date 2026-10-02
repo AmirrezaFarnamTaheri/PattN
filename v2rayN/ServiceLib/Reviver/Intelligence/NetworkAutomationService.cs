@@ -103,15 +103,11 @@ public sealed class NetworkAutomationService
         }
 
         var suppliedRecords = records.ToArray();
-        if (suppliedRecords.Any(x => x is null
-                                     || x.NetworkKey.IsNullOrEmpty()
-                                     || x.GenomeKey.IsNullOrEmpty()
-                                     || x.StrategyId.IsNullOrEmpty()
-                                     || !double.IsFinite(x.Confidence)
-                                     || x.Confidence is < 0d or > 1d))
+        if (suppliedRecords.Any(x => !IsExportableRecord(x)))
         {
             throw new ArgumentException(
-                "Share records require derived keys, a strategy ID, and finite confidence between 0 and 1.",
+                "Share records require PattN-derived network/genome keys, a known failure class, " +
+                "a bounded strategy ID, a non-negative time bucket, and finite confidence between 0 and 1.",
                 nameof(records));
         }
 
@@ -123,7 +119,9 @@ public sealed class NetworkAutomationService
                 x.FailureClass,
                 x.StrategyId,
                 x.Succeeded,
-                x.ObservedAtBucketUnixHours,
+                // Sharing intentionally coarsens locally retained hourly observations to
+                // day buckets to reduce linkability across small cohorts.
+                ObservedAtBucketUnixHours = (x.ObservedAtBucketUnixHours / 24) * 24,
             })
             .Where(x => x.Count() >= policy.MinimumAggregateSamples)
             .Select(group => new AnonymousIntelligenceRecord
@@ -191,9 +189,11 @@ public sealed class NetworkAutomationService
         {
             throw new ArgumentOutOfRangeException(nameof(healthyThreshold));
         }
-        if (!double.IsFinite(deadThreshold) || deadThreshold is < 0d or > 1d || deadThreshold > healthyThreshold)
+        if (!double.IsFinite(deadThreshold) || deadThreshold is < 0d or > 1d || deadThreshold >= healthyThreshold)
         {
-            throw new ArgumentOutOfRangeException(nameof(deadThreshold));
+            throw new ArgumentOutOfRangeException(
+                nameof(deadThreshold),
+                "The dead threshold must be strictly lower than the healthy threshold.");
         }
 
         var rows = proxies.ToArray();
@@ -458,6 +458,11 @@ public sealed class NetworkAutomationService
         {
             throw new InvalidDataException($"Intelligence sync payload exceeds the {MaxSyncRecords} record limit.");
         }
+        if (records.Any(x => !IsExportableRecord(x)))
+        {
+            throw new InvalidDataException(
+                "Intelligence sync payload contains a non-derived identifier or invalid record.");
+        }
 
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(records);
         if (plaintext.Length > MaxSyncPayloadBytes)
@@ -511,8 +516,23 @@ public sealed class NetworkAutomationService
         {
             throw new InvalidDataException($"Intelligence sync payload exceeds the {MaxSyncRecords} record limit.");
         }
+        if (records.Any(x => !IsExportableRecord(x)))
+        {
+            throw new InvalidDataException(
+                "Intelligence sync payload contains a non-derived identifier or invalid record.");
+        }
         return records;
     }
+
+    private static bool IsExportableRecord(AnonymousIntelligenceRecord? record)
+        => record is not null
+           && NetworkIntelligenceService.IsDerivedNetworkKey(record.NetworkKey)
+           && NetworkIntelligenceService.IsDerivedGenomeKey(record.GenomeKey)
+           && NetworkIntelligenceService.IsKnownFailureClass(record.FailureClass)
+           && NetworkIntelligenceService.IsSafeStrategyId(record.StrategyId)
+           && record.ObservedAtBucketUnixHours >= 0
+           && double.IsFinite(record.Confidence)
+           && record.Confidence is >= 0d and <= 1d;
 
     public static string BuildManifestPayload(SignedUpdateManifest manifest)
         => string.Join("\n",
