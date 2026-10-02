@@ -831,7 +831,7 @@ public class Utils
             {
                 if (candidate is > 0 and < 65535 && CanBindLoopbackPort(candidate))
                 {
-                    Logging.SaveLog(_tag, $"GetFreePort: {defaultPort} is unavailable, using {candidate}");
+                    Logging.SaveLog($"GetFreePort: {defaultPort} is unavailable, using {candidate}");
                     return candidate;
                 }
             }
@@ -859,7 +859,7 @@ public class Utils
         // port another process owns -- the core's logs would then describe traffic that never went
         // through it. 0 is not bindable by any of these callers, so the configuration fails loudly at
         // startup instead of silently sharing a port.
-        Logging.SaveLog(_tag, "GetFreePort: no local port could be bound; returning 0 to fail loudly");
+        Logging.SaveLog("GetFreePort: no local port could be bound; returning 0 to fail loudly");
         return 0;
     }
 
