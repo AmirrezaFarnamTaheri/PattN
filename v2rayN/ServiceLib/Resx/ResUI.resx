@@ -2730,4 +2730,121 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="LvIPv4" xml:space="preserve"><value>IPv4 success</value></data>
   <data name="LvIPv6" xml:space="preserve"><value>IPv6 success</value></data>
   <data name="LvUploadStall" xml:space="preserve"><value>Upload stall</value></data>
+<data name="TbDNSNoResolverTelemetry" xml:space="preserve">
+    <value>No resolver telemetry yet.</value>
+  </data>
+<data name="TbDNSCatalogStatusNotLoaded" xml:space="preserve">
+    <value>Resolver catalog status has not been loaded yet.</value>
+  </data>
+<data name="TbDNSNever" xml:space="preserve">
+    <value>Never</value>
+  </data>
+<data name="TbDNSRepairPreviewInitial" xml:space="preserve">
+    <value>Refresh DNS health, choose a resolver, then preview the exact changes.</value>
+  </data>
+<data name="TbDNSNoResolverHistory" xml:space="preserve">
+    <value>No resolver history yet. Refresh DNS health to collect observations.</value>
+  </data>
+<data name="TbDNSNoOperationHistory" xml:space="preserve">
+    <value>No DNS or repair actions yet.</value>
+  </data>
+<data name="TbDNSSelectResolverAfterRefresh" xml:space="preserve">
+    <value>Select a resolver after a live DNS health refresh.</value>
+  </data>
+<data name="TbDNSSelectedResolverPreviewFormat" xml:space="preserve">
+    <value>Selected {0}. Preview before applying.</value>
+  </data>
+<data name="TbDNSRollbackAvailableFormat" xml:space="preserve">
+    <value>A DNS repair from catalog {0} can be rolled back if the applied settings are still unchanged.</value>
+  </data>
+<data name="TbDNSHealthSummaryFormat" xml:space="preserve">
+    <value>{0} healthy · {1} watch · {2} degraded</value>
+  </data>
+<data name="TbDNSCatalogAuditNotRun" xml:space="preserve">
+    <value>Catalog audit not run yet.</value>
+  </data>
+<data name="TbDNSCatalogFreshnessUnauditedFormat" xml:space="preserve">
+    <value>Catalog {0} · telemetry cached; catalog freshness not yet audited</value>
+  </data>
+<data name="TbDNSFresh" xml:space="preserve">
+    <value>fresh</value>
+  </data>
+<data name="TbDNSStaleFormat" xml:space="preserve">
+    <value>{0} stale</value>
+  </data>
+<data name="TbDNSValid" xml:space="preserve">
+    <value>valid</value>
+  </data>
+<data name="TbDNSInvalid" xml:space="preserve">
+    <value>invalid</value>
+  </data>
+<data name="TbDNSUnknownTime" xml:space="preserve">
+    <value>unknown time</value>
+  </data>
+<data name="TbDNSCatalogAuditSummaryFormat" xml:space="preserve">
+    <value>Catalog {0} · {1} · {2} (max age {3} days) · audited {4}</value>
+  </data>
+<data name="TbDNSResolverDiagnosticsHint" xml:space="preserve">
+    <value>Use Refresh to run non-gating resolver diagnostics.</value>
+  </data>
+<data name="TbDNSChooseResolverFirst" xml:space="preserve">
+    <value>Choose a resolver first.</value>
+  </data>
+<data name="TbDNSRepairPreviewResolverFormat" xml:space="preserve">
+    <value>Resolver: {0}</value>
+  </data>
+<data name="TbDNSRepairPreviewPolicyFormat" xml:space="preserve">
+    <value>Policy: {0}</value>
+  </data>
+<data name="TbDNSRepairPreviewHealthFormat" xml:space="preserve">
+    <value>Current health: {0} / {1}</value>
+  </data>
+<data name="TbDNSRepairPreviewCatalogFormat" xml:space="preserve">
+    <value>Catalog: {0}</value>
+  </data>
+<data name="TbDNSRepairPreviewRemoteFormat" xml:space="preserve">
+    <value>RemoteDNS: {0} -&gt; {1}</value>
+  </data>
+<data name="TbDNSRepairPreviewBootstrapFormat" xml:space="preserve">
+    <value>BootstrapDNS: {0} -&gt; {1}</value>
+  </data>
+<data name="TbDNSRepairPreviewChangedFieldsFormat" xml:space="preserve">
+    <value>Changed fields: {0}</value>
+  </data>
+<data name="TbDNSRepairBlockedCatalog" xml:space="preserve">
+    <value>Apply blocked: resolver catalog audit is missing, invalid, or stale.</value>
+  </data>
+<data name="TbDNSRepairBlockedTelemetry" xml:space="preserve">
+    <value>Apply blocked: current resolver telemetry does not meet the live safety gate.</value>
+  </data>
+<data name="TbDNSRepairBlockedSimpleDns" xml:space="preserve">
+    <value>Apply blocked: Simple DNS is currently disabled by custom DNS settings.</value>
+  </data>
+<data name="TbDNSRepairPreviewReady" xml:space="preserve">
+    <value>Preview ready. Apply persists immediately; Cancel does not undo it. Use Rollback if needed.</value>
+  </data>
+<data name="TbDNSRepairPreviewBlocked" xml:space="preserve">
+    <value>Preview ready, but Apply is blocked by the current safety gate.</value>
+  </data>
+<data name="TbDNSRepairPreviewFirst" xml:space="preserve">
+    <value>Preview the current resolver before applying.</value>
+  </data>
+<data name="TbDNSApplySafetyBlocked" xml:space="preserve">
+    <value>Apply is blocked until Simple DNS is enabled and a fresh valid catalog with safe live resolver telemetry is available.</value>
+  </data>
+<data name="TbDNSPreviewChangedDuringConfirm" xml:space="preserve">
+    <value>The DNS repair preview changed while confirming. Preview again before applying.</value>
+  </data>
+<data name="TbDNSAppliedResolverFormat" xml:space="preserve">
+    <value>Applied {0}. The previous Simple DNS snapshot is available for rollback.</value>
+  </data>
+<data name="TbDNSNoRepairToRollback" xml:space="preserve">
+    <value>There is no applied DNS repair to roll back.</value>
+  </data>
+<data name="TbDNSRollbackExact" xml:space="preserve">
+    <value>DNS repair rolled back to the exact previous Simple DNS snapshot.</value>
+  </data>
+<data name="TbDNSRollbackEarlierAvailable" xml:space="preserve">
+    <value>DNS repair rolled back one level. An earlier applied DNS repair is still available for rollback.</value>
+  </data>
 </root>
