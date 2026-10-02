@@ -71,7 +71,7 @@ internal class UpgradeApp
                         File.Move(Utils.GetExePath(), thisAppOldFile);
                     }
 
-                    var entryOutputPath = Utils.GetPath(fullName);
+                    var entryOutputPath = ArchivePathGuard.ResolveUnderRoot(Utils.StartupPath(), fullName);
                     Directory.CreateDirectory(Path.GetDirectoryName(entryOutputPath)!);
                     //In the bin folder, if the file already exists, it will be skipped
                     if (fullName.StartsWith("bin") && File.Exists(entryOutputPath))
@@ -79,7 +79,10 @@ internal class UpgradeApp
                         continue;
                     }
 
-                    TryExtractToFile(entry, entryOutputPath);
+                    if (!TryExtractToFile(entry, entryOutputPath))
+                    {
+                        throw new IOException($"Failed to extract update entry '{entry.FullName}'.");
+                    }
 
                     Console.WriteLine(entryOutputPath);
                 }
@@ -91,13 +94,13 @@ internal class UpgradeApp
         }
         catch (Exception ex)
         {
-            Console.WriteLine(Resx.Resource.FailedUpgrade + ex.StackTrace);
-            //return;
+            Console.WriteLine(Resx.Resource.FailedUpgrade + ex);
+            return;
         }
         if (sb.Length > 0)
         {
             Console.WriteLine(Resx.Resource.FailedUpgrade + sb.ToString());
-            //return;
+            return;
         }
 
         Console.WriteLine(Resx.Resource.Restartv2rayN);
