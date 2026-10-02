@@ -167,9 +167,11 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 				}
 				return dialer.DialContext(ctx, network, address)
 			}
-			if options.AllowPrivate {
-				return dialer.DialContext(ctx, network, address)
-			}
+			// Named host: resolve exactly once through the seam, then decide what may be
+			// dialled. `AllowPrivate` relaxes the address policy -- it must not hand
+			// resolution back to the dialer, because dialing the name makes the system
+			// resolver answer a second time (the leak F-07 exists to prevent) and would
+			// leave this seam untested.
 			addrs, err := probeResolver.LookupNetIP(ctx, "ip", host)
 			if err != nil {
 				return nil, err
@@ -180,10 +182,13 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 					continue
 				}
 				addr = addr.Unmap()
-				if !isPublicProbeAddress(addr) {
+				if !options.AllowPrivate && !isPublicProbeAddress(addr) {
 					continue
 				}
 				return dialer.DialContext(ctx, network, net.JoinHostPort(addr.String(), port))
+			}
+			if options.AllowPrivate {
+				return nil, errors.New("upload probe destination resolved to no usable address")
 			}
 			return nil, errors.New("upload probe destination resolved only to private/special addresses")
 		},
