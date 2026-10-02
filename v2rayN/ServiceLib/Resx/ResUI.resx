@@ -1935,4 +1935,5 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>The tag "{0}" of EchOutbound is already used by another outbound</value>
   </data>
+  <data name="MsgRuntimeUpdateAuthenticationRequired" xml:space="preserve"><value>Runtime network updates are disabled until PattN ships an independently pinned update trust root and signed manifest verifier. Install a verified release package instead.</value></data>
 </root>

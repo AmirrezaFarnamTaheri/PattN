@@ -1809,4 +1809,5 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>تگ "{0}" در EchOutbound قبلاً توسط outbound دیگری استفاده شده است</value>
   </data>
+  <data name="MsgRuntimeUpdateAuthenticationRequired" xml:space="preserve"><value>به‌روزرسانی شبکه‌ای در زمان اجرا تا زمانی که PattN ریشهٔ اعتماد مستقل و سنجاق‌شده و اعتبارسنج مانیفست امضاشده ارائه نکند غیرفعال است. به‌جای آن یک بستهٔ انتشار تأییدشده نصب کنید.</value></data>
 </root>
