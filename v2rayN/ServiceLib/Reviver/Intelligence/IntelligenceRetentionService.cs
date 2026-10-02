@@ -81,6 +81,7 @@ public sealed class IntelligenceRetentionService
                         Successes = group.Count(x => x.Succeeded && !x.RolledBack),
                         Rollbacks = group.Count(x => x.RolledBack),
                         HumanConfirmed = group.Count(x => x.HumanConfirmed),
+                        HumanConfirmedSuccesses = group.Count(x => x.HumanConfirmed && x.Succeeded && !x.RolledBack),
                         LatencySumMs = group
                             .Where(x => x.LatencyMs is { } v && double.IsFinite(v) && v >= 0d)
                             .Sum(x => x.LatencyMs!.Value),
@@ -101,6 +102,7 @@ public sealed class IntelligenceRetentionService
                         existing.Successes += aggregate.Successes;
                         existing.Rollbacks += aggregate.Rollbacks;
                         existing.HumanConfirmed += aggregate.HumanConfirmed;
+                        existing.HumanConfirmedSuccesses += aggregate.HumanConfirmedSuccesses;
                         existing.LatencySumMs += aggregate.LatencySumMs;
                         existing.LatencySamples += aggregate.LatencySamples;
                         db.Update(existing);
