@@ -194,6 +194,12 @@ public sealed record DiscoveryUplinkProbeRequest
 
 public sealed record DiscoveryUplinkProbeResult
 {
+    [JsonPropertyName("connected")]
+    public bool Connected { get; init; }
+
+    [JsonPropertyName("tlsHandshakeSucceeded")]
+    public bool TlsHandshakeSucceeded { get; init; }
+
     [JsonPropertyName("bytesPlanned")]
     public int BytesPlanned { get; init; }
 
