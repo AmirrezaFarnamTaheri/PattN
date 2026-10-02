@@ -101,7 +101,7 @@ install_dependencies() {
 
   if command -v dnf >/dev/null 2>&1; then
     sudo dnf -y install \
-      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang \
+      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang binutils \
       glibc-devel kernel-headers libatomic file ca-certificates libicu \
       && install_ok=1
 
@@ -550,6 +550,21 @@ stage_discovery_helper() {
   }
 }
 
+verify_staged_elf_architecture() {
+  local outroot="${1:?staged output root is required}"
+  local rid="${2:?target RID is required}"
+  local helper="$outroot/bin/pattn-discovery/pattn-discovery"
+
+  pattn_verify_elf_machine "$helper" "$rid" "pattn-discovery"
+
+  if [[ "$WITH_CORE" == "xray" || "$WITH_CORE" == "both" ]]; then
+    pattn_verify_elf_machine "$outroot/bin/xray/xray" "$rid" "Xray"
+  fi
+  if [[ "$WITH_CORE" == "sing-box" || "$WITH_CORE" == "both" ]]; then
+    pattn_verify_elf_machine "$outroot/bin/sing_box/sing-box" "$rid" "sing-box"
+  fi
+}
+
 smoke_discovery_helper() {
   local helper="$1"
   local output
@@ -712,6 +727,7 @@ package_binary() {
 
   stage_runtime_assets "$workdir/$PKGROOT" "$rid"
   stage_discovery_helper "$workdir/$PKGROOT" "$rid"
+  verify_staged_elf_architecture "$workdir/$PKGROOT" "$rid"
 
   rpmdev-setuptree
   sourcedir="${RPM_TOPDIR}/SOURCES"

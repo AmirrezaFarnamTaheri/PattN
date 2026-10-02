@@ -105,7 +105,7 @@ install_dependencies() {
     sudo apt-get update
     sudo apt-get -y install \
       curl unzip tar jq rsync ca-certificates git dpkg-dev fakeroot file \
-      desktop-file-utils xdg-utils wget gcc make pkg-config golang-go \
+      desktop-file-utils xdg-utils wget gcc make pkg-config golang-go binutils \
       libicu-dev libssl-dev libfontconfig1 libfreetype6 zlib1g
 
     mkdir -p "$HOME/.dotnet"
@@ -551,6 +551,21 @@ stage_discovery_helper() {
   }
 }
 
+verify_staged_elf_architecture() {
+  local outroot="${1:?staged output root is required}"
+  local rid="${2:?target RID is required}"
+  local helper="$outroot/bin/pattn-discovery/pattn-discovery"
+
+  pattn_verify_elf_machine "$helper" "$rid" "pattn-discovery"
+
+  if [[ "$WITH_CORE" == "xray" || "$WITH_CORE" == "both" ]]; then
+    pattn_verify_elf_machine "$outroot/bin/xray/xray" "$rid" "Xray"
+  fi
+  if [[ "$WITH_CORE" == "sing-box" || "$WITH_CORE" == "both" ]]; then
+    pattn_verify_elf_machine "$outroot/bin/sing_box/sing-box" "$rid" "sing-box"
+  fi
+}
+
 smoke_discovery_helper() {
   local helper="$1"
   local output
@@ -681,6 +696,7 @@ package_binary() {
 
   stage_runtime_assets "$stage/opt/v2rayN" "$rid"
   stage_discovery_helper "$stage/opt/v2rayN" "$rid"
+  verify_staged_elf_architecture "$stage/opt/v2rayN" "$rid"
   write_launcher_file "$stage"
   write_desktop_file "$stage"
   write_maintainer_scripts "$debian_dir"

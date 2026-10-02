@@ -77,6 +77,24 @@ jobs:
           set -euo pipefail
           # shellcheck source=release-reproducibility.sh
           source ./release-reproducibility.sh
+
+          host_rid=""
+          wrong_rid=""
+          case "$(uname -m)" in
+            x86_64)  host_rid="linux-x64"; wrong_rid="linux-riscv64" ;;
+            aarch64) host_rid="linux-arm64"; wrong_rid="linux-riscv64" ;;
+          esac
+          if [[ -n "$host_rid" ]]; then
+            command -v readelf >/dev/null 2>&1 || {
+              echo "::error::readelf is required for release validation"
+              exit 1
+            }
+            pattn_verify_elf_machine /bin/sh "$host_rid" "CI shell"
+            if pattn_verify_elf_machine /bin/sh "$wrong_rid" "negative-control shell" 2>/dev/null; then
+              echo "::error::ELF architecture negative self-test unexpectedly passed"
+              exit 1
+            fi
+          fi
           repro_tmp="$(mktemp -d)"
           trap 'rm -rf "$repro_tmp"' EXIT
           mkdir -p "$repro_tmp/a/tree" "$repro_tmp/b/tree"
