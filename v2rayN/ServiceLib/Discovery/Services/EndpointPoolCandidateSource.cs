@@ -18,7 +18,7 @@ public sealed class EndpointPoolCandidateSource(
 
         var candidates = await pool.GetCandidatesAsync(
             request,
-            Math.Min(Math.Max(1, maxCandidates), Math.Max(1, request.MaxCandidates * 2)),
+            Math.Min(Math.Max(1, maxCandidates), Math.Max(1, Math.Min(2048, request.MaxCandidates * 2))),
             cancellationToken);
         foreach (var candidate in candidates)
         {

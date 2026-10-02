@@ -24,9 +24,13 @@ public sealed class DiscoveryCandidateProvider(
         {
             yield break;
         }
+        if (request.MaxCandidates > 1024)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "MaxCandidates must be between 1 and 1024.");
+        }
 
         var sourceCandidates = new Dictionary<string, DiscoveryEndpointCandidate>(StringComparer.OrdinalIgnoreCase);
-        var perSourceBudget = Math.Max(4, request.MaxCandidates * 2);
+        var perSourceBudget = Math.Max(4, Math.Min(2048, request.MaxCandidates * 2));
         foreach (var source in _sources)
         {
             var acceptedFromSource = 0;
@@ -60,7 +64,7 @@ public sealed class DiscoveryCandidateProvider(
             yield break;
         }
 
-        var preProbeBudget = Math.Max(request.MaxCandidates, request.MaxCandidates * 8);
+        var preProbeBudget = Math.Max(request.MaxCandidates, Math.Min(8192, request.MaxCandidates * 8));
         var candidates = sourceCandidates.Values
             .OrderByDescending(IsPinned)
             .ThenByDescending(x => x.Reliability ?? -1d)

@@ -97,6 +97,11 @@ public static class ProviderAsnCatalogRemoteSourceRevisionProjector
             LastSignatureKeyId = item.LastSignatureKeyId,
             LastSignatureCatalogSha256 = item.LastSignatureCatalogSha256,
             LastSignatureSignedAtUnixMs = item.LastSignatureSignedAtUnixMs,
+            LastSignatureRevision = item.LastSignatureRevision,
+            LastSignatureExpiresAtUnixMs = item.LastSignatureExpiresAtUnixMs,
+            SignatureRevisionHighWatermark = item.SignatureRevisionHighWatermark,
+            SignatureRevisionHighWatermarkCatalogSha256 = item.SignatureRevisionHighWatermarkCatalogSha256,
+            RemovedAtUnixMs = item.RemovedAtUnixMs,
         };
     }
 

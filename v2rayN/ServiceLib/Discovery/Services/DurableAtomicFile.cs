@@ -21,7 +21,8 @@ internal static class DurableAtomicFile
         string destinationPath,
         ReadOnlyMemory<byte> bytes,
         Func<CancellationToken, Task>? beforeReplace = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action? afterReplace = null)
     {
         destinationPath = Path.GetFullPath(destinationPath);
         var directory = Path.GetDirectoryName(destinationPath)
@@ -57,6 +58,7 @@ internal static class DurableAtomicFile
             cancellationToken.ThrowIfCancellationRequested();
 
             Replace(temp, destinationPath);
+            afterReplace?.Invoke();
             FlushParentDirectory(directory);
         }
         finally
@@ -164,4 +166,61 @@ internal static class DurableAtomicFile
 
     [DllImport("libc", EntryPoint = "close", SetLastError = true)]
     private static extern int Close(int fd);
+}
+
+
+internal static class BoundedFileRead
+{
+    public static async Task<byte[]> ReadAllBytesAsync(
+        string path,
+        long maximumBytes,
+        CancellationToken cancellationToken = default)
+    {
+        if (maximumBytes < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
+        }
+
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            64 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        if (stream.CanSeek && stream.Length > maximumBytes)
+        {
+            throw new InvalidOperationException(
+                $"File '{path}' exceeds the {maximumBytes}-byte limit.");
+        }
+
+        using var memory = new MemoryStream();
+        var buffer = new byte[64 * 1024];
+        while (true)
+        {
+            var read = await stream.ReadAsync(buffer, cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+            if (memory.Length + read > maximumBytes)
+            {
+                throw new InvalidOperationException(
+                    $"File '{path}' exceeds the {maximumBytes}-byte limit.");
+            }
+            await memory.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+        return memory.ToArray();
+    }
+
+    public static async Task<string> ReadAllUtf8TextAsync(
+        string path,
+        long maximumBytes,
+        CancellationToken cancellationToken = default)
+    {
+        var bytes = await ReadAllBytesAsync(path, maximumBytes, cancellationToken);
+        return new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+            .GetString(bytes);
+    }
 }

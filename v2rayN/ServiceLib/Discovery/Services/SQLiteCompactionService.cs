@@ -47,16 +47,31 @@ public sealed class SQLiteCompactionService
             throw new InvalidOperationException("SQLite compaction plan is incomplete.");
         }
 
-        var current = await PreviewAsync(cancellationToken: cancellationToken);
-        if (!IsSameDatabaseState(plan, current))
-        {
-            throw new InvalidOperationException(
-                "SQLite database changed after the compaction preview. Prepare a new preview before applying.");
-        }
+        await SQLiteHelper.Instance.RunExclusiveWriteAsync(
+            async db =>
+            {
+                var current = await PreviewAsync(cancellationToken: cancellationToken);
+                if (!IsSameDatabaseState(plan, current))
+                {
+                    throw new InvalidOperationException(
+                        "SQLite database changed after the compaction preview. Prepare a new preview before applying.");
+                }
 
-        await ExecuteCompactionCommandsAsync(
-            () => CheckpointWalAsync(cancellationToken),
-            sql => SQLiteHelper.Instance.ExecuteAsync(sql),
+                cancellationToken.ThrowIfCancellationRequested();
+                var rows = db.Query<WalCheckpointRow>("PRAGMA wal_checkpoint(TRUNCATE);");
+                if (rows.Count != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"SQLite WAL checkpoint returned {rows.Count} rows; expected exactly one.");
+                }
+                ValidateWalCheckpointResult(
+                    rows[0].Busy,
+                    rows[0].LogFrames,
+                    rows[0].CheckpointedFrames);
+
+                cancellationToken.ThrowIfCancellationRequested();
+                db.Execute("VACUUM;");
+            },
             cancellationToken);
 
         var after = await PreviewAsync(cancellationToken: CancellationToken.None);

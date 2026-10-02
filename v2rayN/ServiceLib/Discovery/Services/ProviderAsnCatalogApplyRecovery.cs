@@ -39,6 +39,7 @@ internal sealed record ProviderAsnCatalogPendingRollbackJournal
 internal static class ProviderAsnCatalogApplyRecovery
 {
     private const string MissingFingerprint = "<missing>";
+    private const int MaximumJournalBytes = 64 * 1024 * 1024;
 
     public static ProviderAsnCatalogPendingApplyJournal Create(
         ProviderAsnCatalogRegistryItem beforeRegistry,
@@ -75,6 +76,10 @@ internal static class ProviderAsnCatalogApplyRecovery
         var raw = JsonSerializer.SerializeToUtf8Bytes(
             journal,
             new JsonSerializerOptions { WriteIndented = true });
+        if (raw.Length > MaximumJournalBytes)
+        {
+            throw new InvalidOperationException($"Pending provider catalog apply journal exceeds {MaximumJournalBytes} bytes.");
+        }
         await DurableAtomicFile.WriteAsync(JournalPath(journal.DestinationPath), raw, cancellationToken: cancellationToken);
     }
 
@@ -121,6 +126,10 @@ internal static class ProviderAsnCatalogApplyRecovery
         var raw = JsonSerializer.SerializeToUtf8Bytes(
             journal,
             new JsonSerializerOptions { WriteIndented = true });
+        if (raw.Length > MaximumJournalBytes)
+        {
+            throw new InvalidOperationException($"Pending provider catalog rollback journal exceeds {MaximumJournalBytes} bytes.");
+        }
         await DurableAtomicFile.WriteAsync(
             RollbackJournalPath(journal.DestinationPath),
             raw,
@@ -236,7 +245,7 @@ internal static class ProviderAsnCatalogApplyRecovery
         ProviderAsnCatalogPendingApplyJournal journal;
         try
         {
-            var raw = await File.ReadAllBytesAsync(journalPath, cancellationToken);
+            var raw = await BoundedFileRead.ReadAllBytesAsync(journalPath, MaximumJournalBytes, cancellationToken);
             journal = JsonSerializer.Deserialize<ProviderAsnCatalogPendingApplyJournal>(raw)
                 ?? throw new InvalidOperationException("Pending provider catalog apply journal decoded to null.");
             Validate(journal);
@@ -318,7 +327,7 @@ internal static class ProviderAsnCatalogApplyRecovery
         ProviderAsnCatalogPendingRollbackJournal journal;
         try
         {
-            var raw = await File.ReadAllBytesAsync(journalPath, cancellationToken);
+            var raw = await BoundedFileRead.ReadAllBytesAsync(journalPath, MaximumJournalBytes, cancellationToken);
             journal = JsonSerializer.Deserialize<ProviderAsnCatalogPendingRollbackJournal>(raw)
                 ?? throw new InvalidOperationException("Pending provider catalog rollback journal decoded to null.");
             ValidateRollback(journal);
@@ -590,7 +599,10 @@ internal static class ProviderAsnCatalogApplyRecovery
             return MissingFingerprint;
         }
 
-        var raw = await File.ReadAllBytesAsync(path, cancellationToken);
+        var raw = await BoundedFileRead.ReadAllBytesAsync(
+            path,
+            ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+            cancellationToken);
         return Convert.ToHexString(SHA256.HashData(raw)).ToLowerInvariant();
     }
 

@@ -68,7 +68,9 @@ public class ProviderAsnCatalogRemoteSourceRevisionTests
             .SequenceEqual([pinB]).Should().BeTrue();
         await revisions.Items[2].ChangeReason.Should().BeEqualTo("remove");
         await revisions.Items[2].AfterFingerprint.Should().BeEqualTo(string.Empty);
-        await (sources.Item is null).Should().BeTrue();
+        await (await sources.GetAsync(registry.Id) is null).Should().BeTrue();
+        await sources.Item.Should().NotBeNull();
+        await (sources.Item!.RemovedAtUnixMs is not null).Should().BeTrue();
     }
 
     [Test]
@@ -245,13 +247,21 @@ public class ProviderAsnCatalogRemoteSourceRevisionTests
         public Task<ProviderAsnCatalogRemoteSourceItem?> GetAsync(
             string registryId,
             CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                Item?.RegistryId == registryId && Item.RemovedAtUnixMs is null
+                    ? Item
+                    : null);
+
+        public Task<ProviderAsnCatalogRemoteSourceItem?> GetIncludingRemovedAsync(
+            string registryId,
+            CancellationToken cancellationToken = default)
             => Task.FromResult(Item?.RegistryId == registryId ? Item : null);
 
         public Task<IReadOnlyList<ProviderAsnCatalogRemoteSourceItem>> ListAsync(
             int maxItems = 500,
             CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProviderAsnCatalogRemoteSourceItem>>(
-                Item is null ? [] : [Item]);
+                Item is null || Item.RemovedAtUnixMs is not null ? [] : [Item]);
 
         public Task UpsertAsync(
             ProviderAsnCatalogRemoteSourceItem value,

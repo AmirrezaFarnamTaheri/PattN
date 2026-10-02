@@ -30,13 +30,10 @@ public sealed class JsonProviderAsnEndpointCatalog : IProviderAsnEndpointCatalog
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var info = new FileInfo(path);
-        if (info.Exists && info.Length > ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes)
-        {
-            throw new InvalidOperationException(
-                $"Provider/ASN catalog exceeds {ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes} bytes.");
-        }
-        var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+        var bytes = await BoundedFileRead.ReadAllBytesAsync(
+            path,
+            ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+            cancellationToken);
         return FromBytes(bytes);
     }
 
