@@ -429,6 +429,93 @@ public class NetworkAutomationTests
         await health.Total.Should().BeEqualTo(2);
         await health.DuplicateGenomes.Should().BeEqualTo(1);
     }
+    private static SignedUpdateManifest MakeManifest(string version, string hash, string minimum)
+        => new()
+        {
+            Version = version,
+            ArtifactSha256 = hash,
+            MinimumVersion = minimum,
+            PublishedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            SignatureBase64 = string.Empty,
+        };
+
+    [Test]
+    public async Task UpdateManifest_ShouldRejectSameVersionUnlessReinstallIsExplicit()
+    {
+        var service = new NetworkAutomationService();
+        var artifact = "artifact"u8.ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var manifest = Sign(MakeManifest("7.25.2", hash, "7.0.0"), signer);
+        var key = signer.ExportSubjectPublicKeyInfo();
+
+        var sameVersion = service.VerifyUpdateManifest(manifest, artifact, key, "7.25.2", TimeSpan.FromDays(14));
+        var asReinstall = service.VerifyUpdateManifest(
+            manifest, artifact, key, "7.25.2", TimeSpan.FromDays(14), allowSameVersionReinstall: true);
+
+        await sameVersion.Valid.Should().BeFalse("an equal version is not an upgrade");
+        await sameVersion.Error.Contains("reinstall", StringComparison.OrdinalIgnoreCase)
+            .Should().BeTrue("the refusal must name the way out");
+        await asReinstall.Valid.Should().BeTrue("an explicit reinstall flow may re-verify the same build");
+    }
+
+    [Test]
+    public async Task UpdateManifest_ShouldRefuseAnEmptyTrustRootRatherThanCallItABadKey()
+    {
+        var service = new NetworkAutomationService();
+        var artifact = "artifact"u8.ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var manifest = Sign(MakeManifest("8.0.0", hash, "7.0.0"), signer);
+
+        var empty = service.VerifyUpdateManifest(manifest, artifact, ReadOnlySpan<byte>.Empty, "7.9.0", TimeSpan.FromDays(14));
+
+        await empty.Valid.Should().BeFalse();
+        await empty.Error.Should().Be("No trust-root public key was supplied for manifest verification.");
+    }
+
+    [Test]
+    public async Task UpdateManifest_ShouldRejectTrustRootWithTrailingData()
+    {
+        var service = new NetworkAutomationService();
+        var artifact = "artifact"u8.ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var manifest = Sign(MakeManifest("8.0.0", hash, "7.0.0"), signer);
+
+        // A key buffer padded with anything (a second concatenated key, a PEM trailer, a truncated
+        // frame that happens to parse) must not silently verify against the prefix.
+        var real = signer.ExportSubjectPublicKeyInfo();
+        var padded = new byte[real.Length + 8];
+        real.CopyTo(padded, 0);
+
+        var verification = service.VerifyUpdateManifest(manifest, artifact, padded, "7.9.0", TimeSpan.FromDays(14));
+
+        await verification.Valid.Should().BeFalse();
+        await verification.Error.Contains("trailing data", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task UpdateManifest_CurrentVersionFromTheManifestDefeatsTheDowngradeGuard()
+    {
+        // Documents the call-site hazard the doc comment forbids: if the caller feeds the manifest's
+        // own MinimumVersion in as `currentVersion`, a publisher can authorise any target by moving
+        // the floor. The verifier cannot see through that -- only a pinned, separately-fetched current
+        // version (Utils.GetVersionInfo) or a pinned trust root closes it -- so this stays a
+        // *characterisation* test rather than a claim that the code is safe.
+        var service = new NetworkAutomationService();
+        var artifact = "artifact"u8.ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var manifest = Sign(MakeManifest("1.2.3", hash, "1.2.3"), signer);
+
+        var naiveCaller = service.VerifyUpdateManifest(
+            manifest, artifact, signer.ExportSubjectPublicKeyInfo(), "1.2.3", TimeSpan.FromDays(14),
+            allowSameVersionReinstall: true);
+
+        await naiveCaller.Valid.Should().BeTrue("the signature and hash do check out; the guard is only as good as its inputs");
+    }
+
     private static SignedUpdateManifest Sign(SignedUpdateManifest manifest, ECDsa signer)
     {
         var signature = signer.SignData(
