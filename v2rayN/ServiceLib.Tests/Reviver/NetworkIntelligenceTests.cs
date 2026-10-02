@@ -38,6 +38,7 @@ public class NetworkIntelligenceTests
             TlsHandshakeSucceeded = true,
             BodyFullyRead = false,
             ResponseReceived = true,
+            StatusCode = 204,
             BytesPlanned = 16 * 1024,
             BytesReadByClient = 8 * 1024,
             ChunksEmitted = 4,
