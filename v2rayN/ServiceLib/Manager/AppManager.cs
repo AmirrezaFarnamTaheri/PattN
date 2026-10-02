@@ -153,6 +153,7 @@ public sealed class AppManager
         SQLiteHelper.Instance.CreateTable<StrategyOutcomeHistoryItem>();
         SQLiteHelper.Instance.CreateTable<StrategyOutcomeAggregateItem>();
         SQLiteHelper.Instance.CreateTable<HumanFeedbackHistoryItem>();
+        SQLiteHelper.Instance.CreateTable<NetworkFingerprintHistoryItem>();
         SQLiteHelper.Instance.RunInTransaction(db =>
         {
             db.Execute("""
@@ -171,6 +172,13 @@ public sealed class AppManager
                     GenomeKey,
                     NetworkKey,
                     DayBucketUnixSeconds DESC
+                )
+                """);
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_NetworkFingerprint_KeyTime
+                ON NetworkFingerprintHistoryItem (
+                    NetworkKey,
+                    ObservedAtUnixMs DESC
                 )
                 """);
             db.Execute("""
