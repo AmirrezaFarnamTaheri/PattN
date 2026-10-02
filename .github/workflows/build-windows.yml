@@ -9,9 +9,22 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    paths:
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/package-zip.yml'
+      - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
+      - 'pattn-discovery/**'
+      - 'v2rayN/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 jobs:
@@ -23,10 +36,14 @@ jobs:
       project: ./v2rayN/v2rayN.csproj
 
   release-zip:
-    if: inputs.release_tag != ''
+    if: github.event_name == 'pull_request' || inputs.release_tag != ''
+    permissions:
+      contents: write
+      actions: read
     needs: build
     uses: ./.github/workflows/package-zip.yml
     with:
       target: windows
       release_tag: ${{ inputs.release_tag }}
-    secrets: inherit
+    secrets:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}

@@ -51,24 +51,27 @@ func TestQualifyDetectsInvalidNameHijack(t *testing.T) {
 func startDualResolver(t *testing.T, hijackInvalid bool) (func(), uint16) {
 	t.Helper()
 
-	// TCP and UDP must use the same DNS port. On Windows an ephemeral TCP port
-	// can fall inside a UDP excluded range, so a single TCP-then-UDP bind is
-	// flaky. Retry OS-assigned TCP ports until the matching UDP bind succeeds.
+	// TCP and UDP must use the same DNS port. Windows can reserve/exclude
+	// protocol-specific ranges inside the dynamic range. Ask UDP for an
+	// actually-bindable ephemeral port first, then try TCP on that exact port;
+	// if TCP has a conflicting exclusion/collision, close both sides and retry.
+	// This avoids the observed failure mode where TCP selected a port that UDP
+	// was forbidden to bind even though it was otherwise free.
 	var tcp net.Listener
 	var udp net.PacketConn
 	var port uint16
 	var lastErr error
-	for attempt := 0; attempt < 32; attempt++ {
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
+	for attempt := 0; attempt < 128; attempt++ {
+		packetConn, err := net.ListenPacket("udp", "127.0.0.1:0")
 		if err != nil {
 			lastErr = err
 			continue
 		}
-		candidatePort := uint16(listener.Addr().(*net.TCPAddr).Port)
-		packetConn, err := net.ListenPacket("udp", net.JoinHostPort("127.0.0.1", decimalPort(candidatePort)))
+		candidatePort := uint16(packetConn.LocalAddr().(*net.UDPAddr).Port)
+		listener, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", decimalPort(candidatePort)))
 		if err != nil {
 			lastErr = err
-			_ = listener.Close()
+			_ = packetConn.Close()
 			continue
 		}
 

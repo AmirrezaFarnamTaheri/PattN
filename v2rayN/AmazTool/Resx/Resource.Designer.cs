@@ -144,6 +144,25 @@ namespace AmazTool.Resx {
         /// <summary>
         ///   查找类似 Upgrade success. 的本地化字符串。
         /// </summary>
+        
+        /// <summary>
+        ///   Previous AmazTool executable restored, so PattN can still be started.
+        /// </summary>
+        internal static string RestoreUpgradeSelf {
+            get {
+                return ResourceManager.GetString("RestoreUpgradeSelf", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to restore the previous AmazTool executable: 
+        /// </summary>
+        internal static string FailedRestoreUpgradeSelf {
+            get {
+                return ResourceManager.GetString("FailedRestoreUpgradeSelf", resourceCulture);
+            }
+        }
+        
         internal static string SuccessUpgrade {
             get {
                 return ResourceManager.GetString("SuccessUpgrade", resourceCulture);

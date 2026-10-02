@@ -19,6 +19,12 @@ public record FileDownloadRequest
     public string? DisplayFileName { get; init; }
 
     /// <summary>
+    /// Optional lowercase/uppercase SHA-256 hex digest expected for the completed file.
+    /// When set, the downloader verifies the file before reporting completion.
+    /// </summary>
+    public string? ExpectedSha256 { get; init; }
+
+    /// <summary>
     /// Treat HTTP 404 as a successful (skipped) download.
     /// Used for sing-box rule-set files that may not exist on the selected source.
     /// </summary>
