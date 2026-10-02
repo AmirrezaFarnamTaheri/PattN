@@ -9,6 +9,7 @@ public class RepairPromotionHistoryItem
     public string EventKind { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
     public string CandidateId { get; set; } = string.Empty;
+    public string StrategyId { get; set; } = string.Empty;
     public string OriginalProfileId { get; set; } = string.Empty;
     public string PromotedProfileId { get; set; } = string.Empty;
     public string PreviousDefaultProfileId { get; set; } = string.Empty;
