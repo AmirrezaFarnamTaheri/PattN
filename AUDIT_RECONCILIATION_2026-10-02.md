@@ -230,6 +230,66 @@ The repository already contains KSK-2024 and a scheduled authenticated IANA sour
 
 The application write gate/sidecar leases protect cooperating PattN writers. There is no portable filesystem primitive in the current design that turns arbitrary third-party writers into an atomic compare-and-swap with replacement. Keep this in the local attacker/host-integrity threat model; do not present it as a remote catalog vulnerability.
 
+## Stack gates (2026-10-02, second pass)
+
+The three static gates that run in `.github/workflows/stack-audit.yml` now encode one incident each.
+All of them are stdlib-only, take seconds, and are meant to be run before pushing:
+
+### `scripts/check_stack_sync.py`
+
+1. **base ancestry** — a split PR must contain the tip of the branch it targets; otherwise its review is
+   not about the code that would merge.
+2. **payload parity** — the files a split PR changes must carry the integration ref's blob.
+3. **shared-slice parity** *(added this pass)* — for `v2rayN/ServiceLib/Reviver/`, a split PR that carries a
+   file must carry the integration ref's blob, and `split/final-integration-base` (declared to carry the
+   whole slice) must have no missing or differing file. A split owning a subset is reported, not failed.
+
+Why (3) exists: `dff02073` merged `74ccbe88` but resolved only the service files to the incoming side,
+rewinding three Reviver model files to their pre-merge blob — 17 lines, among them `IntegritySuspect` and
+`MeetsQuorumWithoutIntegrityDoubt`, i.e. the model members of the loopback-trust hardening — while keeping
+every service that calls them. `split/final-integration-base`, #8 and #9 all stopped compiling, twice
+annotated by CI (`RepairPromotionService.cs:40/72/74/97/100/124/127`, `RepairValidationAccumulator.cs:72`,
+CS1061). Checks (1) and (2) reported `drift=0` throughout: the rewound files were in no PR's payload.
+`bfe7154c` repaired the base; check (3) is what fails if it happens again.
+
+Controls, executed (`--check-slice-of` is the one-ref entry point):
+
+| command | result |
+|---|---|
+| `--check-slice-of dff02073` | 7 gaps, exit 1 |
+| `--check-slice-of 85c2b4a6` (broken #8 head) | 7 gaps, exit 1 |
+| `--check-slice-of origin/split/final-integration-base` | 0 gaps, exit 0 |
+| `--full-payload` (13 open PRs) | all ok, exit 0 |
+| `--slice-base-ref dff02073` | base FAIL, exit 1 |
+
+The workflow also runs the negative control on every build (`Shared-slice check has not gone dead`): it
+asserts that `dff02073` is still flagged, and says so instead of passing silently if that commit ever
+disappears.
+
+### `scripts/check_localization.py`
+
+Resource-key/placeholder parity across `ResUI*.resx`. Resolution note for the Persian file: it is not
+uniformly indented, and branch and upstream disagree only by *adding* keys, so conflicts are resolved as a
+key-name union (integration side wins on a name collision) and then validated with `xml.etree`
+(entry count + duplicate check) rather than by hand.
+
+### `scripts/check_test_assertions.py`
+
+1. no message argument on a no-argument TUnit assertion (`BeTrue("why")` does not compile; the repository
+   spelling is `.Because("why")`);
+2. no `await` in a non-async method (CS4032), counting method-body depth so awaits inside lambdas are not
+   false positives.
+
+Covers `ServiceLib.Tests` (141 files) and `AmazTool` tests (5), with controls recorded in its commit message.
+
+### Lint lesson (cost one CI cycle)
+
+`git cat-file -e <sha>^{commit}` in a `run:` block is flagged by shellcheck (SC1083, literal braces), and
+actionlint runs shellcheck over every `run:` block — so the control step took down `Validate GitHub Actions
+workflows`. `git cat-file -e <sha>` needs no peel suffix. After the fix, `Validate` is green on `c467a49b`;
+note that `git rev-parse --verify --quiet 0000…0` exits 0 (it accepts the null object name) and would have
+made the control silently skip, so it is not an acceptable substitute.
+
 ## CI validation status
 
 The new commits retrigger current-head CI. A previously current #9 RPM run failed only because ICU was absent in UBI10; the failure was reproduced from the job log and patched as described above. New current-head runs are the final Tier-1 validation gate and may still be queued depending on runner availability.
