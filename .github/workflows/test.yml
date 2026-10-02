@@ -19,6 +19,7 @@ on:
       - '.github/workflows/**'
       - 'package-*.sh'
       - 'release-assets.lock.sh'
+      - 'scripts/deterministic_zip.py'
   pull_request:
     paths:
       - 'v2rayN/ServiceLib/**'
@@ -33,6 +34,7 @@ on:
       - '.github/workflows/**'
       - 'package-*.sh'
       - 'release-assets.lock.sh'
+      - 'scripts/deterministic_zip.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -165,6 +167,24 @@ jobs:
           echo "::error::package-osx.sh accepted an unsupported architecture"
           exit 1
         fi
+
+        python3 -m py_compile scripts/deterministic_zip.py
+        zip_tree="$RUNNER_TEMP/deterministic zip tree"
+        mkdir -p "$zip_tree/sub dir"
+        printf 'alpha\n' > "$zip_tree/a file.txt"
+        printf 'beta\n' > "$zip_tree/sub dir/b.txt"
+        chmod 0755 "$zip_tree/a file.txt"
+        if ln -s "a file.txt" "$zip_tree/link" 2>/dev/null; then
+          :
+        fi
+        zip_one="$RUNNER_TEMP/deterministic-one.zip"
+        zip_two="$RUNNER_TEMP/deterministic-two.zip"
+        python3 scripts/deterministic_zip.py "$zip_tree" "$zip_one" --epoch 1700000000
+        python3 scripts/deterministic_zip.py "$zip_tree" "$zip_two" --epoch 1700000000
+        cmp "$zip_one" "$zip_two" || {
+          echo "::error::deterministic ZIP self-test produced different bytes"
+          exit 1
+        }
 
     - name: Run verified actionlint
       shell: bash
