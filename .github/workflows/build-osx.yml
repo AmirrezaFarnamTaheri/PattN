@@ -15,6 +15,7 @@ on:
       - '.github/workflows/build.yml'
       - '.github/workflows/package-zip.yml'
       - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
       - 'package-osx.sh'
       - 'release-assets.lock.sh'
       - 'pattn-discovery/**'
