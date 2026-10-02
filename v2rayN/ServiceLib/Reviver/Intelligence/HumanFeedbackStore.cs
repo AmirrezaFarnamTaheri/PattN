@@ -15,9 +15,13 @@ public sealed class SqliteHumanFeedbackStore : IHumanFeedbackStore
         ArgumentNullException.ThrowIfNull(observation);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (observation.GenomeKey.IsNullOrEmpty() || observation.NetworkKey.IsNullOrEmpty())
+        if (!NetworkIntelligenceService.IsDerivedGenomeKey(observation.GenomeKey)
+            || !NetworkIntelligenceService.IsDerivedNetworkKey(observation.NetworkKey)
+            || (observation.StrategyId.IsNotEmpty()
+                && !NetworkIntelligenceService.IsSafeStrategyId(observation.StrategyId)))
         {
-            throw new ArgumentException("Human feedback must use derived genome/network keys.");
+            throw new ArgumentException(
+                "Human feedback must use PattN-derived genome/network keys and a bounded strategy ID.");
         }
 
         await SQLiteHelper.Instance.InsertAsync(new HumanFeedbackHistoryItem
