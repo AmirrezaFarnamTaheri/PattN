@@ -25,6 +25,106 @@ public sealed class NetworkAutomationService
         return selected;
     }
 
+    public CompatibleStrategyPlan PlanCompatibleCandidates(IEnumerable<RepairCandidate> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        var selected = new List<string>();
+        var conflicts = new List<StrategyConflict>();
+        var fieldTargets = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var candidate in candidates
+                     .OrderByDescending(x => x.Score ?? 0d)
+                     .ThenBy(x => x.Mutations.Count)
+                     .ThenBy(x => x.Id, StringComparer.Ordinal))
+        {
+            StrategyConflict? conflict = null;
+            foreach (var mutation in candidate.Mutations)
+            {
+                if (mutation.Field.IsNullOrEmpty())
+                {
+                    continue;
+                }
+                var target = mutation.To ?? string.Empty;
+                if (fieldTargets.TryGetValue(mutation.Field, out var existing)
+                    && !string.Equals(existing, target, StringComparison.Ordinal))
+                {
+                    conflict = new StrategyConflict
+                    {
+                        CandidateId = candidate.Id,
+                        Field = mutation.Field,
+                        ExistingTarget = existing,
+                        ConflictingTarget = target,
+                    };
+                    break;
+                }
+            }
+
+            if (conflict is not null)
+            {
+                conflicts.Add(conflict);
+                continue;
+            }
+
+            selected.Add(candidate.Id);
+            foreach (var mutation in candidate.Mutations)
+            {
+                if (mutation.Field.IsNotEmpty())
+                {
+                    fieldTargets.TryAdd(mutation.Field, mutation.To ?? string.Empty);
+                }
+            }
+        }
+
+        return new CompatibleStrategyPlan
+        {
+            SelectedCandidateIds = selected,
+            Conflicts = conflicts,
+        };
+    }
+
+    public IntelligenceShareBatch PrepareShareBatch(
+        IEnumerable<AnonymousIntelligenceRecord> records,
+        IntelligenceSharingPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (!policy.ExplicitOptIn || policy.Mode != EIntelligencePrivacyMode.AnonymousAggregate)
+        {
+            throw new InvalidOperationException(
+                "External intelligence sharing requires explicit opt-in and AnonymousAggregate privacy mode.");
+        }
+        if (policy.MinimumAggregateSamples is < 2 or > 1000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(policy.MinimumAggregateSamples));
+        }
+
+        var grouped = records
+            .GroupBy(x => new
+            {
+                x.NetworkKey,
+                x.GenomeKey,
+                x.FailureClass,
+                x.StrategyId,
+                x.Succeeded,
+                x.ObservedAtBucketUnixHours,
+            })
+            .Where(x => x.Count() >= policy.MinimumAggregateSamples)
+            .Select(group => new AnonymousIntelligenceRecord
+            {
+                NetworkKey = group.Key.NetworkKey,
+                GenomeKey = group.Key.GenomeKey,
+                FailureClass = group.Key.FailureClass,
+                StrategyId = group.Key.StrategyId,
+                Succeeded = group.Key.Succeeded,
+                ObservedAtBucketUnixHours = group.Key.ObservedAtBucketUnixHours,
+                Confidence = group.Average(x => x.Confidence),
+            })
+            .ToArray();
+
+        return new IntelligenceShareBatch { Records = grouped };
+    }
+
     public ShadowTestDecision EvaluateShadow(
         IReadOnlyList<ShadowSample> baseline,
         IReadOnlyList<ShadowSample> candidate,
