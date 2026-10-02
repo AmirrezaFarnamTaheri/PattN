@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using ServiceLib.Models.Entities;
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Services;
@@ -23,9 +25,19 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
         ArgumentNullException.ThrowIfNull(observation);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await SQLiteHelper.Instance.InsertAsync(new StrategyOutcomeHistoryItem
+        if (observation.StrategyId.IsNullOrEmpty()
+            || observation.GenomeKey.IsNullOrEmpty()
+            || observation.NetworkKey.IsNullOrEmpty())
         {
-            Id = Utils.GetGuid(false),
+            throw new ArgumentException("Strategy learning requires strategy, genome, and network keys.");
+        }
+
+        var row = new StrategyOutcomeHistoryItem
+        {
+            Id = observation.CandidateId.IsNotEmpty()
+                ? CandidateOutcomeId(observation)
+                : Utils.GetGuid(false),
+            CandidateId = observation.CandidateId,
             StrategyId = observation.StrategyId,
             GenomeKey = observation.GenomeKey,
             NetworkKey = observation.NetworkKey,
@@ -34,7 +46,27 @@ public sealed class SqliteStrategyOutcomeStore : IStrategyOutcomeStore
             HumanConfirmed = observation.HumanConfirmed,
             LatencyMs = observation.LatencyMs is { } latency && double.IsFinite(latency) ? latency : null,
             ObservedAtUnixMs = observation.ObservedAt.ToUnixTimeMilliseconds(),
-        });
+        };
+
+        if (observation.CandidateId.IsNotEmpty())
+        {
+            await SQLiteHelper.Instance.ReplaceAsync(row);
+        }
+        else
+        {
+            await SQLiteHelper.Instance.InsertAsync(row);
+        }
+    }
+
+    private static string CandidateOutcomeId(StrategyOutcomeObservation observation)
+    {
+        var material = string.Join("|",
+            observation.CandidateId.Trim(),
+            observation.StrategyId.Trim(),
+            observation.GenomeKey.Trim(),
+            observation.NetworkKey.Trim());
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(material));
+        return "candidate:" + Convert.ToHexString(digest.AsSpan(0, 16)).ToLowerInvariant();
     }
 
     public async Task<StrategyEffectivenessSummary> SummarizeAsync(
@@ -187,6 +219,7 @@ public sealed class StrategyLearningObserver(
 
         await store.RecordAsync(new StrategyOutcomeObservation
         {
+            CandidateId = candidate.Id,
             StrategyId = NetworkIntelligenceService.StrategyIdFor(candidate),
             GenomeKey = genome.Key,
             NetworkKey = network?.Key ?? "net:unknown",
