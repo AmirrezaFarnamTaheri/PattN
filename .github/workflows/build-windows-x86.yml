@@ -204,10 +204,10 @@ jobs:
             "$bin/Country.mmdb" \
             "$expected"
 
-          pattn_download_sha256 \
-            "https://github.com/MetaCubeX/meta-rules-dat/releases/download/${PATTN_METACUBEX_GEOIP_METADB_RELEASE}/geoip.metadb" \
+          pattn_download_git_blob \
+            "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/${PATTN_METACUBEX_RELEASE_COMMIT}/geoip.metadb" \
             "$bin/geoip.metadb" \
-            "$PATTN_METACUBEX_GEOIP_METADB_SHA256"
+            "$PATTN_METACUBEX_GEOIP_METADB_BLOB_SHA1"
 
           for f in \
             geoip-private.srs \
