@@ -1,0 +1,224 @@
+package measure
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/netip"
+	"net/url"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
+)
+
+const (
+	MaxUploadProbeBytes  = 1 << 20
+	MaxUploadProbeChunks = 64
+)
+
+type UploadProbeOptions struct {
+	URL             string
+	TotalBytes      int
+	Chunks          int
+	Timeout         time.Duration
+	InterChunkDelay time.Duration
+	AllowPrivate    bool
+}
+
+type UploadProbeResult struct {
+	BytesPlanned       int     `json:"bytesPlanned"`
+	BytesReadByClient  int64   `json:"bytesReadByClient"`
+	ChunksEmitted      int64   `json:"chunksEmitted"`
+	BodyFullyRead      bool    `json:"bodyFullyRead"`
+	ResponseReceived   bool    `json:"responseReceived"`
+	StatusCode         int     `json:"statusCode"`
+	DurationMs         float64 `json:"durationMs"`
+	Error              string  `json:"error,omitempty"`
+}
+
+func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeResult, error) {
+	if options.TotalBytes <= 0 || options.TotalBytes > MaxUploadProbeBytes {
+		return UploadProbeResult{}, fmt.Errorf("totalBytes must be between 1 and %d", MaxUploadProbeBytes)
+	}
+	if options.Chunks < 2 || options.Chunks > MaxUploadProbeChunks {
+		return UploadProbeResult{}, fmt.Errorf("chunks must be between 2 and %d", MaxUploadProbeChunks)
+	}
+	if options.Timeout <= 0 || options.Timeout > 60*time.Second {
+		return UploadProbeResult{}, errors.New("timeout must be between 1ns and 60s")
+	}
+	if options.InterChunkDelay < 0 || options.InterChunkDelay > time.Second {
+		return UploadProbeResult{}, errors.New("interChunkDelay must be between 0 and 1s")
+	}
+
+	parsed, err := url.Parse(strings.TrimSpace(options.URL))
+	if err != nil || parsed.Hostname() == "" {
+		return UploadProbeResult{}, errors.New("a valid upload probe URL is required")
+	}
+	if !strings.EqualFold(parsed.Scheme, "https") {
+		return UploadProbeResult{}, errors.New("upload probe URL must use https")
+	}
+	if parsed.User != nil {
+		return UploadProbeResult{}, errors.New("upload probe URL must not contain userinfo")
+	}
+
+	probeCtx, cancel := context.WithTimeout(ctx, options.Timeout)
+	defer cancel()
+
+	body := &pacedUploadBody{
+		total: options.TotalBytes,
+		chunks: options.Chunks,
+		delay: options.InterChunkDelay,
+	}
+	request, err := http.NewRequestWithContext(probeCtx, http.MethodPost, parsed.String(), body)
+	if err != nil {
+		return UploadProbeResult{}, err
+	}
+	request.ContentLength = int64(options.TotalBytes)
+	request.Header.Set("Content-Type", "application/octet-stream")
+	request.Header.Set("User-Agent", "pattn-discovery/uplink-probe")
+
+	dialer := &net.Dialer{Timeout: options.Timeout}
+	transport := &http.Transport{
+		Proxy: nil,
+		ForceAttemptHTTP2: true,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(address)
+			if err != nil {
+				return nil, err
+			}
+			if options.AllowPrivate {
+				return dialer.DialContext(ctx, network, address)
+			}
+			addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+			if err != nil {
+				return nil, err
+			}
+			for _, resolved := range addrs {
+				addr, ok := netip.AddrFromSlice(resolved.AsSlice())
+				if !ok {
+					continue
+				}
+				addr = addr.Unmap()
+				if !isPublicProbeAddress(addr) {
+					continue
+				}
+				return dialer.DialContext(ctx, network, net.JoinHostPort(addr.String(), port))
+			}
+			return nil, errors.New("upload probe destination resolved only to private/special addresses")
+		},
+	}
+	defer transport.CloseIdleConnections()
+
+	client := &http.Client{
+		Transport: transport,
+		Timeout: options.Timeout,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return errors.New("upload probe redirects are disabled")
+		},
+	}
+
+	start := time.Now()
+	response, requestErr := client.Do(request)
+	result := UploadProbeResult{
+		BytesPlanned:      options.TotalBytes,
+		BytesReadByClient: body.bytesRead.Load(),
+		ChunksEmitted:     body.chunksEmitted.Load(),
+		BodyFullyRead:     body.bytesRead.Load() == int64(options.TotalBytes),
+		DurationMs:        float64(time.Since(start)) / float64(time.Millisecond),
+	}
+	if requestErr != nil {
+		result.Error = requestErr.Error()
+		return result, nil
+	}
+	defer response.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
+	result.ResponseReceived = true
+	result.StatusCode = response.StatusCode
+	result.BytesReadByClient = body.bytesRead.Load()
+	result.ChunksEmitted = body.chunksEmitted.Load()
+	result.BodyFullyRead = result.BytesReadByClient == int64(options.TotalBytes)
+	return result, nil
+}
+
+type pacedUploadBody struct {
+	total         int
+	chunks        int
+	delay         time.Duration
+	offset        int
+	chunkIndex    int
+	bytesRead     atomic.Int64
+	chunksEmitted atomic.Int64
+}
+
+func (b *pacedUploadBody) Read(p []byte) (int, error) {
+	if b.offset >= b.total {
+		return 0, io.EOF
+	}
+	if b.chunkIndex > 0 && b.delay > 0 {
+		time.Sleep(b.delay)
+	}
+
+	base := b.total / b.chunks
+	extra := b.total % b.chunks
+	next := base
+	if b.chunkIndex < extra {
+		next++
+	}
+	if next <= 0 {
+		next = 1
+	}
+	remaining := b.total - b.offset
+	if next > remaining {
+		next = remaining
+	}
+	if next > len(p) {
+		next = len(p)
+	}
+	for i := 0; i < next; i++ {
+		p[i] = byte((b.offset + i) % 251)
+	}
+	b.offset += next
+	if next > 0 {
+		b.bytesRead.Add(int64(next))
+		b.chunksEmitted.Add(1)
+		b.chunkIndex++
+	}
+	return next, nil
+}
+
+func (b *pacedUploadBody) Close() error { return nil }
+
+func isPublicProbeAddress(addr netip.Addr) bool {
+	return addr.IsValid()
+		&& !addr.IsUnspecified()
+		&& !addr.IsLoopback()
+		&& !addr.IsPrivate()
+		&& !addr.IsLinkLocalUnicast()
+		&& !addr.IsLinkLocalMulticast()
+		&& !addr.IsMulticast()
+}
+
+func ParseUploadProbeTimeout(milliseconds int) (time.Duration, error) {
+	if milliseconds < 1 || milliseconds > 60_000 {
+		return 0, errors.New("timeoutMs must be between 1 and 60000")
+	}
+	return time.Duration(milliseconds) * time.Millisecond, nil
+}
+
+func ParseUploadProbeDelay(milliseconds int) (time.Duration, error) {
+	if milliseconds < 0 || milliseconds > 1000 {
+		return 0, errors.New("interChunkDelayMs must be between 0 and 1000")
+	}
+	return time.Duration(milliseconds) * time.Millisecond, nil
+}
+
+func DefaultUploadProbeURL(host string, port int) string {
+	if port <= 0 {
+		port = 443
+	}
+	return "https://" + net.JoinHostPort(host, strconv.Itoa(port)) + "/"
+}
