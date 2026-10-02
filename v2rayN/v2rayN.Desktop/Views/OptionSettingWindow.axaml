@@ -2,6 +2,7 @@
     x:Class="v2rayN.Desktop.Views.OptionSettingWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:dd="clr-namespace:v2rayN.Desktop.DesignData"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -549,7 +550,7 @@
                     <Grid
                         Margin="{StaticResource Margin4}"
                         ColumnDefinitions="Auto,Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
 
                         <TextBlock
                             x:Name="tbAutoRun"
@@ -764,10 +765,19 @@
                             Text="{x:Static resx:ResUI.TbSettingsMixedConcurrencyCount}" />
                         <ComboBox
                             x:Name="cmbMixedConcurrencyCount"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsMixedConcurrencyCount}"
                             Grid.Row="16"
                             Grid.Column="1"
                             Width="200"
-                            Margin="{StaticResource Margin4}" />
+                            Margin="{StaticResource Margin4}"
+                            IsEditable="True" />
+                        <TextBlock
+                            Grid.Row="16"
+                            Grid.Column="2"
+                            Margin="{StaticResource Margin4}"
+                            VerticalAlignment="Center"
+                            Text="{x:Static resx:ResUI.TbSettingsSpeedTestCustomValueTip}"
+                            TextWrapping="Wrap" />
 
                         <TextBlock
                             Grid.Row="17"
@@ -777,10 +787,19 @@
                             Text="{x:Static resx:ResUI.TbSettingsSpeedTestTimeout}" />
                         <ComboBox
                             x:Name="cmbSpeedTestTimeout"
+                            automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsSpeedTestTimeout}"
                             Grid.Row="17"
                             Grid.Column="1"
                             Width="200"
-                            Margin="{StaticResource Margin4}" />
+                            Margin="{StaticResource Margin4}"
+                            IsEditable="True" />
+                        <TextBlock
+                            Grid.Row="17"
+                            Grid.Column="2"
+                            Margin="{StaticResource Margin4}"
+                            VerticalAlignment="Center"
+                            Text="{x:Static resx:ResUI.TbSettingsSpeedTestCustomValueTip}"
+                            TextWrapping="Wrap" />
 
                         <TextBlock
                             Grid.Row="18"
@@ -927,6 +946,42 @@
                             VerticalAlignment="Center"
                             Text="{x:Static resx:ResUI.TbSettingsChinaUserTip}"
                             TextWrapping="Wrap" />
+
+                        <TextBlock Grid.Row="28" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsRetryEachProxyCount}" />
+                        <TextBox x:Name="txtRetryEachProxyCount" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsRetryEachProxyCount}" Grid.Row="28" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="29" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsRetryFailedAfterBatchCount}" />
+                        <TextBox x:Name="txtRetryFailedAfterBatchCount" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsRetryFailedAfterBatchCount}" Grid.Row="29" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="30" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsTestHistoryRetentionDays}" />
+                        <TextBox x:Name="txtTestHistoryRetentionDays" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsTestHistoryRetentionDays}" Grid.Row="30" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="31" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyFailureCount}" />
+                        <TextBox x:Name="txtHistoryPolicyFailureCount" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsHistoryPolicyFailureCount}" Grid.Row="31" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="32" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyWindowCount}" />
+                        <TextBox x:Name="txtHistoryPolicyWindowCount" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsHistoryPolicyWindowCount}" Grid.Row="32" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="33" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyConsecutiveFailures}" />
+                        <TextBox x:Name="txtHistoryPolicyConsecutiveFailures" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsHistoryPolicyConsecutiveFailures}" Grid.Row="33" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="34" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyAutoRemove}" />
+                        <ToggleSwitch x:Name="togHistoryPolicyAutoRemove" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsHistoryPolicyAutoRemove}" Grid.Row="34" Grid.Column="1" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="34" Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsHistoryPolicyAutoRemoveTip}" TextWrapping="Wrap" />
+
+                        <TextBlock Grid.Row="35" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadProbeUrl}" />
+                        <TextBox x:Name="txtUploadProbeUrl" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsUploadProbeUrl}" Grid.Row="35" Grid.Column="1" Width="500" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="35" Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadProbeTip}" TextWrapping="Wrap" />
+
+                        <TextBlock Grid.Row="36" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadProbeBytes}" />
+                        <TextBox x:Name="txtUploadProbeBytes" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsUploadProbeBytes}" Grid.Row="36" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="37" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadProbeTimeout}" />
+                        <TextBox x:Name="txtUploadProbeTimeoutSeconds" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsUploadProbeTimeout}" Grid.Row="37" Grid.Column="1" Width="200" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" />
+
+                        <TextBlock Grid.Row="38" Grid.Column="0" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadStallFinalMask}" />
+                        <TextBox x:Name="txtUploadStallFinalMaskJson" automation:AutomationProperties.Name="{x:Static resx:ResUI.TbSettingsUploadStallFinalMask}" Grid.Row="38" Grid.Column="1" Width="600" Margin="{StaticResource Margin4}" HorizontalAlignment="Left" AcceptsReturn="True" TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="38" Grid.Column="2" Margin="{StaticResource Margin4}" VerticalAlignment="Center" Text="{x:Static resx:ResUI.TbSettingsUploadStallFinalMaskTip}" TextWrapping="Wrap" />
                     </Grid>
                 </ScrollViewer>
             </TabItem>

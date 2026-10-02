@@ -17,6 +17,10 @@ on:
       - 'pattn-discovery/**'
       - 'global.json'
       - '.github/workflows/**'
+      - 'package-*.sh'
+      - 'release-assets.lock.sh'
+      - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
   pull_request:
     paths:
       - 'v2rayN/ServiceLib/**'
@@ -29,101 +33,546 @@ on:
       - 'pattn-discovery/**'
       - 'global.json'
       - '.github/workflows/**'
+      - 'package-*.sh'
+      - 'release-assets.lock.sh'
+      - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 permissions:
-  checks: write
-  pull-requests: write
+  contents: read
+  actions: read
 
 jobs:
   workflow-lint:
     name: Validate GitHub Actions workflows
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Run actionlint
-        uses: docker://rhysd/actionlint:1.7.12
-        with:
-          args: -color
+    - name: Audit release packaging integrity lock
+      if: ${{ hashFiles('release-assets.lock.sh', 'release-reproducibility.sh') != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        scripts=(
+          release-assets.lock.sh release-reproducibility.sh
+          package-debian.sh package-rhel.sh
+          package-debian-riscv.sh package-rhel-riscv.sh
+          package-debian-loong.sh package-rhel-loong.sh
+          package-osx.sh
+        )
+        bash -n "${scripts[@]}"
+
+        # shellcheck source=release-assets.lock.sh
+        source ./release-assets.lock.sh
+
+        # Native package reproducibility helper must be deterministic even when
+        # the input tree starts with different mtimes.
+        (
+          set -euo pipefail
+          # shellcheck source=release-reproducibility.sh
+          source ./release-reproducibility.sh
+          repro_tmp="$(mktemp -d)"
+          trap 'rm -rf "$repro_tmp"' EXIT
+          mkdir -p "$repro_tmp/a/tree" "$repro_tmp/b/tree"
+          printf 'same-payload\n' > "$repro_tmp/a/tree/payload.txt"
+          cp "$repro_tmp/a/tree/payload.txt" "$repro_tmp/b/tree/payload.txt"
+          touch -d '@1700000000' "$repro_tmp/a/tree/payload.txt"
+          touch -d '@1800000000' "$repro_tmp/b/tree/payload.txt"
+          SOURCE_DATE_EPOCH=1600000000
+          pattn_init_reproducible_build "$GITHUB_WORKSPACE"
+          pattn_normalize_tree_mtime "$repro_tmp/a/tree"
+          pattn_normalize_tree_mtime "$repro_tmp/b/tree"
+          pattn_reproducible_tar_gz "$repro_tmp/a" tree "$repro_tmp/a.tar.gz"
+          pattn_reproducible_tar_gz "$repro_tmp/b" tree "$repro_tmp/b.tar.gz"
+          cmp "$repro_tmp/a.tar.gz" "$repro_tmp/b.tar.gz"
+        )
+
+        sdk_version="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["version"])')"
+        sdk_roll_forward="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["rollForward"])')"
+        [[ "$sdk_version" == "$PATTN_DOTNET_SDK_VERSION" ]] || {
+          echo "::error::global.json SDK $sdk_version differs from release lock $PATTN_DOTNET_SDK_VERSION"
+          exit 1
+        }
+        [[ "$sdk_roll_forward" == "disable" ]] || {
+          echo "::error::global.json must require the exact locked SDK (rollForward=disable)"
+          exit 1
+        }
+
+        for rid in linux-x64 linux-arm64 linux-riscv64 linux-loongarch64; do
+          pattn_xray_sha256 "$rid" >/dev/null
+          pattn_singbox_sha256 "$rid" >/dev/null
+          pattn_core_bundle_blob_sha1 "$rid" >/dev/null
+        done
+        pattn_xray_sha256 macos-64 >/dev/null
+        pattn_xray_sha256 macos-arm64 >/dev/null
+        pattn_core_bundle_blob_sha1 macos-64 >/dev/null
+        pattn_core_bundle_blob_sha1 macos-arm64 >/dev/null
+        pattn_xray_sha256 windows-32 >/dev/null
+        pattn_singbox_sha256 windows-386 >/dev/null
+
+        tmp="$(mktemp)"
+        trap 'rm -f "$tmp"' EXIT
+        printf 'pattn-release-integrity-self-test\n' > "$tmp"
+        good_sha="$(pattn_sha256_file "$tmp")"
+        good_sha512="$(pattn_sha512_file "$tmp")"
+        good_blob="$(pattn_git_blob_sha1 "$tmp")"
+        pattn_verify_sha256 "$tmp" "$good_sha"
+        pattn_verify_sha512 "$tmp" "$good_sha512"
+        pattn_verify_git_blob "$tmp" "$good_blob"
+
+        if pattn_verify_sha256 "$tmp" "0000000000000000000000000000000000000000000000000000000000000000"; then
+          echo "::error::SHA-256 negative self-test unexpectedly passed"
+          exit 1
+        fi
+        if pattn_verify_sha512 "$tmp" "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"; then
+          echo "::error::SHA-512 negative self-test unexpectedly passed"
+          exit 1
+        fi
+        if pattn_verify_git_blob "$tmp" "0000000000000000000000000000000000000000"; then
+          echo "::error::Git-blob negative self-test unexpectedly passed"
+          exit 1
+        fi
+
+        download_src="$(mktemp)"
+        download_dst="$(mktemp)"
+        trap 'rm -f "$tmp" "$download_src" "$download_dst"' EXIT
+        printf 'verified-download-payload\n' > "$download_src"
+        download_sha="$(pattn_sha256_file "$download_src")"
+        pattn_download_sha256 "file://$download_src" "$download_dst" "$download_sha"
+        cmp "$download_src" "$download_dst"
+
+        if pattn_download_sha256           "file://$download_src"           "$download_dst"           "0000000000000000000000000000000000000000000000000000000000000000"; then
+          echo "::error::corrupted/unexpected download negative self-test unexpectedly passed"
+          exit 1
+        fi
+
+        if grep -nE           'refs/heads/(master|main|release|rule-set)|releases/latest/download|dot\.net/v1/dotnet-install|bin/Release/net10\.0|MIN_KERNEL='           package-*.sh; then
+          echo "::error::release packager reintroduced a mutable asset URL, hardcoded TFM path, or kernel heuristic"
+          exit 1
+        fi
+
+        if grep -nE 'refs/heads/(master|main|release|rule-set)|releases/latest/download' \
+          .github/workflows/build-windows-x86.yml \
+          .github/workflows/package-zip.yml; then
+          echo "::error::release workflow reintroduced a mutable, unverified asset URL"
+          exit 1
+        fi
+
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+
+        failures = []
+        for workflow in sorted(Path(".github/workflows").glob("*.yml")):
+            for line_no, line in enumerate(workflow.read_text(encoding="utf-8").splitlines(), 1):
+                match = re.match(r"^\s*-?\s*uses:\s*([^#\s]+)", line)
+                if not match:
+                    continue
+                ref = match.group(1)
+                if ref.startswith("./"):
+                    continue
+                if ref.startswith("docker://"):
+                    if "@sha256:" not in ref:
+                        failures.append(f"{workflow}:{line_no}: mutable container action {ref}")
+                    continue
+                if not re.fullmatch(r"[^@\s]+@[0-9a-fA-F]{40}", ref):
+                    failures.append(f"{workflow}:{line_no}: action is not pinned to a full commit SHA: {ref}")
+
+        if failures:
+            raise SystemExit("\n".join(failures))
+        PY
+
+        if bash ./package-osx.sh invalid-arch "$RUNNER_TEMP/path with spaces" 0.0.0; then
+          echo "::error::package-osx.sh accepted an unsupported architecture"
+          exit 1
+        fi
+
+        python3 -m py_compile scripts/deterministic_zip.py scripts/generate_dependency_sbom.py
+        dependency_sbom="$RUNNER_TEMP/dependencies.spdx.json"
+        python3 scripts/generate_dependency_sbom.py \
+          --root . \
+          --output "$dependency_sbom" \
+          --source-sha "$GITHUB_SHA" \
+          --repository "$GITHUB_REPOSITORY"
+        python3 - "$dependency_sbom" <<'PY'
+        import json
+        import re
+        import sys
+        from pathlib import Path
+
+        doc = json.load(open(sys.argv[1], encoding="utf-8"))
+        assert doc["spdxVersion"] == "SPDX-2.3"
+        packages = doc.get("packages", [])
+        assert any(p["name"] == "ReactiveUI" for p in packages), "NuGet dependency inventory missing ReactiveUI"
+
+        # The Go inventory must mirror pattn-discovery/go.mod, not merely be non-empty. The previous
+        # form asserted "at least one pkg:golang/ entry" unconditionally, which can never hold for a
+        # module with no third-party requirements -- and pattn-discovery is stdlib-only by design --
+        # so the job failed on a tree that satisfied its own premise, naming no real defect. Now every
+        # declared requirement must be present, and nothing may be present that is not declared.
+        declared = []
+        in_block = False
+        for raw in Path("pattn-discovery/go.mod").read_text(encoding="utf-8").splitlines():
+            line = raw.split("//", 1)[0].strip()
+            if not line:
+                continue
+            if line == "require (":
+                in_block = True
+                continue
+            if in_block and line == ")":
+                in_block = False
+                continue
+            if in_block:
+                declared.append(line.split()[0])
+                continue
+            match = re.fullmatch(r"require\s+(\S+)\s+\S+", line)
+            if match:
+                declared.append(match.group(1))
+
+        purls = [p["externalRefs"][0]["referenceLocator"] for p in packages
+                 if p.get("externalRefs")
+                 and p["externalRefs"][0]["referenceLocator"].startswith("pkg:golang/")]
+        for name in declared:
+            assert any(purl.startswith(f"pkg:golang/{name}@") for purl in purls), f"Go dependency inventory missing {name}"
+        assert len(purls) == len(declared), (
+            f"Go dependency inventory has {len(purls)} entries for {len(declared)} declared requirements"
+        )
+        PY
+        zip_tree="$RUNNER_TEMP/deterministic zip tree"
+        mkdir -p "$zip_tree/sub dir"
+        printf 'alpha\n' > "$zip_tree/a file.txt"
+        printf 'beta\n' > "$zip_tree/sub dir/b.txt"
+        chmod 0755 "$zip_tree/a file.txt"
+        if ln -s "a file.txt" "$zip_tree/link" 2>/dev/null; then
+          :
+        fi
+        zip_one="$RUNNER_TEMP/deterministic-one.zip"
+        zip_two="$RUNNER_TEMP/deterministic-two.zip"
+        python3 scripts/deterministic_zip.py "$zip_tree" "$zip_one" --epoch 1700000000
+        python3 scripts/deterministic_zip.py "$zip_tree" "$zip_two" --epoch 1700000000
+        cmp "$zip_one" "$zip_two" || {
+          echo "::error::deterministic ZIP self-test produced different bytes"
+          exit 1
+        }
+
+    - name: Run verified actionlint
+      if: ${{ hashFiles('release-assets.lock.sh') != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck source=release-assets.lock.sh
+        source ./release-assets.lock.sh
+        archive="$RUNNER_TEMP/actionlint.tar.gz"
+        install_dir="$RUNNER_TEMP/actionlint"
+        mkdir -p "$install_dir"
+        pattn_download_sha256 \
+          "https://github.com/rhysd/actionlint/releases/download/v${PATTN_ACTIONLINT_VERSION}/actionlint_${PATTN_ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+          "$archive" \
+          "$PATTN_ACTIONLINT_LINUX_AMD64_SHA256"
+        tar -xzf "$archive" -C "$install_dir"
+        "$install_dir/actionlint" -color
 
   test:
-    name: Test ServiceLib and discovery runtime
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.x'
-          dotnet-quality: 'ga'
+    - name: Prepare test results directory
+      shell: bash
+      run: |
+        mkdir -p ./TestResults
+        printf 'placeholder for result handoff\n' > ./TestResults/ci-placeholder.txt
 
-      - name: Setup Go
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: './pattn-discovery/go.mod'
-          cache: false
+    - name: Setup .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      with:
+        dotnet-version: '10.0.111'
+        dotnet-quality: 'ga'
 
-      - name: Test and vet pattn-discovery
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        run: |
-          go test ./...
-          go vet ./...
+    - name: Setup Go
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version: '1.23.12'
+        cache: false
 
-      - name: Race-test pattn-discovery
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        run: go test -race ./...
+    - name: Audit new desktop XAML accessibility markup
+      shell: bash
+      run: |
+        set -euo pipefail
+        files=(
+          v2rayN/v2rayN/Views/DiscoveryManagementWindow.xaml
+          v2rayN/v2rayN.Desktop/Views/DiscoveryManagementWindow.axaml
+          v2rayN/v2rayN/Views/DNSSettingWindow.xaml
+          v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml
+          v2rayN/v2rayN/Views/ProfilesView.xaml
+          v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml
+        )
+        existing_files=()
+        for file in "${files[@]}"; do
+          [[ -f "$file" ]] && existing_files+=("$file")
+        done
+        if (( ${#existing_files[@]} > 0 )) \
+          && grep -nE '/[[:space:]]+(automation:)?AutomationProperties\.' "${existing_files[@]}"; then
+          echo "::error::malformed accessibility property after self-closing slash"
+          exit 1
+        fi
 
-      - name: Smoke pattn-discovery executable protocol
-        if: ${{ hashFiles('pattn-discovery/go.mod') != '' }}
-        working-directory: ./pattn-discovery
-        shell: bash
-        run: |
-          set -euo pipefail
-          helper="$RUNNER_TEMP/pattn-discovery"
-          go build -trimpath -o "$helper" ./cmd/pattn-discovery
-          output="$(printf '%s\n' '{"v":1,"id":"smoke","method":"engine.version"}' | timeout 5s "$helper")"
-          grep -F '"id":"smoke"' <<<"$output"
-          grep -F '"engine":"pattn-discovery"' <<<"$output"
+        python3 - <<'PY'
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
 
-      - name: Test ServiceLib
-        run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
+        XAML_NAME = "{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+        required_live = {
+            "v2rayN/v2rayN/Views/DiscoveryManagementWindow.xaml": {
+                "txtStatus", "txtRemoteTlsPinStatus", "txtRemoteSourceHealthSummary",
+                "txtRemoteProvenanceSummary", "txtRepairHistorySummary",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DiscoveryManagementWindow.axaml": {
+                "txtStatus", "txtRemoteTlsPinStatus", "txtRemoteSourceHealthSummary",
+                "txtRemoteProvenanceSummary", "txtRepairHistorySummary",
+            },
+            "v2rayN/v2rayN/Views/DNSSettingWindow.xaml": {
+                "txtDnsHealthSummary", "txtDnsHealthError", "txtDnsRepairStatus", "txtDnsHistoryError",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml": {
+                "txtDnsHealthSummary", "txtDnsHealthError", "txtDnsRepairStatus", "txtDnsHistoryError",
+            },
+            "v2rayN/v2rayN/Views/ProfilesView.xaml": {"txtReviverStatus"},
+            "v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml": {"txtReviverStatus"},
+        }
+        required_actions = {
+            "v2rayN/v2rayN/Views/DNSSettingWindow.xaml": {
+                "btnRefreshDnsHealth", "btnPreviewDnsRepair", "btnApplyDnsRepair", "btnRollbackDnsRepair",
+            },
+            "v2rayN/v2rayN.Desktop/Views/DNSSettingWindow.axaml": {
+                "btnRefreshDnsHealth", "btnPreviewDnsRepair", "btnApplyDnsRepair", "btnRollbackDnsRepair",
+            },
+            "v2rayN/v2rayN/Views/ProfilesView.xaml": {
+                "btnReviveSelectedProfile", "btnCancelReviver", "btnExportReviverSupportBundle",
+            },
+            "v2rayN/v2rayN.Desktop/Views/ProfilesView.axaml": {
+                "btnReviveSelectedProfile", "btnCancelReviver", "btnExportReviverSupportBundle",
+            },
+        }
 
-      - name: Comment PR with results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: ./TestResults/*.trx
-          comment_mode: failures
+        def attached(element, suffix):
+            for key, value in element.attrib.items():
+                if key.endswith(suffix):
+                    return value
+            return None
+
+        failures = []
+        for file_name, live_names in required_live.items():
+            path = Path(file_name)
+            if not path.is_file():
+                # Split PRs intentionally do not all own the UI leaf. Validate
+                # every relevant file present in the checked-out composition.
+                continue
+            root = ET.parse(path).getroot()
+            named = {
+                element.attrib[XAML_NAME]: element
+                for element in root.iter()
+                if XAML_NAME in element.attrib
+            }
+
+            # #8 owns the feature UI while #9 owns this integration gate. On the
+            # isolated #9 stack, upstream versions of shared files exist but do
+            # not yet contain any Discovery/Reviver controls. Skip only when the
+            # entire feature surface is absent; once any sentinel is present,
+            # require the complete accessibility contract so partial integration
+            # cannot evade the audit.
+            expected_names = set(live_names) | required_actions.get(file_name, set())
+            if expected_names and not (expected_names & set(named)):
+                continue
+
+            for name in live_names:
+                element = named.get(name)
+                if element is None:
+                    failures.append(f"{file_name}: missing required accessibility control {name}")
+                    continue
+                if not attached(element, "AutomationProperties.Name"):
+                    failures.append(f"{file_name}: {name} has no accessible name")
+                if attached(element, "AutomationProperties.LiveSetting") not in {"Polite", "Assertive"}:
+                    failures.append(f"{file_name}: {name} is not an accessibility live region")
+
+            for name in required_actions.get(file_name, set()):
+                element = named.get(name)
+                if element is None:
+                    failures.append(f"{file_name}: missing action {name}")
+                    continue
+                if not attached(element, "AutomationProperties.Name"):
+                    failures.append(f"{file_name}: {name} has no accessible name")
+                try:
+                    target_height = float(element.attrib.get("MinHeight", "0"))
+                except ValueError:
+                    target_height = 0
+                if target_height < 44:
+                    failures.append(f"{file_name}: {name} target height is below 44 DIPs")
+
+        if failures:
+            raise SystemExit("\n".join(failures))
+        PY
+
+    - name: Test pattn-discovery
+      working-directory: ./pattn-discovery
+      run: |
+        go test ./...
+        go vet ./...
+
+    - name: Smoke pattn-discovery executable protocol
+      working-directory: ./pattn-discovery
+      shell: bash
+      run: |
+        set -euo pipefail
+        helper="$RUNNER_TEMP/pattn-discovery"
+        go build -trimpath -o "$helper" ./cmd/pattn-discovery
+        output="$(printf '%s\n' '{"v":1,"id":"smoke","method":"engine.version"}' | timeout 5s "$helper")"
+        grep -F '"id":"smoke"' <<<"$output"
+        grep -F '"engine":"pattn-discovery"' <<<"$output"
+
+    - name: Race-test pattn-discovery
+      working-directory: ./pattn-discovery
+      run: go test -race ./...
+
+    - name: Fuzz smoke DNS parsers
+      working-directory: ./pattn-discovery
+      run: |
+        go test ./internal/dnswire -run=^$ -fuzz=^FuzzParseMessage$ -fuzztime=3s
+        go test ./internal/dnswire -run=^$ -fuzz=^FuzzReadName$ -fuzztime=3s
+        go test ./internal/dnssec -run=^$ -fuzz=^FuzzParseDNSSECRData$ -fuzztime=3s
+        go test ./internal/dnstrace -run=^$ -fuzz=^FuzzDnameSynthesis$ -fuzztime=3s
+        go test ./cmd/pattn-discovery -run=^$ -fuzz=^FuzzNDJSONFraming$ -fuzztime=3s
+
+    - name: Audit committed fuzz regression corpus
+      if: ${{ hashFiles('pattn-discovery/cmd/fuzz-corpus-audit/**') != '' }}
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/fuzz-corpus-audit -root .
+
+    - name: Audit DNS root trust-anchor snapshot
+      if: ${{ hashFiles('pattn-discovery/cmd/dns-trust-anchor-audit/**') != '' }}
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/dns-trust-anchor-audit -max-age-days 90
+
+    - name: Audit DNS fixture corpus
+      if: ${{ hashFiles('pattn-discovery/cmd/dns-fixture-audit/**') != '' }}
+      working-directory: ./pattn-discovery
+      run: go run ./cmd/dns-fixture-audit -root ./internal/dnsfixture/testdata -fail-on-orphans
+
+    - name: Test Code
+      run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
+
+    - name: Build durability fault harness
+      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
+      run: dotnet build ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release
+
+    - name: Abrupt-loss recovery smoke
+      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        publish="$RUNNER_TEMP/fault-harness-publish"
+        dotnet publish ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release -o "$publish"
+
+        for checkpoint in after-file-apply after-revision-insert after-registry-upsert after-rollback-file after-rollback-registry after-rollback-revision; do
+          case_dir="$RUNNER_TEMP/fault-smoke-$checkpoint"
+          mkdir -p "$case_dir"
+          cp -a "$publish/." "$case_dir/"
+          (cd "$case_dir" && ./ServiceLib.FaultHarness init > init.json)
+
+          (
+            cd "$case_dir"
+            exec ./ServiceLib.FaultHarness worker "$checkpoint"
+          ) > "$case_dir/worker.log" 2>&1 &
+          pid=$!
+
+          reached=0
+          for _ in $(seq 1 400); do
+            if [[ -s "$case_dir/fault-checkpoint.marker" ]]; then
+              reached=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$case_dir/worker.log"
+              exit 1
+            fi
+            sleep 0.05
+          done
+          [[ "$reached" == 1 ]] || { kill -9 "$pid" 2>/dev/null || true; exit 1; }
+
+          kill -9 "$pid"
+          wait "$pid" 2>/dev/null || true
+          (cd "$case_dir" && ./ServiceLib.FaultHarness verify "$checkpoint")
+        done
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: service-test-results
+        path: ./TestResults
+        if-no-files-found: error
+        retention-days: 7
+
+  test-results:
+    name: Test Results
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+    steps:
+    - name: Download test results
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      with:
+        name: service-test-results
+        path: ./TestResults
+
+    - name: Detect TRX results
+      id: trx
+      shell: bash
+      run: |
+        if compgen -G './TestResults/*.trx' >/dev/null; then
+          echo 'found=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'found=false' >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Publish unit test results
+      if: steps.trx.outputs.found == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
+      with:
+        files: ./TestResults/*.trx
+        comment_mode: failures
 
   ui-build:
     name: Build WPF and Avalonia UI
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        submodules: recursive
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.x'
-          dotnet-quality: 'ga'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      with:
+        dotnet-version: '10.0.111'
+        dotnet-quality: 'ga'
 
-      - name: Build WPF
-        shell: pwsh
-        run: dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
+    - name: Build WPF
+      shell: pwsh
+      run: dotnet build ./v2rayN/v2rayN/v2rayN.csproj -c Release -p:EnableWindowsTargeting=true
 
-      - name: Build Avalonia
-        shell: pwsh
-        run: dotnet build ./v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj -c Release
+    - name: Build Avalonia
+      shell: pwsh
+      run: dotnet build ./v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj -c Release

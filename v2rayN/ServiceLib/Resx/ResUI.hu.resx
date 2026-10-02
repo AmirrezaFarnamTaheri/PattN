@@ -1803,4 +1803,396 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>Az EchOutbound "{0}" tag értékét már egy másik outbound használja</value>
   </data>
+
+  <!-- Discovery/Reviver feature keys: explicit English fallback until reviewed translation is supplied. -->
+  <data name="TbDNSRepairResolver" xml:space="preserve">
+      <value>DNS repair resolver</value>
+    </data>
+  <data name="TbDNSRepairPreviewAction" xml:space="preserve">
+      <value>Preview change</value>
+    </data>
+  <data name="TbDNSRepairApplyAction" xml:space="preserve">
+      <value>Apply DNS repair</value>
+    </data>
+  <data name="TbDNSRepairRollbackAction" xml:space="preserve">
+      <value>Rollback DNS repair</value>
+    </data>
+  <data name="TbDNSRepairPlan" xml:space="preserve">
+      <value>Changes to apply</value>
+    </data>
+  <data name="TbDNSRepairStatus" xml:space="preserve">
+      <value>Repair status</value>
+    </data>
+  <data name="TbDNSRepairSafety" xml:space="preserve">
+      <value>Preview shows the exact DNS changes. Apply changes only Remote DNS and Bootstrap DNS and saves a rollback snapshot.</value>
+    </data>
+  <data name="TbDNSRepairApplyCancelled" xml:space="preserve">
+      <value>DNS repair was not applied.</value>
+    </data>
+  <data name="TbDNSRepairRollbackCancelled" xml:space="preserve">
+      <value>DNS repair rollback was cancelled.</value>
+    </data>
+  <data name="menuDiscoveryManagement" xml:space="preserve">
+      <value>Discovery &amp; repair</value>
+    </data>
+  <data name="TbDiscoveryManagementDesc" xml:space="preserve">
+      <value>Review discovery data, manage trusted catalog sources, inspect repairs, and run maintenance. Changes happen only when you choose an action.</value>
+    </data>
+  <data name="TbDiscoveryMaintenance" xml:space="preserve">
+      <value>Maintenance</value>
+    </data>
+  <data name="TbDiscoveryStatus" xml:space="preserve">
+      <value>Status</value>
+    </data>
+  <data name="TbReviverStatus" xml:space="preserve">
+      <value>Repair status</value>
+    </data>
+  <data name="TbReviverHelp" xml:space="preserve">
+      <value>Diagnose one selected profile. Repairs are validated first and saved as a new child; the source profile is never overwritten.</value>
+    </data>
+  <data name="TbDiscoveryReady" xml:space="preserve"><value>Ready</value></data>
+  <data name="TbDiscoveryWorking" xml:space="preserve"><value>Working…</value></data>
+  <data name="TbDiscoveryOperationFailed" xml:space="preserve"><value>The operation failed. Review the saved evidence or application log for details.</value></data>
+  <data name="TbDiscoverySelectCatalog" xml:space="preserve"><value>Select a catalog first.</value></data>
+  <data name="TbDiscoverySelectRetiredCatalog" xml:space="preserve"><value>Select a retired catalog first.</value></data>
+  <data name="TbDiscoverySelectEndpoint" xml:space="preserve"><value>Select an endpoint first.</value></data>
+  <data name="TbDiscoverySelectRevision" xml:space="preserve"><value>Select a catalog revision first.</value></data>
+  <data name="TbDiscoveryNoRemoteSource" xml:space="preserve"><value>No remote source is configured for this catalog.</value></data>
+  <data name="TbDiscoveryNoExtraTlsPins" xml:space="preserve"><value>Standard certificate validation is active; no additional SPKI pins are configured.</value></data>
+  <data name="TbDiscoveryInspectSpki" xml:space="preserve"><value>Inspect the current server key to view its SPKI.</value></data>
+  <data name="TbDiscoveryFetchPreview" xml:space="preserve"><value>Fetch a preview to compare the remote catalog before applying it.</value></data>
+  <data name="TbDiscoveryImportPreview" xml:space="preserve"><value>Preview the trust configuration before importing it.</value></data>
+  <data name="TbDiscoveryEndpointCleanupPreview" xml:space="preserve"><value>Preview endpoint cleanup to review the affected endpoints.</value></data>
+  <data name="TbDiscoveryRetentionPreview" xml:space="preserve"><value>Preview retention to review the records that would be removed.</value></data>
+  <data name="TbDiscoveryCompactionPreview" xml:space="preserve"><value>Preview compaction to review the current database state.</value></data>
+  <data name="TbDiscoveryPreviewRequired" xml:space="preserve"><value>Preview this operation before applying it.</value></data>
+  <data name="TbDiscoveryPreviewChanged" xml:space="preserve"><value>The preview changed. Review a fresh preview before applying.</value></data>
+  <data name="TbReviverDiagnosing" xml:space="preserve">
+      <value>Diagnosing the selected profile and validating bounded repair candidates…</value>
+    </data>
+  <data name="TbReviverHealthy" xml:space="preserve">
+      <value>Profile passed repeated real-core validation. No repair was needed.</value>
+    </data>
+  <data name="TbReviverUnsupported" xml:space="preserve">
+      <value>Automatic repair is not available for this profile type.</value>
+    </data>
+  <data name="TbReviverNoCandidate" xml:space="preserve">
+      <value>No repair passed repeated real-core validation. The source profile was not changed.</value>
+    </data>
+  <data name="TbReviverValidatedNotApplied" xml:space="preserve">
+      <value>A validated repair was found but was not applied.</value>
+    </data>
+  <data name="TbReviverPromoted" xml:space="preserve">
+      <value>A repaired child profile was created. The source profile and current default were not changed.</value>
+    </data>
+  <data name="TbReviverCancelling" xml:space="preserve">
+      <value>Cancelling repair analysis…</value>
+    </data>
+  <data name="TbReviverCancelled" xml:space="preserve">
+      <value>Repair analysis was cancelled or timed out. No changes were applied.</value>
+    </data>
+  <data name="TbReviverExported" xml:space="preserve">
+      <value>Repair diagnostic bundle saved.</value>
+    </data>
+  <data name="TbReviverExportUnavailable" xml:space="preserve">
+      <value>Run Diagnose &amp; repair before exporting a diagnostic bundle.</value>
+    </data>
+  <data name="TbReviverAnalysisFailed" xml:space="preserve">
+      <value>Repair analysis failed. No changes were applied.</value>
+    </data>
+  <data name="TbReviverConfirmPromotion" xml:space="preserve">
+      <value>A repair passed repeated real-core validation.\n\n{0}\n\nCreate a new detached repaired profile? The source profile and current default will not be changed.</value>
+    </data>
+  <data name="TbReviverDiagnosisLine" xml:space="preserve">
+      <value>Diagnosis: {0}</value>
+    </data>
+  <data name="TbReviverValidationLine" xml:space="preserve">
+      <value>Validation: {0}/{1} successful attempts; median latency {2}; loss {3}.</value>
+    </data>
+  <data name="TbReviverMutationLine" xml:space="preserve">
+      <value>{0}: {1} → {2} ({3})</value>
+    </data>
+  <data name="TbReviverEmptyValue" xml:space="preserve">
+      <value>(empty)</value>
+    </data>
+  <data name="TbDiscoveryRefreshingEndpointPool" xml:space="preserve"><value>Refreshing endpoint pool…</value></data>
+  <data name="TbDiscoveryEndpointPoolRefreshed" xml:space="preserve"><value>Endpoint pool refreshed.</value></data>
+  <data name="TbDiscoveryPinningEndpoint" xml:space="preserve"><value>Pinning endpoint…</value></data>
+  <data name="TbDiscoveryUnpinningEndpoint" xml:space="preserve"><value>Unpinning endpoint…</value></data>
+  <data name="TbDiscoveryEndpointPinned" xml:space="preserve"><value>Endpoint pinned.</value></data>
+  <data name="TbDiscoveryEndpointUnpinned" xml:space="preserve"><value>Endpoint unpinned.</value></data>
+  <data name="TbDiscoveryEnablingEndpoint" xml:space="preserve"><value>Enabling endpoint…</value></data>
+  <data name="TbDiscoveryDisablingEndpoint" xml:space="preserve"><value>Disabling endpoint…</value></data>
+  <data name="TbDiscoveryEndpointEnabled" xml:space="preserve"><value>Endpoint enabled.</value></data>
+  <data name="TbDiscoveryEndpointDisabled" xml:space="preserve"><value>Endpoint disabled.</value></data>
+  <data name="TbDiscoveryUpdatingEndpointLabel" xml:space="preserve"><value>Updating endpoint label…</value></data>
+  <data name="TbDiscoveryEndpointLabelUpdated" xml:space="preserve"><value>Endpoint label updated.</value></data>
+  <data name="TbDiscoveryRefreshingRepairHistory" xml:space="preserve"><value>Refreshing repair history…</value></data>
+  <data name="TbDiscoveryRepairHistoryRefreshed" xml:space="preserve"><value>Repair history refreshed.</value></data>
+  <data name="TbDiscoveryPreparingEndpointCleanup" xml:space="preserve"><value>Preparing endpoint cleanup preview…</value></data>
+  <data name="TbDiscoveryEndpointCleanupPrepared" xml:space="preserve"><value>Endpoint cleanup preview prepared.</value></data>
+  <data name="TbDiscoveryApplyingEndpointCleanup" xml:space="preserve"><value>Applying endpoint cleanup…</value></data>
+  <data name="TbDiscoveryEndpointCleanupApplied" xml:space="preserve"><value>Endpoint cleanup applied.</value></data>
+  <data name="TbDiscoveryEndpointCleanupResult" xml:space="preserve"><value>Applied: {0}/{1} removed; {2} changed entries skipped.</value></data>
+  <data name="TbDiscoveryPreparingRetention" xml:space="preserve"><value>Preparing lifecycle-retention preview…</value></data>
+  <data name="TbDiscoveryRetentionPrepared" xml:space="preserve"><value>Lifecycle-retention preview prepared.</value></data>
+  <data name="TbDiscoveryApplyingRetention" xml:space="preserve"><value>Applying lifecycle retention…</value></data>
+  <data name="TbDiscoveryRetentionApplied" xml:space="preserve"><value>Lifecycle retention applied.</value></data>
+  <data name="TbDiscoveryRetentionResult" xml:space="preserve"><value>Applied: {0}/{1} deleted; {2} already missing.</value></data>
+  <data name="TbDiscoveryPreparingCompaction" xml:space="preserve"><value>Preparing SQLite compaction preview…</value></data>
+  <data name="TbDiscoveryCompactionPrepared" xml:space="preserve"><value>Database compaction preview prepared. Review it before Apply.</value></data>
+  <data name="TbDiscoveryCompactingDatabase" xml:space="preserve"><value>Compacting SQLite database…</value></data>
+  <data name="TbDiscoveryCompactionCompleted" xml:space="preserve"><value>Database compaction completed.</value></data>
+  <data name="TbProxyTestHistory" xml:space="preserve">
+      <value>Proxy test history</value>
+    </data>
+  <data name="TbProxyTestHistoryEmpty" xml:space="preserve">
+      <value>No retained proxy test history is available yet.</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyPreviewEmpty" xml:space="preserve">
+      <value>No history policy preview is available.</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyNoRules" xml:space="preserve">
+      <value>Enable an N-of-M failure rule or a consecutive-failure rule in Settings first.</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyNoMatches" xml:space="preserve">
+      <value>No inactive proxies currently match the configured history policy.</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyApplied" xml:space="preserve">
+      <value>History policy removed {0} profile(s); {1} active profile(s) were protected.</value>
+    </data>
+  <data name="TbProxyTestHistoryRefreshed" xml:space="preserve">
+      <value>Proxy test history refreshed.</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyPrepared" xml:space="preserve">
+      <value>History policy preview prepared.</value>
+    </data>
+  <data name="TbProxyTestHistoryDiagnosticLine" xml:space="preserve">
+      <value>{0}: {1}/{2} successful ({3:P0}); failure streak {4}; avg delay {5:F0} ms; avg speed {6}; last {7:u}</value>
+    </data>
+  <data name="TbProxyTestHistoryPolicyLine" xml:space="preserve">
+      <value>{0}: {1} failures / {2} runs; streak {3}; success rate {4:P0}</value>
+    </data>
+  <data name="TbProxyTestHistoryRanked" xml:space="preserve">
+      <value>Ranked {0} of {1} visible profiles using recent reliability history.</value>
+    </data>
+  <data name="TbDiscoveryRevisionDetailsEmpty" xml:space="preserve">
+      <value>Select a revision to view its details.</value>
+    </data>
+  <data name="TbDiscoveryCatalogAuditEmpty" xml:space="preserve">
+      <value>Select a catalog to view its audit details.</value>
+    </data>
+  <data name="TbDiscoveryCatalogUpdatePreviewEmpty" xml:space="preserve">
+      <value>Preview an update to review changes before applying.</value>
+    </data>
+  <data name="TbDiscoveryRemoteHealthEmpty" xml:space="preserve">
+      <value>Refresh to load saved source health.</value>
+    </data>
+  <data name="TbDiscoveryRemoteHealthDetailsEmpty" xml:space="preserve">
+      <value>Select a source to view its saved health details.</value>
+    </data>
+  <data name="TbDiscoveryRemoteProvenanceEmpty" xml:space="preserve">
+      <value>Search to view saved evidence from previous remote updates.</value>
+    </data>
+  <data name="TbDiscoveryRemoteProvenanceDetailsEmpty" xml:space="preserve">
+      <value>Select an update to view its saved provenance.</value>
+    </data>
+  <data name="TbDiscoveryRetiredCatalogDetailsEmpty" xml:space="preserve">
+      <value>Select a retired catalog to view its preserved history.</value>
+    </data>
+  <data name="TbDiscoveryArchiveInspectionEmpty" xml:space="preserve">
+      <value>Choose an archive to inspect it without importing it.</value>
+    </data>
+  <data name="TbDiscoveryEndpointHistoryEmpty" xml:space="preserve">
+      <value>Select an endpoint to view its history.</value>
+    </data>
+  <data name="TbDiscoveryRepairHistoryEmpty" xml:space="preserve">
+      <value>Refresh to load repair history.</value>
+    </data>
+  <data name="TbDiscoveryPromotionEventDetailsEmpty" xml:space="preserve">
+      <value>Select an event to view its details.</value>
+    </data>
+  <data name="TbDiscoveryManagementRefreshed" xml:space="preserve">
+      <value>Discovery management data refreshed.</value>
+    </data>
+  <data name="TbDiscoveryCatalogMetadataRefreshed" xml:space="preserve">
+      <value>Catalog metadata refreshed.</value>
+    </data>
+  <data name="TbDiscoveryCatalogUnregisterStale" xml:space="preserve">
+      <value>Catalog selection changed; unregister cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRetiredArchiveRefreshed" xml:space="preserve">
+      <value>Retired catalog archive refreshed.</value>
+    </data>
+  <data name="TbDiscoveryCatalogReregisteredDisabled" xml:space="preserve">
+      <value>Catalog re-registered in disabled state. Review it before enabling.</value>
+    </data>
+  <data name="TbDiscoveryRetiredDiscardStale" xml:space="preserve">
+      <value>Retired catalog selection changed; discard cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRetiredExportStale" xml:space="preserve">
+      <value>Retired catalog selection changed; export cancelled.</value>
+    </data>
+  <data name="TbDiscoveryCatalogLabelUpdated" xml:space="preserve">
+      <value>Catalog label updated.</value>
+    </data>
+  <data name="TbDiscoveryEnterHttpsCatalogUrl" xml:space="preserve">
+      <value>Enter an HTTPS catalog URL first.</value>
+    </data>
+  <data name="TbDiscoveryFixSpkiPins" xml:space="preserve">
+      <value>Fix the HTTPS SPKI pin set before saving.</value>
+    </data>
+  <data name="TbDiscoveryRemoteSaveTrustCancelled" xml:space="preserve">
+      <value>Remote source save cancelled; existing transport trust remains unchanged.</value>
+    </data>
+  <data name="TbDiscoveryRemoteSaveStale" xml:space="preserve">
+      <value>Catalog selection changed; remote source save cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteSourceSaved" xml:space="preserve">
+      <value>Remote catalog source saved. No catalog bytes were changed.</value>
+    </data>
+  <data name="TbDiscoveryRemoteRemovalStale" xml:space="preserve">
+      <value>Catalog selection changed; remote source removal cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteSourceRemoved" xml:space="preserve">
+      <value>Remote source configuration and cache metadata removed. Catalog file unchanged.</value>
+    </data>
+  <data name="TbDiscoveryRemoteFetchStale" xml:space="preserve">
+      <value>Catalog selection changed while fetching; stale remote preview discarded.</value>
+    </data>
+  <data name="TbDiscoveryRemotePreviewRequired" xml:space="preserve">
+      <value>Fetch a remote catalog preview first.</value>
+    </data>
+  <data name="TbDiscoveryRemotePreviewNoUpdate" xml:space="preserve">
+      <value>The current remote preview contains no catalog update.</value>
+    </data>
+  <data name="TbDiscoveryRemotePreviewWrongCatalog" xml:space="preserve">
+      <value>The remote preview belongs to another catalog; fetch a fresh preview.</value>
+    </data>
+  <data name="TbDiscoveryRemoteApplyStale" xml:space="preserve">
+      <value>Catalog selection or remote preview changed; apply cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteUpdateApplied" xml:space="preserve">
+      <value>Remote catalog update applied through the revision pipeline.</value>
+    </data>
+  <data name="TbDiscoveryTlsObservationStale" xml:space="preserve">
+      <value>Catalog URL changed while inspecting TLS; stale observation discarded.</value>
+    </data>
+  <data name="TbDiscoveryInspectServerKeyFirst" xml:space="preserve">
+      <value>Inspect the current HTTPS server key first.</value>
+    </data>
+  <data name="TbDiscoveryFixPinEditor" xml:space="preserve">
+      <value>Fix the existing pin editor before adding the observed key.</value>
+    </data>
+  <data name="TbDiscoveryRemoteExportStale" xml:space="preserve">
+      <value>Catalog selection changed; remote-source export cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteImportPreviewStale" xml:space="preserve">
+      <value>Catalog selection changed; remote-source import preview cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteImportPreparedStale" xml:space="preserve">
+      <value>Catalog selection changed while preparing import; stale preview discarded.</value>
+    </data>
+  <data name="TbDiscoveryRemoteImportPreviewRequired" xml:space="preserve">
+      <value>Prepare a remote-source import preview first.</value>
+    </data>
+  <data name="TbDiscoveryRemoteImportWrongCatalog" xml:space="preserve">
+      <value>The import preview belongs to another catalog; prepare a fresh preview.</value>
+    </data>
+  <data name="TbDiscoveryRemoteImportApplyStale" xml:space="preserve">
+      <value>Catalog selection or import preview changed; apply cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRemoteTrustImported" xml:space="preserve">
+      <value>Remote-source trust configuration imported.</value>
+    </data>
+  <data name="TbDiscoveryRemoteProvenanceRefreshed" xml:space="preserve">
+      <value>Remote provenance query refreshed from local history. No network fetch was performed.</value>
+    </data>
+  <data name="TbDiscoveryCatalogPreviewStale" xml:space="preserve">
+      <value>Catalog selection changed; update preview cancelled.</value>
+    </data>
+  <data name="TbDiscoveryCatalogPreviewPreparedStale" xml:space="preserve">
+      <value>Catalog selection changed while preparing update; stale preview discarded.</value>
+    </data>
+  <data name="TbDiscoveryCatalogPreviewPrepared" xml:space="preserve">
+      <value>Catalog update preview prepared. Review it before Apply.</value>
+    </data>
+  <data name="TbDiscoveryCatalogPreviewRequired" xml:space="preserve">
+      <value>Prepare a catalog update preview first.</value>
+    </data>
+  <data name="TbDiscoveryCatalogApplyStale" xml:space="preserve">
+      <value>Catalog selection or update preview changed; apply cancelled.</value>
+    </data>
+  <data name="TbDiscoveryCatalogUpdateApplied" xml:space="preserve">
+      <value>Catalog update applied and revision recorded.</value>
+    </data>
+  <data name="TbDiscoveryRollbackStale" xml:space="preserve">
+      <value>Catalog revision selection changed; rollback cancelled.</value>
+    </data>
+  <data name="TbDiscoveryRollbackApplied" xml:space="preserve">
+      <value>Catalog revision rolled back.</value>
+    </data>
+  <data name="TbDiscoveryRemoteHealthRefreshed" xml:space="preserve">
+      <value>Remote source health refreshed from persisted metadata. No network fetch was performed.</value>
+    </data>
+  <data name="TbDNSRepairPreviewInitial" xml:space="preserve">
+      <value>Refresh DNS health, choose a resolver, then preview the exact changes.</value>
+    </data>
+  <data name="TbDNSRepairPreviewResolverFormat" xml:space="preserve">
+      <value>Resolver: {0}</value>
+    </data>
+  <data name="TbDNSRepairPreviewPolicyFormat" xml:space="preserve">
+      <value>Policy: {0}</value>
+    </data>
+  <data name="TbDNSRepairPreviewHealthFormat" xml:space="preserve">
+      <value>Current health: {0} / {1}</value>
+    </data>
+  <data name="TbDNSRepairPreviewCatalogFormat" xml:space="preserve">
+      <value>Catalog: {0}</value>
+    </data>
+  <data name="TbDNSRepairPreviewRemoteFormat" xml:space="preserve">
+      <value>RemoteDNS: {0} -&gt; {1}</value>
+    </data>
+  <data name="TbDNSRepairPreviewBootstrapFormat" xml:space="preserve">
+      <value>BootstrapDNS: {0} -&gt; {1}</value>
+    </data>
+  <data name="TbDNSRepairPreviewChangedFieldsFormat" xml:space="preserve">
+      <value>Changed fields: {0}</value>
+    </data>
+  <data name="TbDNSRepairBlockedCatalog" xml:space="preserve">
+      <value>Apply blocked: resolver catalog audit is missing, invalid, or stale.</value>
+    </data>
+  <data name="TbDNSRepairBlockedTelemetry" xml:space="preserve">
+      <value>Apply blocked: current resolver telemetry does not meet the live safety gate.</value>
+    </data>
+  <data name="TbDNSRepairBlockedSimpleDns" xml:space="preserve">
+      <value>Apply blocked: Simple DNS is currently disabled by custom DNS settings.</value>
+    </data>
+  <data name="TbDNSRepairPreviewReady" xml:space="preserve">
+      <value>Preview ready. Apply persists immediately; Cancel does not undo it. Use Rollback if needed.</value>
+    </data>
+  <data name="TbDNSRepairPreviewBlocked" xml:space="preserve">
+      <value>Preview ready, but Apply is blocked by the current safety gate.</value>
+    </data>
+  <data name="TbDNSRepairPreviewFirst" xml:space="preserve">
+      <value>Preview the current resolver before applying.</value>
+    </data>
+  <data name="TbReviverConfidenceLine" xml:space="preserve">
+      <value>Evidence confidence: {0:P0}</value>
+    </data>
+  <data name="TbReviverFeedbackUnavailable" xml:space="preserve">
+      <value>No promoted repair is available for feedback.</value>
+    </data>
+  <data name="TbReviverFeedbackRecorded" xml:space="preserve">
+      <value>Repair feedback recorded.</value>
+    </data>
+  <data name="TbSettingsUploadProbeUrl" xml:space="preserve"><value>Reviver upload probe URL</value></data>
+  <data name="TbSettingsUploadProbeBytes" xml:space="preserve"><value>Reviver upload probe payload bytes</value></data>
+  <data name="TbSettingsUploadProbeTimeout" xml:space="preserve"><value>Reviver upload probe timeout (seconds)</value></data>
+  <data name="TbSettingsUploadStallFinalMask" xml:space="preserve"><value>Upload-stall finalMask template</value></data>
+  <data name="TbSettingsUploadProbeTip" xml:space="preserve"><value>Optional. PattN posts random, non-secret bytes through the candidate proxy to this HTTP(S) endpoint. Empty disables upload-stall classification.</value></data>
+  <data name="TbSettingsUploadStallFinalMaskTip" xml:space="preserve"><value>Optional. A local Xray finalMask JSON template is tried only after an observed upload stall and must pass normal real-core validation before promotion.</value></data>
+  <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>Check the Reviver upload probe settings: URL must be HTTP(S), payload 1024–1048576 bytes, timeout 1–60 seconds, and finalMask (when set) must contain a non-empty tcp array.</value></data>
+  <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>Revision history unavailable: {0}</value></data>
+  <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} events · {1} promotions · {2} rollbacks · {3} improved · {4} stable · {5} regressed</value></data>
 </root>
