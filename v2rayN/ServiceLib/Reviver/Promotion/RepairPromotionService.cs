@@ -69,6 +69,7 @@ public sealed class RepairPromotionService(
         {
             SessionId = session.Id,
             CandidateId = candidate.Id,
+            StrategyId = candidate.StrategyId,
             OriginalProfileId = session.Original.IndexId,
             OriginalProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(
                 session.Original.CreateWorkingCopy()),
@@ -211,6 +212,7 @@ public sealed class RepairPromotionService(
         {
             SessionId = plan.SessionId,
             CandidateId = plan.CandidateId,
+            StrategyId = plan.StrategyId,
             OriginalProfileId = plan.OriginalProfileId,
             PromotedProfileId = child.IndexId,
             PreviousDefaultProfileId = previousDefault,
