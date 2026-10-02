@@ -60,9 +60,11 @@ public sealed class RepairPromotionHistoryQueryService
     }
 
     public static RepairPromotionHistorySummary Summarize(
-        IReadOnlyList<RepairPromotionHistoryItem> rows)
+        IReadOnlyList<RepairPromotionHistoryItem> rows,
+        DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(rows);
+        var referenceTime = now ?? DateTimeOffset.UtcNow;
 
         var entries = rows
             .OrderByDescending(x => x.ObservedAtUnixMs)
@@ -73,14 +75,50 @@ public sealed class RepairPromotionHistoryQueryService
             .Where(x => x.StrategyId.IsNotEmpty())
             .GroupBy(x => x.StrategyId, StringComparer.Ordinal)
             .OrderBy(x => x.Key, StringComparer.Ordinal)
-            .Select(group => new RepairStrategyHistorySummary
+            .Select(group =>
             {
-                StrategyId = group.Key,
-                Promotions = group.Count(x => x.EventKind == "promoted"),
-                Rollbacks = group.Count(x => x.EventKind == "rolled-back"),
-                Improved = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "improved"),
-                Stable = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "stable"),
-                Regressed = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "regressed"),
+                var promotions = group.Count(x => x.EventKind == "promoted");
+                var rollbacks = group.Count(x => x.EventKind == "rolled-back");
+                var improved = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "improved");
+                var stable = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "stable");
+                var regressed = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "regressed");
+                var rated = improved + stable + regressed;
+
+                double weightedSuccess = 0;
+                double weightedTotal = 0;
+                foreach (var entry in group.Where(x =>
+                             x.EventKind == "promoted"
+                             && x.OutcomeVerdict is "improved" or "stable" or "regressed"))
+                {
+                    var ageDays = Math.Max(0d, (referenceTime - entry.ObservedAt).TotalDays);
+                    var weight = Math.Pow(0.5d, ageDays / 90d);
+                    weightedTotal += weight;
+                    if (entry.OutcomeVerdict is "improved" or "stable")
+                    {
+                        weightedSuccess += weight;
+                    }
+                }
+
+                return new RepairStrategyHistorySummary
+                {
+                    StrategyId = group.Key,
+                    Promotions = promotions,
+                    Rollbacks = rollbacks,
+                    Improved = improved,
+                    Stable = stable,
+                    Regressed = regressed,
+                    RatedPromotions = rated,
+                    SuccessRate = rated == 0
+                        ? null
+                        : (improved + stable) / (double)rated,
+                    RollbackRate = promotions == 0
+                        ? null
+                        : Math.Clamp(rollbacks / (double)promotions, 0d, 1d),
+                    RecencyWeightedSuccessRate = weightedTotal <= 0
+                        ? null
+                        : weightedSuccess / weightedTotal,
+                    LatestEventAt = group.Max(x => x.ObservedAt),
+                };
             })
             .ToArray();
 
