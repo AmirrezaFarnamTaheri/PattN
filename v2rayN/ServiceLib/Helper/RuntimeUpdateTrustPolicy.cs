@@ -12,5 +12,5 @@ namespace ServiceLib.Helper;
 /// </summary>
 public static class RuntimeUpdateTrustPolicy
 {
-    public const bool BlockUnauthenticatedLegacyUpdater = true;
+    public static readonly bool BlockUnauthenticatedLegacyUpdater = true;
 }
