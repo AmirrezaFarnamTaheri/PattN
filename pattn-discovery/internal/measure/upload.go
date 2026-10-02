@@ -3,6 +3,7 @@ package measure
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ type UploadProbeOptions struct {
 	Timeout         time.Duration
 	InterChunkDelay time.Duration
 	AllowPrivate    bool
+	RootCAs         *x509.CertPool
 }
 
 type UploadProbeResult struct {
@@ -101,6 +103,10 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	transport := &http.Transport{
 		Proxy: nil,
 		ForceAttemptHTTP2: true,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			RootCAs: options.RootCAs,
+		},
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 			host, port, err := net.SplitHostPort(address)
 			if err != nil {
