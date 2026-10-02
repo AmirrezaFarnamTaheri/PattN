@@ -89,7 +89,7 @@ jobs:
         security create-keychain -p "$password" "$keychain"
         security set-keychain-settings -lut 21600 "$keychain"
         security unlock-keychain -p "$password" "$keychain"
-        printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/pattn-signing.p12"
+        printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 -D > "$RUNNER_TEMP/pattn-signing.p12"
         security import "$RUNNER_TEMP/pattn-signing.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
         security list-keychains -d user -s "$keychain" login.keychain-db
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain"
@@ -113,7 +113,7 @@ jobs:
           exit 1
         }
         key="$RUNNER_TEMP/AuthKey_$APPLE_NOTARY_KEY_ID.p8"
-        printf '%s' "$APPLE_NOTARY_PRIVATE_KEY_BASE64" | base64 --decode > "$key"
+        printf '%s' "$APPLE_NOTARY_PRIVATE_KEY_BASE64" | base64 -D > "$key"
         dmg="PattN-macos-$Arch.dmg"
         xcrun notarytool submit "$dmg" \
           --key "$key" \
