@@ -5,6 +5,8 @@ namespace ServiceLib.Tests.Reviver;
 
 public class NetworkAutomationTests
 {
+    private const string ValidNetworkKey = "net:v1:0123456789abcdef01234567";
+    private const string ValidGenomeKey = "genome:v1:abcdef0123456789abcdef01";
     [Test]
     public async Task ShadowTesting_ShouldRequireMeaningfulImprovement()
     {
@@ -120,8 +122,8 @@ public class NetworkAutomationTests
         {
             new AnonymousIntelligenceRecord
             {
-                NetworkKey = "net:key",
-                GenomeKey = "genome:key",
+                NetworkKey = ValidNetworkKey,
+                GenomeKey = ValidGenomeKey,
                 FailureClass = "UplinkStall",
                 Confidence = 0.8,
                 StrategyId = "ipv6",
@@ -134,7 +136,7 @@ public class NetworkAutomationTests
         var decoded = service.DecryptSyncPayload(encrypted, key);
 
         await decoded.Count.Should().BeEqualTo(1);
-        await decoded[0].NetworkKey.Should().BeEqualTo("net:key");
+        await decoded[0].NetworkKey.Should().BeEqualTo(ValidNetworkKey);
     }
 
     [Test]
@@ -275,8 +277,8 @@ public class NetworkAutomationTests
         var service = new NetworkAutomationService();
         var rows = Enumerable.Range(0, 5).Select(_ => new AnonymousIntelligenceRecord
         {
-            NetworkKey = "net:key",
-            GenomeKey = "genome:key",
+            NetworkKey = ValidNetworkKey,
+            GenomeKey = ValidGenomeKey,
             FailureClass = "UplinkStall",
             Confidence = 0.8,
             StrategyId = "ipv6",
@@ -308,6 +310,102 @@ public class NetworkAutomationTests
         }
 
         await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Sharing_ShouldRejectRawIdentifiersAndCoarsenTimeBucket()
+    {
+        var service = new NetworkAutomationService();
+        var valid = Enumerable.Range(0, 5).Select(_ => new AnonymousIntelligenceRecord
+        {
+            NetworkKey = ValidNetworkKey,
+            GenomeKey = ValidGenomeKey,
+            FailureClass = "UplinkStall",
+            Confidence = 0.8,
+            StrategyId = "ipv6",
+            Succeeded = true,
+            ObservedAtBucketUnixHours = 49,
+        }).ToArray();
+
+        var batch = service.PrepareShareBatch(valid, new IntelligenceSharingPolicy
+        {
+            ExplicitOptIn = true,
+            Mode = EIntelligencePrivacyMode.AnonymousAggregate,
+            MinimumAggregateSamples = 5,
+        });
+        await batch.Records.Single().ObservedAtBucketUnixHours.Should().BeEqualTo(48);
+
+        var raw = valid.Select(x => x with { NetworkKey = "private-carrier.example" }).ToArray();
+        var rejected = false;
+        try
+        {
+            _ = service.PrepareShareBatch(raw, new IntelligenceSharingPolicy
+            {
+                ExplicitOptIn = true,
+                Mode = EIntelligencePrivacyMode.AnonymousAggregate,
+                MinimumAggregateSamples = 5,
+            });
+        }
+        catch (ArgumentException)
+        {
+            rejected = true;
+        }
+
+        await rejected.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task SyncCodec_ShouldRejectNonDerivedIdentifiers()
+    {
+        var service = new NetworkAutomationService();
+        var key = RandomNumberGenerator.GetBytes(32);
+        var rejected = false;
+        try
+        {
+            _ = service.EncryptSyncPayload(
+            [
+                new AnonymousIntelligenceRecord
+                {
+                    NetworkKey = "raw-network-name",
+                    GenomeKey = ValidGenomeKey,
+                    FailureClass = "UplinkStall",
+                    Confidence = 0.8,
+                    StrategyId = "ipv6",
+                    ObservedAtBucketUnixHours = 48,
+                }
+            ], key);
+        }
+        catch (InvalidDataException)
+        {
+            rejected = true;
+        }
+
+        await rejected.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task FleetHealth_ShouldRejectOverlappingThresholds()
+    {
+        var service = new NetworkAutomationService();
+        var genome = new ProxyGenome
+        {
+            Key = "same",
+            Protocol = "VLESS",
+            Transport = "ws",
+            Core = "Xray",
+        };
+
+        var rejected = false;
+        try
+        {
+            _ = service.BuildFleetHealth([(genome, 0.5d)], healthyThreshold: 0.5d, deadThreshold: 0.5d);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            rejected = true;
+        }
+
+        await rejected.Should().BeTrue();
     }
 
     [Test]
