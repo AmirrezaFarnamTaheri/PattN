@@ -1,5 +1,6 @@
 using System.Globalization;
 using ServiceLib.Discovery.Services;
+using ServiceLib.Reviver.Intelligence;
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Normalization;
 using ServiceLib.Reviver.Promotion;
@@ -127,6 +128,8 @@ public partial class ProfilesViewModel
                 policy);
             var candidateProvider = DiscoveryCandidateComposition.CreateWithRegisteredProviderCatalogs(engine);
             var dnsHistory = new SqliteDnsRepairHistoryStore();
+            var strategyOutcomes = new SqliteStrategyOutcomeStore();
+            var intelligence = new NetworkIntelligenceService();
             var strategies = ReviverStrategyCatalog.CreateDefault(
                 candidateProvider,
                 new DiscoveryDnsRepairEvidenceProvider(engine),
@@ -136,7 +139,10 @@ public partial class ProfilesViewModel
                 invariants,
                 strategies,
                 policy,
-                observers: ReviverStrategyCatalog.CreateDefaultObservers(dnsHistory));
+                observers: ReviverStrategyCatalog.CreateDefaultObservers(
+                    dnsHistory,
+                    strategyOutcomes,
+                    intelligence));
 
             var run = await reviver.ReviveAsync(
                 profile,
@@ -172,7 +178,10 @@ public partial class ProfilesViewModel
             // the service performs compensating writes and must finish its durable
             // transaction boundary. It always creates a detached child and never
             // overwrites the source or changes the current default here.
-            var promotion = new RepairPromotionService(new SqliteRepairPromotionHistoryStore());
+            var promotion = new RepairPromotionService(
+                new SqliteRepairPromotionHistoryStore(),
+                strategyOutcomes: strategyOutcomes,
+                intelligence: intelligence);
             var plan = promotion.Prepare(run.Session, candidate);
             var receipt = await promotion.PromoteAsync(
                 _config,
