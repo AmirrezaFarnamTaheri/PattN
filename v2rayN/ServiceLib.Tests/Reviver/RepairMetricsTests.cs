@@ -6,6 +6,7 @@ namespace ServiceLib.Tests.Reviver;
 public class RepairMetricsTests
 {
     [Test]
+    [NotInParallel]
     public async Task Metrics_ShouldCountOnlyAggregateNonIdentifyingDimensions()
     {
         var strategyId = $"test-{Guid.NewGuid():N}";
