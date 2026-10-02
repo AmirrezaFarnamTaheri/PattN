@@ -227,6 +227,7 @@ public partial class DiscoveryManagementViewModel : MyReactiveObject, ICloseable
             (hasPreview, busy) => hasPreview && !busy);
 
         RefreshAllCmd = ReactiveCommand.CreateFromTask(RefreshAllAsync, canRun);
+        RefreshNetworkIntelligenceCmd = ReactiveCommand.CreateFromTask(RefreshNetworkIntelligenceAsync, canRun);
         RegisterCatalogCmd = ReactiveCommand.CreateFromTask(RegisterCatalogAsync, canRun);
         RefreshCatalogCmd = ReactiveCommand.CreateFromTask(RefreshSelectedCatalogAsync, canUseCatalog);
         ToggleCatalogEnabledCmd = ReactiveCommand.CreateFromTask(ToggleCatalogEnabledAsync, canUseCatalog);
@@ -335,6 +336,7 @@ public partial class DiscoveryManagementViewModel : MyReactiveObject, ICloseable
             await RefreshEndpointsCoreAsync();
             await RefreshPromotionHistoryCoreAsync();
             await RefreshProxyTestHistoryCoreAsync();
+            await RefreshNetworkIntelligenceCoreAsync();
             StatusMessage = ResUI.TbDiscoveryManagementRefreshed;
         });
 
