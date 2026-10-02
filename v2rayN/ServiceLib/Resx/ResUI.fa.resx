@@ -2248,6 +2248,9 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryInspectSpki" xml:space="preserve">
     <value>برای مشاهدهٔ SPKI، کلید فعلی سرور را بررسی کنید.</value>
   </data>
+  <data name="TbRepairHistory" xml:space="preserve">
+    <value>تاریخچهٔ ترمیم</value>
+  </data>
   <data name="TbDiscoveryMaintenance" xml:space="preserve">
     <value>نگه‌داری</value>
   </data>
