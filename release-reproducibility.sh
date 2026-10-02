@@ -56,3 +56,52 @@ pattn_reproducible_tar_gz() {
     -cf - "$entry" \
     | gzip -n > "$output"
 }
+
+# Checksums authenticate bytes; this additionally proves staged native binaries
+# match the package RID before a RISC-V/LoongArch artifact can be emitted.
+pattn_verify_elf_machine() {
+  local file="${1:?ELF file is required}"
+  local rid="${2:?target RID is required}"
+  local label="${3:-$file}"
+  local machine=""
+
+  command -v readelf >/dev/null 2>&1 || {
+    echo "readelf is required to verify ELF architecture for $label" >&2
+    return 1
+  }
+  [[ -s "$file" ]] || {
+    echo "ELF architecture check target is missing or empty: $label ($file)" >&2
+    return 1
+  }
+
+  machine="$(LC_ALL=C readelf -h "$file" 2>/dev/null |
+    sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p' | head -n1)"
+  [[ -n "$machine" ]] || {
+    echo "Unable to read ELF machine for $label ($file)" >&2
+    return 1
+  }
+
+  case "$rid" in
+    linux-x64)
+      [[ "$machine" == *"X86-64"* || "$machine" == *"x86-64"* || "$machine" == *"Advanced Micro Devices"* ]]
+      ;;
+    linux-arm64)
+      [[ "$machine" == *"AArch64"* ]]
+      ;;
+    linux-riscv64)
+      [[ "$machine" == *"RISC-V"* ]]
+      ;;
+    linux-loongarch64)
+      [[ "$machine" == *"LoongArch"* ]]
+      ;;
+    *)
+      echo "Unsupported ELF target RID: $rid" >&2
+      return 1
+      ;;
+  esac || {
+    echo "ELF architecture mismatch for $label: target=$rid, machine=$machine" >&2
+    return 1
+  }
+
+  echo "[OK] ELF architecture $label: target=$rid, machine=$machine"
+}
