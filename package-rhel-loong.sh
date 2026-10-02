@@ -382,7 +382,7 @@ download_geo_assets() {
   pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/geoip-only-cn-private.dat" "$bin_dir/geoip-only-cn-private.dat" "$expected"
   expected="$(pattn_raw_rule_blob_sha1 loyal Country.mmdb)"
   pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/Country.mmdb" "$bin_dir/Country.mmdb" "$expected"
-  pattn_download_sha256 "https://github.com/MetaCubeX/meta-rules-dat/releases/download/${PATTN_METACUBEX_GEOIP_METADB_RELEASE}/geoip.metadb" "$bin_dir/geoip.metadb" "$PATTN_METACUBEX_GEOIP_METADB_SHA256"
+  pattn_download_git_blob "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/${PATTN_METACUBEX_RELEASE_COMMIT}/geoip.metadb" "$bin_dir/geoip.metadb" "$PATTN_METACUBEX_GEOIP_METADB_BLOB_SHA1"
 
   for f in geoip-private.srs geoip-cn.srs geoip-facebook.srs geoip-fastly.srs geoip-google.srs geoip-netflix.srs geoip-telegram.srs geoip-twitter.srs; do
     expected="$(pattn_raw_rule_blob_sha1 geoip "$f")"
