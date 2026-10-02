@@ -54,8 +54,37 @@ def run(argv: list[str], *, cwd: str = REPO_ROOT, check: bool = True) -> str:
     return proc.stdout
 
 
+def ensure_full_history(*, dry_run: bool = False) -> str:
+    """Deepen a shallow clone, or say why ancestry cannot be computed.
+
+    `actions/checkout` defaults to `fetch-depth: 1`, and CI's stack-audit job ran on exactly such a
+    checkout: `git merge-base` then fails with exit 1 (it cannot find a common ancestor), and the
+    *gate* looked broken when the repository simply had no history. Detected, not guessed -- the same
+    command is what the local runbook tells you to check first.
+    """
+    shallow = run(["git", "rev-parse", "--is-shallow-repository"]).strip() == "true"
+    if not shallow:
+        return "full"
+    if dry_run:
+        return "shallow"
+    run(["git", "fetch", "--quiet", "--unshallow", "origin", "+refs/heads/*:refs/remotes/origin/*"])
+    still = run(["git", "rev-parse", "--is-shallow-repository"]).strip() == "true"
+    return "shallow-after-fetch" if still else "unshallowed"
+
+
 def gh_json(args: list[str]) -> object:
-    out = run(["gh", "api", *args])
+    try:
+        out = run(["gh", "api", *args])
+    except GateError as exc:
+        # In CI the token is present (github.token) but `gh` itself is only on runner images; a
+        # plain "command failed (1): gh api ..." made the job look like a stack failure. Name the
+        # real cause so a reader does not start auditing PRs that are fine.
+        if "gh" in str(exc) and ("No such file" in str(exc) or "not found" in str(exc)):
+            raise GateError(
+                "the `gh` CLI is not available in this environment; this gate needs it to list "
+                "open pull requests (CI supplies it, and `GH_TOKEN`/`actions/GITHUB_TOKEN` authorises it)"
+            ) from exc
+        raise
     return json.loads(out) if out.strip() else None
 
 
@@ -187,6 +216,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="compare the whole PR-side change set (merge-base..head) with blob parity "
         "instead of only the two-dot payload GitHub attributes to the PR.",
     )
+    p.add_argument(
+        "--no-deepen",
+        action="store_true",
+        help="do not auto-unshallow a shallow clone before computing merge-base "
+        "(CI checkouts default to fetch-depth: 1, where merge-base fails and looks like a stack failure)",
+    )
     p.add_argument("--json", action="store_true")
     return p.parse_args(argv)
 
@@ -194,6 +229,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     prefixes = tuple(args.parity_prefix or ["split/"])
+    state = ensure_full_history(dry_run=args.no_deepen)
+    if state != "full":
+        print(f"note: clone history state after preparation: {state}", file=sys.stderr)
     allow = {x.strip() for x in args.allow_drift.split(",") if x.strip()}
 
     pulls = list_open_pulls(args.repo)
