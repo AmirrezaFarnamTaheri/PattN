@@ -31,6 +31,37 @@ func TestParseAndCount(t *testing.T) {
 	}
 }
 
+func TestParseMappedIPv6PrefixUsesNativeIPv4Family(t *testing.T) {
+	r, err := Parse("::ffff:192.0.2.0/120")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !r.Start.Is4() || !r.End.Is4() {
+		t.Fatalf("mapped prefix must normalize both bounds to native IPv4: %s..%s", r.Start, r.End)
+	}
+	if got, want := r.Start.String(), "192.0.2.0"; got != want {
+		t.Fatalf("start=%s want=%s", got, want)
+	}
+	if got, want := r.End.String(), "192.0.2.255"; got != want {
+		t.Fatalf("end=%s want=%s", got, want)
+	}
+	if got, want := r.Count().String(), "256"; got != want {
+		t.Fatalf("count=%s want=%s", got, want)
+	}
+
+	var got []netip.Addr
+	if err := Stream(context.Background(), []Range{r}, 2, func(addr netip.Addr) error {
+		got = append(got, addr)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := []netip.Addr{netip.MustParseAddr("192.0.2.0"), netip.MustParseAddr("192.0.2.1")}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("stream=%v want=%v", got, want)
+	}
+}
+
 func TestStreamIsLazyAndBounded(t *testing.T) {
 	r, err := Parse("10.0.0.0/8")
 	if err != nil {

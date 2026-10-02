@@ -50,12 +50,12 @@ jobs:
   workflow-lint:
     name: Validate GitHub Actions workflows
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Audit release packaging integrity lock
-      if: ${{ hashFiles('release-assets.lock.sh', 'release-reproducibility.sh') != '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -77,6 +77,24 @@ jobs:
           set -euo pipefail
           # shellcheck source=release-reproducibility.sh
           source ./release-reproducibility.sh
+
+          host_rid=""
+          wrong_rid=""
+          case "$(uname -m)" in
+            x86_64)  host_rid="linux-x64"; wrong_rid="linux-riscv64" ;;
+            aarch64) host_rid="linux-arm64"; wrong_rid="linux-riscv64" ;;
+          esac
+          if [[ -n "$host_rid" ]]; then
+            command -v readelf >/dev/null 2>&1 || {
+              echo "::error::readelf is required for release validation"
+              exit 1
+            }
+            pattn_verify_elf_machine /bin/sh "$host_rid" "CI shell"
+            if pattn_verify_elf_machine /bin/sh "$wrong_rid" "negative-control shell" 2>/dev/null; then
+              echo "::error::ELF architecture negative self-test unexpectedly passed"
+              exit 1
+            fi
+          fi
           repro_tmp="$(mktemp -d)"
           trap 'rm -rf "$repro_tmp"' EXIT
           mkdir -p "$repro_tmp/a/tree" "$repro_tmp/b/tree"
@@ -115,6 +133,12 @@ jobs:
         pattn_core_bundle_blob_sha1 macos-arm64 >/dev/null
         pattn_xray_sha256 windows-32 >/dev/null
         pattn_singbox_sha256 windows-386 >/dev/null
+        for asset in \
+          Xray-linux-64.zip Xray-linux-arm64-v8a.zip Xray-linux-riscv64.zip Xray-linux-loong64.zip \
+          Xray-macos-64.zip Xray-macos-arm64-v8a.zip \
+          Xray-windows-32.zip Xray-windows-64.zip Xray-windows-arm64-v8a.zip; do
+          pattn_xray_asset_id "$asset" >/dev/null
+        done
 
         tmp="$(mktemp)"
         trap 'rm -f "$tmp"' EXIT
@@ -144,6 +168,8 @@ jobs:
         trap 'rm -f "$tmp" "$download_src" "$download_dst"' EXIT
         printf 'verified-download-payload\n' > "$download_src"
         download_sha="$(pattn_sha256_file "$download_src")"
+        download_sha512="$(pattn_sha512_file "$download_src")"
+        download_blob="$(pattn_git_blob_sha1 "$download_src")"
         pattn_download_sha256 "file://$download_src" "$download_dst" "$download_sha"
         cmp "$download_src" "$download_dst"
 
@@ -151,6 +177,33 @@ jobs:
           echo "::error::corrupted/unexpected download negative self-test unexpectedly passed"
           exit 1
         fi
+
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed SHA-256 verification left an unverified output file"
+          exit 1
+        }
+
+        pattn_download_sha512 "file://$download_src" "$download_dst" "$download_sha512"
+        cmp "$download_src" "$download_dst"
+        if pattn_download_sha512 "file://$download_src" "$download_dst" "$(printf '0%.0s' {1..128})"; then
+          echo "::error::SHA-512 download negative self-test unexpectedly passed"
+          exit 1
+        fi
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed SHA-512 verification left an unverified output file"
+          exit 1
+        }
+
+        pattn_download_git_blob "file://$download_src" "$download_dst" "$download_blob"
+        cmp "$download_src" "$download_dst"
+        if pattn_download_git_blob "file://$download_src" "$download_dst" "0000000000000000000000000000000000000000"; then
+          echo "::error::Git-blob download negative self-test unexpectedly passed"
+          exit 1
+        fi
+        [[ ! -e "$download_dst" ]] || {
+          echo "::error::failed Git-blob verification left an unverified output file"
+          exit 1
+        }
 
         if grep -nE           'refs/heads/(master|main|release|rule-set)|releases/latest/download|dot\.net/v1/dotnet-install|bin/Release/net10\.0|MIN_KERNEL='           package-*.sh; then
           echo "::error::release packager reintroduced a mutable asset URL, hardcoded TFM path, or kernel heuristic"
@@ -262,7 +315,6 @@ jobs:
         }
 
     - name: Run verified actionlint
-      if: ${{ hashFiles('release-assets.lock.sh') != '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -280,6 +332,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -451,17 +504,14 @@ jobs:
         go test ./cmd/pattn-discovery -run=^$ -fuzz=^FuzzNDJSONFraming$ -fuzztime=3s
 
     - name: Audit committed fuzz regression corpus
-      if: ${{ hashFiles('pattn-discovery/cmd/fuzz-corpus-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/fuzz-corpus-audit -root .
 
     - name: Audit DNS root trust-anchor snapshot
-      if: ${{ hashFiles('pattn-discovery/cmd/dns-trust-anchor-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/dns-trust-anchor-audit -max-age-days 90
 
     - name: Audit DNS fixture corpus
-      if: ${{ hashFiles('pattn-discovery/cmd/dns-fixture-audit/**') != '' }}
       working-directory: ./pattn-discovery
       run: go run ./cmd/dns-fixture-audit -root ./internal/dnsfixture/testdata -fail-on-orphans
 
@@ -469,11 +519,9 @@ jobs:
       run: dotnet test --project ./v2rayN/ServiceLib.Tests -c Release --results-directory ./TestResults -- --report-trx
 
     - name: Build durability fault harness
-      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
       run: dotnet build ./v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj -c Release
 
     - name: Abrupt-loss recovery smoke
-      if: ${{ hashFiles('v2rayN/ServiceLib.FaultHarness/ServiceLib.FaultHarness.csproj') != '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -557,6 +605,7 @@ jobs:
   ui-build:
     name: Build WPF and Avalonia UI
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
     - name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

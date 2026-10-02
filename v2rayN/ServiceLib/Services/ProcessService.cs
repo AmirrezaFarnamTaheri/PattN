@@ -4,6 +4,7 @@ public class ProcessService : IDisposable
 {
     private readonly Process _process;
     private readonly Func<bool, string, Task>? _updateFunc;
+    private readonly IReadOnlyList<string> _cleanupPaths;
     private bool _isDisposed;
 
     public int Id => _process.Id;
@@ -17,9 +18,15 @@ public class ProcessService : IDisposable
         bool displayLog,
         bool redirectInput,
         Dictionary<string, string>? environmentVars,
-        Func<bool, string, Task>? updateFunc)
+        Func<bool, string, Task>? updateFunc,
+        IEnumerable<string>? cleanupPaths = null)
     {
         _updateFunc = updateFunc;
+        _cleanupPaths = cleanupPaths?
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray()
+            ?? [];
 
         _process = new Process
         {
@@ -172,6 +179,20 @@ public class ProcessService : IDisposable
         catch (Exception ex)
         {
             _updateFunc?.Invoke(true, ex.Message);
+        }
+        finally
+        {
+            foreach (var path in _cleanupPaths)
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (Exception ex)
+                {
+                    Logging.SaveLog(nameof(ProcessService), ex);
+                }
+            }
         }
 
         _isDisposed = true;

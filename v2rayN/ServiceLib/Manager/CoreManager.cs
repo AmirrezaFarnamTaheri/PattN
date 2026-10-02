@@ -112,6 +112,7 @@ public class CoreManager
         await UpdateFunc(false, result.Msg);
         if (result.Success != true)
         {
+            TryDeleteEphemeralConfig(configPath);
             return null;
         }
 
@@ -119,7 +120,12 @@ public class CoreManager
         await UpdateFunc(false, configPath);
 
         var coreInfo = CoreInfoManager.Instance.GetCoreInfo(coreType);
-        return await RunProcess(coreInfo, fileName, true, false);
+        var process = await RunProcess(coreInfo, fileName, true, false, cleanupFilePath: configPath);
+        if (process is null)
+        {
+            TryDeleteEphemeralConfig(configPath);
+        }
+        return process;
     }
 
     public async Task<ProcessService?> LoadCoreConfigSpeedtest(ServerTestItem testItem)
@@ -142,6 +148,7 @@ public class CoreManager
         var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, context, testItem, configPath);
         if (result.Success != true)
         {
+            TryDeleteEphemeralConfig(configPath);
             return null;
         }
 
@@ -149,7 +156,12 @@ public class CoreManager
         testItem.CoreType = coreType;
         testItem.Profile = node;
         var coreInfo = CoreInfoManager.Instance.GetCoreInfo(coreType);
-        return await RunProcess(coreInfo, fileName, true, false);
+        var process = await RunProcess(coreInfo, fileName, true, false, cleanupFilePath: configPath);
+        if (process is null)
+        {
+            TryDeleteEphemeralConfig(configPath);
+        }
+        return process;
     }
 
     public async Task CoreStop()
@@ -310,7 +322,13 @@ public class CoreManager
             && isNonWindows;
     }
 
-    private async Task<ProcessService?> RunProcess(CoreInfo? coreInfo, string configPath, bool displayLog, bool mayNeedSudo, bool isTunLaunch = false)
+    private async Task<ProcessService?> RunProcess(
+        CoreInfo? coreInfo,
+        string configPath,
+        bool displayLog,
+        bool mayNeedSudo,
+        bool isTunLaunch = false,
+        string? cleanupFilePath = null)
     {
         var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out var msg);
         if (fileName.IsNullOrEmpty())
@@ -329,7 +347,7 @@ public class CoreManager
                 return await CoreAdminManager.Instance.RunProcessAsLinuxSudo(fileName, coreInfo, configPath);
             }
 
-            return await RunProcessNormal(fileName, coreInfo, configPath, displayLog);
+            return await RunProcessNormal(fileName, coreInfo, configPath, displayLog, cleanupFilePath);
         }
         catch (Exception ex)
         {
@@ -339,7 +357,12 @@ public class CoreManager
         }
     }
 
-    private async Task<ProcessService?> RunProcessNormal(string fileName, CoreInfo? coreInfo, string configPath, bool displayLog)
+    private async Task<ProcessService?> RunProcessNormal(
+        string fileName,
+        CoreInfo? coreInfo,
+        string configPath,
+        bool displayLog,
+        string? cleanupFilePath = null)
     {
         var environmentVars = new Dictionary<string, string>();
         foreach (var kv in coreInfo.Environment)
@@ -354,7 +377,8 @@ public class CoreManager
             displayLog: displayLog,
             redirectInput: false,
             environmentVars: environmentVars,
-            updateFunc: _updateFunc
+            updateFunc: _updateFunc,
+            cleanupPaths: cleanupFilePath.IsNotEmpty() ? new[] { cleanupFilePath! } : null
         );
 
         await procService.StartAsync();
@@ -368,6 +392,18 @@ public class CoreManager
         AddProcessJob(procService.Handle);
 
         return procService;
+    }
+
+    private static void TryDeleteEphemeralConfig(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(nameof(CoreManager), ex);
+        }
     }
 
     private void AddProcessJob(nint processHandle)

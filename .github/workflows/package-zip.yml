@@ -9,12 +9,16 @@ on:
       target: # windows linux macos windows-desktop
         required: true
         type: string
+      publish_release:
+        required: false
+        type: boolean
+        default: true
     secrets:
       GPG_PRIVATE_KEY:
-        required: true
+        required: false
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 jobs:
@@ -25,78 +29,112 @@ jobs:
         arch: [ x64, arm64 ]
     runs-on: ubuntu-latest
     env:
-      Target: |- 
-        ${{
-          case(
-            inputs.target == 'windows-desktop', 'windows',
-            inputs.target
-          )
-        }}
-      Arch: |-
-        ${{
-          case(
-            matrix.arch == 'x64', '64',
-            matrix.arch
-          ) 
-        }}
+      Target: ${{ case(inputs.target == 'windows-desktop', 'windows', inputs.target) }}
+      Arch: ${{ case(matrix.arch == 'x64', '64', matrix.arch) }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
 
     - name: Restore build artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
       with:
         name: ${{ matrix.arch }}
         path: PattN-${{ env.Target }}-${{ env.Arch }}
 
-    - name: Get v2rayN-core-bin
-      run: |
-        wget -nv -O core-bin.zip "https://github.com/2dust/v2rayN-core-bin/raw/refs/heads/master/v2rayN-${Target}-${Arch}.zip"
-        7z x -y core-bin.zip
-        cp -an "v2rayN-${Target}-${Arch}/." "PattN-${Target}-${Arch}/"
-
-    - name: Bundle patterniha/Xray-core
+    - name: Bundle locked runtime assets
+      shell: bash
       run: |
         set -euo pipefail
-        case "${Target}-${Arch}" in
+        # shellcheck source=release-assets.lock.sh
+        source ./release-assets.lock.sh
+        rid="$Target-$Arch"
+        if [[ "$rid" == "linux-64" ]]; then
+          rid="linux-x64"
+        fi
+
+        core_blob="$(pattn_core_bundle_blob_sha1 "$rid")" || {
+          echo "::error::no locked core bundle for $rid"
+          exit 1
+        }
+        core_url="https://raw.githubusercontent.com/2dust/v2rayN-core-bin/${PATTN_CORE_BIN_COMMIT}/v2rayN-${Target}-${Arch}.zip"
+        pattn_download_git_blob "$core_url" core-bin.zip "$core_blob"
+        7z x -y core-bin.zip
+        cp -an "v2rayN-$Target-$Arch/." "PattN-$Target-$Arch/"
+
+        case "$rid" in
           windows-64)    asset=Xray-windows-64.zip ;;
           windows-arm64) asset=Xray-windows-arm64-v8a.zip ;;
-          linux-64)      asset=Xray-linux-64.zip ;;
+          linux-x64)     asset=Xray-linux-64.zip ;;
           linux-arm64)   asset=Xray-linux-arm64-v8a.zip ;;
           macos-64)      asset=Xray-macos-64.zip ;;
           macos-arm64)   asset=Xray-macos-arm64-v8a.zip ;;
-          *) echo "::error::no Xray asset mapping for ${Target}-${Arch}"; exit 1 ;;
+          *) echo "::error::no Xray asset mapping for $rid"; exit 1 ;;
         esac
-        wget -nv -O xray-core.zip "https://github.com/patterniha/Xray-core/releases/latest/download/${asset}"
+        xray_sha="$(pattn_xray_sha256 "$rid")" || {
+          echo "::error::no locked Xray digest for $rid"
+          exit 1
+        }
+        pattn_download_sha256           "https://github.com/patterniha/Xray-core/releases/download/v${PATTN_XRAY_VERSION}/$asset"           xray-core.zip           "$xray_sha"
         7z x -y -oxray-core xray-core.zip
-        mkdir -p "PattN-${Target}-${Arch}/bin/xray"
-        cp -f xray-core/xray* "PattN-${Target}-${Arch}/bin/xray/"
-        chmod +x "PattN-${Target}-${Arch}/bin/xray/xray" 2>/dev/null || true
+        mkdir -p "PattN-$Target-$Arch/bin/xray"
+        cp -f xray-core/xray* "PattN-$Target-$Arch/bin/xray/"
+        chmod +x "PattN-$Target-$Arch/bin/xray/xray" 2>/dev/null || true
 
-    - name: Bundle Chocolate4U geo files
+        pattn_download_sha256           "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geosite.dat"           "PattN-$Target-$Arch/bin/geosite.dat"           "$PATTN_IRAN_GEOSITE_SHA256"
+        pattn_download_sha256           "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geoip.dat"           "PattN-$Target-$Arch/bin/geoip.dat"           "$PATTN_IRAN_GEOIP_SHA256"
+
+        mkdir -p "PattN-$Target-$Arch/bin/srss"
+        for rule in geosite-category-ir.srs geoip-ir.srs; do
+          expected="$(pattn_raw_rule_blob_sha1 iran "$rule")" || {
+            echo "::error::no locked Iran rule digest for $rule"
+            exit 1
+          }
+          pattn_download_git_blob             "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/${PATTN_IRAN_SING_RULES_COMMIT}/$rule"             "PattN-$Target-$Arch/bin/srss/$rule"             "$expected"
+        done
+
+    - name: Verify bundled pattn-discovery
+      shell: bash
       run: |
         set -euo pipefail
-        wget -nv -O "PattN-${Target}-${Arch}/bin/geosite.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geosite.dat"
-        wget -nv -O "PattN-${Target}-${Arch}/bin/geoip.dat" "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/latest/download/geoip.dat"
-        mkdir -p "PattN-${Target}-${Arch}/bin/srss"
-        wget -nv -O "PattN-${Target}-${Arch}/bin/srss/geosite-category-ir.srs" "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/rule-set/geosite-category-ir.srs"
-        wget -nv -O "PattN-${Target}-${Arch}/bin/srss/geoip-ir.srs" "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/rule-set/geoip-ir.srs"
+        helper="PattN-$Target-$Arch/bin/pattn-discovery/pattn-discovery"
+        if [[ "$Target" == "windows" ]]; then
+          helper="$helper.exe"
+        fi
+        [[ -s "$helper" ]] || { echo "::error::missing bundled discovery helper: $helper"; exit 1; }
 
-    - name: Package zip archive
-      run: 7z a -tZip "PattN-${Target}-${Arch}.zip" "PattN-${Target}-${Arch}" -mx1
+    - name: Package deterministic zip archive
+      shell: bash
+      run: |
+        set -euo pipefail
+        epoch="$(git show -s --format=%ct "$GITHUB_SHA")"
+        first="$RUNNER_TEMP/PattN-$Target-$Arch.first.zip"
+        second="$RUNNER_TEMP/PattN-$Target-$Arch.second.zip"
+        python3 scripts/deterministic_zip.py "PattN-$Target-$Arch" "$first" --epoch "$epoch"
+        python3 scripts/deterministic_zip.py "PattN-$Target-$Arch" "$second" --epoch "$epoch"
+        cmp "$first" "$second" || {
+          echo "::error::deterministic ZIP self-check failed"
+          exit 1
+        }
+        mv "$first" "PattN-$Target-$Arch.zip"
 
     - name: Rename windows-desktop
       if: inputs.target == 'windows-desktop'
-      run: mv "PattN-${Target}-${Arch}.zip" "PattN-${Target}-${Arch}-desktop.zip"
+      run: mv "PattN-$Target-$Arch.zip" "PattN-$Target-$Arch-desktop.zip"
 
     - name: Upload zip artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: release-${{ inputs.target }}-${{ matrix.arch }}
         path: PattN*.zip
         if-no-files-found: error
 
   release:
+    if: inputs.publish_release && inputs.release_tag != ''
+    permissions:
+      contents: write
+      actions: read
     name: sign and upload zip x64 arm64
     needs: package
     strategy:

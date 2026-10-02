@@ -1,0 +1,121 @@
+name: Stack & Localization Audit
+
+# Static gates for the Discovery/Reviver review stack. Both checks are pure
+# (git + python3, no toolchain), so they run on every PR in seconds and guard
+# the two failure modes this repo has actually hit:
+#   1. a split PR drifting behind its own base and silently reverting hardening
+#      when merged  -> scripts/check_stack_sync.py
+#   2. a view binding a resource key that was deleted from ResUI.resx, which
+#      compiles and throws at window load -> scripts/check_localization.py
+#   3. a sync merge on the stack's aggregation base resolving a *shared* slice file
+#      to an older side (dff02073 dropped five Reviver model members that the
+#      services it kept still call), which payload parity cannot see
+#      -> scripts/check_stack_sync.py (shared-slice check)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/stack-audit.yml'
+      - 'scripts/check_stack_sync.py'
+      - 'scripts/check_localization.py'
+      - 'scripts/check_test_assertions.py'
+      - 'v2rayN/ServiceLib/Resx/**'
+      - 'v2rayN/ServiceLib.Tests/**'
+      - 'v2rayN/ServiceLib/Discovery/**'
+      - 'v2rayN/ServiceLib/Reviver/**'
+      - 'v2rayN/ServiceLib/Helper/SqliteHelper.cs'
+      - 'v2rayN/ServiceLib/Manager/AppManager.cs'
+      - 'v2rayN/v2rayN/**'
+      - 'v2rayN/v2rayN.Desktop/**'
+      - 'pattn-discovery/**'
+  push:
+    branches:
+      - my-releases
+      - feat/discovery-reviver-integration
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  localization-parity:
+    name: ResUI key parity (R1/R2/R3)
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to the same full commit SHA the repo's other workflows use: the
+      # "Audit release packaging integrity lock" step rejects any `uses:` that is
+      # not a 40-hex digest, so an unpinned tag here fails *every* PR's validate job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      # No setup-python: ubuntu-latest's python3 is >= 3.11, which is all these
+      # stdlib-only gates need -- and actions/setup-python is not pinned anywhere
+      # in this repo, so there is no SHA here I could honestly reuse.
+      - name: Scoped to this PR's checkout
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/check_localization.py
+      - name: Whole tree (push / manual)
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/check_localization.py
+
+  test-assertions:
+    name: Test-source assertion hygiene
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to the SHA this repository uses elsewhere; the integrity step to the left of
+      # this file rejects any `uses:` that is not a 40-hex commit digest.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: No message arguments on no-argument TUnit assertions, no await in non-async methods
+        run: python3 scripts/check_test_assertions.py
+
+  stack-sync:
+    name: Split-stack integrity (ancestry + blob parity + shared slice)
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to the same full commit SHA the repo's other workflows use: the
+      # "Audit release packaging integrity lock" step rejects any `uses:` that is
+      # not a 40-hex digest, so an unpinned tag here fails *every* PR's validate job.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      # No setup-python: ubuntu-latest's python3 is >= 3.11, which is all these
+      # stdlib-only gates need -- and actions/setup-python is not pinned anywhere
+      # in this repo, so there is no SHA here I could honestly reuse.
+      - name: Split PRs contain their base tip, match the integration ref and keep the shared slice
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_stack_sync.py
+
+      # A push to the integration branch (or my-releases) advances the base of every PR stacked on it.
+      # Those PRs are legitimately "behind" until they are resynced, and that finding belongs to no PR
+      # under review -- so on a push the gate enforces the invariant that actually reverts hardening when
+      # a split merges late (blob parity), and ancestry stays where it is actionable: the PR event.
+      - name: Split PRs match the integration ref and keep the shared slice (parity only after a base move)
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_stack_sync.py --skip-base-ancestry
+
+      # Executable negative control for the shared-slice check: it must flag a ref that is
+      # known to have dropped part of the slice. dff02073 is the merge that did exactly that
+      # on 2026-10-02 (three Reviver model files rewound to their pre-merge blob, 17 lines of
+      # hardening among them); it is named here as a *control*, not as live state. If history
+      # is ever rewritten and the commit disappears, the step says so instead of failing the
+      # build -- a control that silently passes would be worse than no control.
+      - name: Shared-slice check has not gone dead (negative control on dff02073)
+        run: |
+          if git cat-file -e dff02073 2>/dev/null; then
+            if python3 scripts/check_stack_sync.py --check-slice-of dff02073 >/dev/null 2>&1; then
+              echo "::error::the shared-slice check accepted a ref that dropped part of the slice"
+              exit 1
+            fi
+            echo "control ok: dff02073 is flagged (expected exit 1)"
+          else
+            echo "control skipped: dff02073 is not in this clone (history rewritten?)"
+          fi

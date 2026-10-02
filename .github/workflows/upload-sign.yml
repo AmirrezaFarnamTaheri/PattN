@@ -29,11 +29,149 @@ jobs:
   upload:
     runs-on: ubuntu-26.04
     steps:
+    - name: Checkout release metadata generator source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
+
     - name: Download release artifact
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
       with:
         name: ${{ inputs.artifact_name }}
         path: dist
+
+    - name: Validate release inputs
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: |
+        set -euo pipefail
+        [[ "$RELEASE_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-P[0-9]+)?$ ]] || {
+          echo "::error::release_tag must be x.y.z or x.y.z-Pn (got '$RELEASE_TAG')"
+          exit 1
+        }
+
+    - name: Generate checksums, SPDX inventory and provenance
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        FILE_PATTERN: ${{ inputs.file_pattern }}
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        SOURCE_REPOSITORY: ${{ github.repository }}
+        SOURCE_SHA: ${{ github.sha }}
+        WORKFLOW_REF: ${{ github.workflow_ref }}
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        import glob
+        import hashlib
+        import json
+        import os
+        from datetime import datetime, timezone
+        from pathlib import Path
+
+        dist = Path("dist")
+        pattern = os.environ["FILE_PATTERN"]
+        artifact_name = os.environ["ARTIFACT_NAME"]
+        prefix = "".join(c if c.isalnum() or c in "._-" else "_" for c in artifact_name)
+
+        matched = sorted(
+            Path(p) for p in glob.glob(str(dist / pattern), recursive=True)
+            if Path(p).is_file() and not p.endswith(".sig")
+        )
+        if not matched:
+            raise SystemExit(f"No release files matched for metadata: {pattern}")
+
+        entries = []
+        for path in matched:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            entries.append((path.relative_to(dist).as_posix(), digest, path.stat().st_size))
+
+        checksums = dist / f"{prefix}.checksums.sha256"
+        checksums.write_text(
+            "".join(f"{digest}  {name}\n" for name, digest, _ in entries),
+            encoding="utf-8",
+        )
+
+        provenance = {
+            "_type": "https://in-toto.io/Statement/v1",
+            "subject": [
+                {"name": name, "digest": {"sha256": digest}}
+                for name, digest, _ in entries
+            ],
+            "predicateType": "https://slsa.dev/provenance/v1",
+            "predicate": {
+                "buildDefinition": {
+                    "buildType": "https://github.com/Attestations/GitHubActionsWorkflow@v1",
+                    "externalParameters": {
+                        "releaseTag": os.environ["RELEASE_TAG"],
+                        "artifactName": artifact_name,
+                    },
+                    "resolvedDependencies": [{
+                        "uri": f"git+https://github.com/{os.environ['SOURCE_REPOSITORY']}@{os.environ['SOURCE_SHA']}",
+                        "digest": {"gitCommit": os.environ["SOURCE_SHA"]},
+                    }],
+                },
+                "runDetails": {
+                    "builder": {"id": os.environ["WORKFLOW_REF"]},
+                    "metadata": {
+                        "invocationId": f"{os.environ['RUN_ID']}/{os.environ['RUN_ATTEMPT']}",
+                    },
+                },
+            },
+        }
+        (dist / f"{prefix}.provenance.json").write_text(
+            json.dumps(provenance, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        spdx = {
+            "spdxVersion": "SPDX-2.3",
+            "dataLicense": "CC0-1.0",
+            "SPDXID": "SPDXRef-DOCUMENT",
+            "name": f"PattN-{artifact_name}",
+            "documentNamespace": (
+                f"https://github.com/{os.environ['SOURCE_REPOSITORY']}/"
+                f"actions/runs/{os.environ['RUN_ID']}/{artifact_name}"
+            ),
+            "creationInfo": {
+                "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "creators": ["Tool: PattN release metadata generator"],
+            },
+            "files": [
+                {
+                    "fileName": name,
+                    "SPDXID": f"SPDXRef-File-{index}",
+                    "checksums": [{"algorithm": "SHA256", "checksumValue": digest}],
+                    "fileTypes": ["BINARY"],
+                    "comment": f"release artifact size={size}",
+                }
+                for index, (name, digest, size) in enumerate(entries, start=1)
+            ],
+        }
+        (dist / f"{prefix}.sbom.spdx.json").write_text(
+            json.dumps(spdx, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        PY
+
+    - name: Generate declared dependency SBOM
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        SOURCE_REPOSITORY: ${{ github.repository }}
+        SOURCE_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        prefix="$ARTIFACT_NAME"
+        prefix="${prefix//[^A-Za-z0-9._-]/_}"
+        python3 scripts/generate_dependency_sbom.py \
+          --root . \
+          --output "dist/$prefix.dependencies.spdx.json" \
+          --source-sha "$SOURCE_SHA" \
+          --repository "$SOURCE_REPOSITORY"
 
     - name: Import GPG private key
       shell: bash
@@ -46,35 +184,54 @@ jobs:
 
     - name: Sign release files
       shell: bash
+      env:
+        FILE_PATTERN: ${{ inputs.file_pattern }}
+      run: |
+        set -euo pipefail
+        cd dist
+        case "$FILE_PATTERN" in
+          /*|../*|*/../*|*/..)
+            echo "file_pattern must stay within the downloaded artifact: $FILE_PATTERN" >&2
+            exit 1
+            ;;
+        esac
+        shopt -s globstar nullglob
+        mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
+        prefix="${{ inputs.artifact_name }}"
+        prefix="${prefix//[^A-Za-z0-9._-]/_}"
+        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json" "$prefix.dependencies.spdx.json")
+        (( ${#files[@]} )) || { echo "No files matched: $FILE_PATTERN"; exit 1; }
+        for f in "${files[@]}"; do
+          [[ -f "$f" ]] || { echo "Missing release metadata/file: $f"; exit 1; }
+          gpg --batch --yes --armor --detach-sign --output "$f.sig" "$f"
+        done
+
+    - name: Upload signed assets with GitHub CLI
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        FILE_PATTERN: ${{ inputs.file_pattern }}
       run: |
         set -euo pipefail
         cd dist
         shopt -s globstar nullglob
-        files=( ${{ inputs.file_pattern }} )
-        (( ${#files[@]} )) || { echo "No files matched: ${{ inputs.file_pattern }}"; exit 1; }
+        mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
+        prefix="${{ inputs.artifact_name }}"
+        prefix="${prefix//[^A-Za-z0-9._-]/_}"
+        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json" "$prefix.dependencies.spdx.json")
+        (( ${#files[@]} )) || { echo "No release files matched: $FILE_PATTERN"; exit 1; }
+
+        assets=()
         for f in "${files[@]}"; do
           [[ -f "$f" ]] || continue
-          gpg --batch --yes --armor --detach-sign --output "$f.sig" "$f"
+          [[ -f "$f.sig" ]] || { echo "Missing signature for $f"; exit 1; }
+          assets+=("$f" "$f.sig")
         done
+        (( ${#assets[@]} )) || { echo "No regular release files matched"; exit 1; }
 
-    - name: Upload release files
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/${{ inputs.file_pattern }}
-        tag: ${{ inputs.release_tag }}
-        release_name: PattN v${{ inputs.release_tag }}
-        body: "."
-        file_glob: true
-        prerelease: true
-        overwrite: true
-
-    - name: Upload release signatures
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/${{ inputs.file_pattern }}.sig
-        tag: ${{ inputs.release_tag }}
-        release_name: PattN v${{ inputs.release_tag }}
-        body: "."
-        file_glob: true
-        prerelease: true
-        overwrite: true
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes "." --prerelease
+        fi
+        gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

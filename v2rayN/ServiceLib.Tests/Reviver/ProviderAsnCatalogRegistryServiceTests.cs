@@ -100,6 +100,7 @@ public class ProviderAsnCatalogRegistryServiceTests
         }
     }
 
+
     [Test]
     public async Task ApplyThenRestartRollback_ShouldRestoreExactPriorCatalogFromPersistedRevision()
     {

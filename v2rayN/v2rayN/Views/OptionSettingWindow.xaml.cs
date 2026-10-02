@@ -43,8 +43,8 @@ public partial class OptionSettingWindow
         cmbCoreType7.ItemsSource = Global.CoreTypes;
         cmbCoreType9.ItemsSource = Global.CoreTypes;
 
-        cmbMixedConcurrencyCount.ItemsSource = Enumerable.Range(Global.SpeedTestConcurrencyCountMin, 20).ToList();
-        cmbSpeedTestTimeout.ItemsSource = Enumerable.Range(2, 5).Select(i => i * 5).ToList();
+        cmbMixedConcurrencyCount.ItemsSource = new[] { 1, 2, 4, 8, 16, 32, 64 };
+        cmbSpeedTestTimeout.ItemsSource = new[] { 2, 5, 10, 15, 30, 60, 120 };
         cmbSpeedTestUrl.ItemsSource = Global.SpeedTestUrls;
         cmbSpeedPingTestUrl.ItemsSource = Global.SpeedPingTestUrls;
         cmbUdpTestTarget.ItemsSource = Global.UdpTestTargets;
@@ -108,6 +108,17 @@ public partial class OptionSettingWindow
             this.Bind(ViewModel, vm => vm.SpeedPingTestUrl, v => v.cmbSpeedPingTestUrl.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.UdpTestTarget, v => v.cmbUdpTestTarget.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.MixedConcurrencyCount, v => v.cmbMixedConcurrencyCount.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.RetryEachProxyCount, v => v.txtRetryEachProxyCount.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.RetryFailedAfterBatchCount, v => v.txtRetryFailedAfterBatchCount.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.TestHistoryRetentionDays, v => v.txtTestHistoryRetentionDays.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.HistoryPolicyFailureCount, v => v.txtHistoryPolicyFailureCount.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.HistoryPolicyWindowCount, v => v.txtHistoryPolicyWindowCount.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.HistoryPolicyConsecutiveFailures, v => v.txtHistoryPolicyConsecutiveFailures.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.HistoryPolicyAutoRemove, v => v.togHistoryPolicyAutoRemove.IsChecked).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeUrl, v => v.txtUploadProbeUrl.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeBytes, v => v.txtUploadProbeBytes.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadProbeTimeoutSeconds, v => v.txtUploadProbeTimeoutSeconds.Text).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.UploadStallFinalMaskJson, v => v.txtUploadStallFinalMaskJson.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.EnableHWA, v => v.togEnableHWA.IsChecked).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.SubConvertUrl, v => v.cmbSubConvertUrl.Text).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.MainGirdOrientation, v => v.cmbMainGirdOrientation.SelectedIndex).DisposeWith(disposables);

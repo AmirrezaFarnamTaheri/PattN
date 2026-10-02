@@ -40,7 +40,7 @@ jobs:
         gpg --batch --armor --export "$fingerprint" > PattN-public-key.asc
 
     - name: Upload GPG public key to release
-      uses: svenstaro/upload-release-action@v2
+      uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2.11.5
       with:
         file: PattN-public-key.asc
         tag: ${{ inputs.release_tag }}

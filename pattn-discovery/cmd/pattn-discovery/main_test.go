@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -74,6 +75,15 @@ func FuzzNDJSONFraming(f *testing.F) {
 			// framing errors; panics or hangs are the properties under test.
 			if !strings.Contains(err.Error(), "token too long") {
 				t.Logf("run returned bounded framing error: %v", err)
+			}
+		}
+
+		for _, line := range bytes.Split(bytes.TrimSpace(out.Bytes()), []byte{'\n'}) {
+			if len(bytes.TrimSpace(line)) == 0 {
+				continue
+			}
+			if !json.Valid(line) {
+				t.Fatalf("helper emitted non-JSON NDJSON record: %q", line)
 			}
 		}
 	})

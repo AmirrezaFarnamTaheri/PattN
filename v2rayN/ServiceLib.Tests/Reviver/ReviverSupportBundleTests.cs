@@ -143,6 +143,31 @@ public class ReviverSupportBundleTests
     }
 
     [Test]
+    public async Task DefaultBuilder_ShouldUseFreshTokenSaltForEachBundle()
+    {
+        var profile = new ProfileItem
+        {
+            ConfigType = EConfigType.VLESS,
+            Address = "same-private-endpoint.example",
+            Port = 443,
+            Password = Guid.NewGuid().ToString(),
+            Network = "tcp",
+            StreamSecurity = "tls",
+        };
+        var result = new RepairRunResult
+        {
+            Session = new RepairSession { Original = ProfileSnapshot.Capture(profile) },
+            Diagnosis = new RepairDiagnosis { FailureClass = ERepairFailureClass.ConnectionTimeout },
+        };
+
+        var builder = new ReviverSupportBundleBuilder();
+        var first = builder.Build(result);
+        var second = builder.Build(result);
+
+        await (first.Profile.AddressToken != second.Profile.AddressToken).Should().BeTrue();
+    }
+
+    [Test]
     public async Task Bundle_ShouldTokenizeUnknownEvidenceKinds()
     {
         const string secretKind = "customer-secret-key.example";
