@@ -174,6 +174,51 @@ public sealed record DiscoveryEndpointProbeResponse
     public IReadOnlyList<string> Invalid { get; init; } = [];
 }
 
+public sealed record DiscoveryUplinkProbeRequest
+{
+    [JsonPropertyName("url")]
+    public string Url { get; init; } = string.Empty;
+
+    [JsonPropertyName("totalBytes")]
+    public int TotalBytes { get; init; } = 16 * 1024;
+
+    [JsonPropertyName("chunks")]
+    public int Chunks { get; init; } = 8;
+
+    [JsonPropertyName("timeoutMs")]
+    public int TimeoutMs { get; init; } = 8000;
+
+    [JsonPropertyName("interChunkDelayMs")]
+    public int InterChunkDelayMs { get; init; }
+}
+
+public sealed record DiscoveryUplinkProbeResult
+{
+    [JsonPropertyName("bytesPlanned")]
+    public int BytesPlanned { get; init; }
+
+    [JsonPropertyName("bytesReadByClient")]
+    public long BytesReadByClient { get; init; }
+
+    [JsonPropertyName("chunksEmitted")]
+    public long ChunksEmitted { get; init; }
+
+    [JsonPropertyName("bodyFullyRead")]
+    public bool BodyFullyRead { get; init; }
+
+    [JsonPropertyName("responseReceived")]
+    public bool ResponseReceived { get; init; }
+
+    [JsonPropertyName("statusCode")]
+    public int StatusCode { get; init; }
+
+    [JsonPropertyName("durationMs")]
+    public double DurationMs { get; init; }
+
+    [JsonPropertyName("error")]
+    public string Error { get; init; } = string.Empty;
+}
+
 public sealed record DiscoveryTcpScanRequest
 {
     [JsonPropertyName("targets")]
