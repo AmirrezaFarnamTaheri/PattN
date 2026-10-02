@@ -59,6 +59,75 @@ public sealed class RepairPromotionHistoryQueryService
         return Summarize(rows);
     }
 
+    public async Task<RepairIncidentTimeline> QueryTimelineAsync(
+        string profileId,
+        TimeSpan? maxAge = null,
+        int maxItems = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (profileId.IsNullOrEmpty())
+        {
+            throw new ArgumentException("Incident timeline requires a profile ID.", nameof(profileId));
+        }
+
+        var summary = await QueryAsync(
+            new RepairPromotionHistoryQuery
+            {
+                ProfileId = profileId,
+                MaxAge = maxAge ?? TimeSpan.FromDays(180),
+                MaxItems = maxItems,
+            },
+            cancellationToken);
+
+        return BuildTimeline(profileId, summary.Entries);
+    }
+
+    public static RepairIncidentTimeline BuildTimeline(
+        string profileId,
+        IReadOnlyList<RepairPromotionHistoryEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var events = entries
+            .OrderBy(x => x.ObservedAt)
+            .Select(entry => new RepairIncidentTimelineEvent
+            {
+                ObservedAt = entry.ObservedAt,
+                EventKind = entry.EventKind,
+                StrategyId = entry.StrategyId,
+                CandidateId = entry.CandidateId,
+                OutcomeVerdict = entry.OutcomeVerdict,
+                MutationFields = entry.Mutations
+                    .Select(x => x.Field ?? string.Empty)
+                    .Where(x => x.IsNotEmpty())
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(x => x, StringComparer.Ordinal)
+                    .ToArray(),
+                Summary = BuildTimelineSummary(entry),
+            })
+            .ToArray();
+
+        return new RepairIncidentTimeline
+        {
+            ProfileId = profileId,
+            StartedAt = events.Length == 0 ? null : events[0].ObservedAt,
+            EndedAt = events.Length == 0 ? null : events[^1].ObservedAt,
+            Events = events,
+        };
+    }
+
+    private static string BuildTimelineSummary(RepairPromotionHistoryEntry entry)
+    {
+        var strategy = entry.StrategyId.IsNullOrEmpty() ? "unknown strategy" : entry.StrategyId;
+        return entry.EventKind switch
+        {
+            "promoted" => $"Promoted {strategy}; outcome={entry.OutcomeVerdict}.",
+            "rolled-back" => $"Rolled back {strategy}; outcome={entry.OutcomeVerdict}.",
+            "human-confirmed" => $"Operator feedback for {strategy}: {entry.OutcomeVerdict}.",
+            _ => $"{entry.EventKind}: {strategy}; outcome={entry.OutcomeVerdict}.",
+        };
+    }
+
     public static RepairPromotionHistorySummary Summarize(
         IReadOnlyList<RepairPromotionHistoryItem> rows,
         DateTimeOffset? now = null)
