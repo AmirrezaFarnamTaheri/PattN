@@ -52,8 +52,8 @@ public sealed class CoreBackedRepairValidator(RepairPolicy? policy = null) : IRe
             // third-party listener and its behaviour says nothing about the repaired profile.
             if (CoreHasExited(process))
             {
-                Logging.SaveLog(nameof(CoreBackedRepairValidator),
-                    $"core exited while validating (port {testItem.Port}); treating as startup failure");
+                Logging.SaveLog(
+                    $"[{nameof(CoreBackedRepairValidator)}] core exited while validating (port {testItem.Port}); treating as startup failure");
                 accumulator.AddFailure(ERepairFailureClass.CoreStartupFailure);
                 return accumulator.Build(integritySuspect: true);
             }
@@ -95,8 +95,8 @@ public sealed class CoreBackedRepairValidator(RepairPolicy? policy = null) : IRe
                 // Whatever answered on that port may not have been our core. The successes are real
                 // measurements, so they are kept, but they are marked as unattributable rather than
                 // deleted -- a promotion gate must not be able to accept them.
-                Logging.SaveLog(nameof(CoreBackedRepairValidator),
-                    $"core no longer serving port {testItem.Port} after validation");
+                Logging.SaveLog(
+                    $"[{nameof(CoreBackedRepairValidator)}] core no longer serving port {testItem.Port} after validation");
             }
 
             return accumulator.Build(integritySuspect: suspect);
