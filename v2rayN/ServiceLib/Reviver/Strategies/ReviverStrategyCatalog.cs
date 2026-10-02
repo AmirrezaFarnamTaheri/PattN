@@ -1,4 +1,5 @@
 using ServiceLib.Discovery.Services;
+using ServiceLib.Reviver.Intelligence;
 using ServiceLib.Reviver.Normalization;
 using ServiceLib.Reviver.Services;
 
@@ -12,7 +13,28 @@ public static class ReviverStrategyCatalog
 {
     public static IReadOnlyList<IRepairLifecycleObserver> CreateDefaultObservers(
         IDnsRepairHistoryStore? dnsHistory)
-        => dnsHistory is null ? [] : [new DnsRepairHistoryObserver(dnsHistory)];
+        => CreateDefaultObservers(dnsHistory, null);
+
+    public static IReadOnlyList<IRepairLifecycleObserver> CreateDefaultObservers(
+        IDnsRepairHistoryStore? dnsHistory,
+        IStrategyOutcomeStore? strategyOutcomes,
+        NetworkIntelligenceService? intelligence = null,
+        Func<NetworkFingerprint?>? currentNetwork = null)
+    {
+        var observers = new List<IRepairLifecycleObserver>();
+        if (dnsHistory is not null)
+        {
+            observers.Add(new DnsRepairHistoryObserver(dnsHistory));
+        }
+        if (strategyOutcomes is not null)
+        {
+            observers.Add(new StrategyLearningObserver(
+                strategyOutcomes,
+                intelligence ?? new NetworkIntelligenceService(),
+                currentNetwork));
+        }
+        return observers;
+    }
 
     public static IReadOnlyList<IRepairStrategy> CreateDefault(
         IDiscoveryCandidateProvider discoveryCandidates,
