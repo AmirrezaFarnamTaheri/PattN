@@ -326,7 +326,7 @@ public partial class DiscoveryManagementViewModel : MyReactiveObject, ICloseable
     }
 
     private async Task RefreshAllAsync()
-        => await RunBusyAsync("Refreshing discovery management data...", async () =>
+        => await RunBusyAsync(ResUI.TbDiscoveryWorking, async () =>
         {
             await RefreshCatalogsCoreAsync();
             await RefreshRemoteSourceHealthCoreAsync();
