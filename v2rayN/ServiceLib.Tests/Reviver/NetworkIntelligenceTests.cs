@@ -195,6 +195,31 @@ public class NetworkIntelligenceTests
     }
 
     [Test]
+    public async Task StrategyIdFor_ShouldPreferOriginatingStrategyId()
+    {
+        var candidate = new RepairCandidate
+        {
+            SessionId = "session",
+            StrategyId = "endpoint-replacement",
+            Profile = new ProfileItem(),
+            Mutations =
+            [
+                new RepairMutation
+                {
+                    Kind = ERepairMutationKind.ReplaceEndpoint,
+                    Field = nameof(ProfileItem.Address),
+                    To = "203.0.113.10",
+                    Reason = "test",
+                    Confidence = ERepairConfidence.EvidenceBacked,
+                }
+            ],
+        };
+
+        await NetworkIntelligenceService.StrategyIdFor(candidate)
+            .Should().BeEqualTo("endpoint-replacement");
+    }
+
+    [Test]
     public async Task PredictFailure_ShouldRaiseRiskOnSharpSuccessDropAndLatencySpike()
     {
         var service = new NetworkIntelligenceService();
