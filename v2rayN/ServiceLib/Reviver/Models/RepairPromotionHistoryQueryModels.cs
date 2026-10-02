@@ -40,9 +40,13 @@ public sealed record RepairStrategyHistorySummary
     public int Stable { get; init; }
     public int Regressed { get; init; }
     public int RatedPromotions { get; init; }
+    public int HumanConfirmedPositive { get; init; }
+    public int HumanConfirmedNegative { get; init; }
     public double? SuccessRate { get; init; }
+    public double? HumanConfirmedSuccessRate { get; init; }
     public double? RollbackRate { get; init; }
     public double? RecencyWeightedSuccessRate { get; init; }
+    public double? RecencyWeightedLearningSuccessRate { get; init; }
     public DateTimeOffset? LatestEventAt { get; init; }
 }
 
