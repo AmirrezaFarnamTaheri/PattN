@@ -90,10 +90,7 @@ public class NetworkAutomationTests
             PublishedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             SignatureBase64 = string.Empty,
         };
-        var signature = signer.SignData(
-            System.Text.Encoding.UTF8.GetBytes(NetworkAutomationService.BuildManifestPayload(unsigned)),
-            HashAlgorithmName.SHA256);
-        var manifest = unsigned with { SignatureBase64 = Convert.ToBase64String(signature) };
+        var manifest = Sign(unsigned, signer);
 
         var verified = service.VerifyUpdateManifest(
             manifest,
@@ -102,7 +99,7 @@ public class NetworkAutomationTests
             "7.9.0",
             TimeSpan.FromDays(14));
         var downgrade = service.VerifyUpdateManifest(
-            manifest with { Version = "6.9.0", SignatureBase64 = manifest.SignatureBase64 },
+            Sign(unsigned with { Version = "6.9.0" }, signer),
             artifact,
             signer.ExportSubjectPublicKeyInfo(),
             "7.9.0",
@@ -110,6 +107,34 @@ public class NetworkAutomationTests
 
         await verified.Valid.Should().BeTrue();
         await downgrade.Valid.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task UpdateManifest_ShouldRejectPattNPatchDowngradeWithValidSignature()
+    {
+        var service = new NetworkAutomationService();
+        var artifact = "artifact"u8.ToArray();
+        var hash = Convert.ToHexString(SHA256.HashData(artifact)).ToLowerInvariant();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        var downgrade = Sign(new SignedUpdateManifest
+        {
+            Version = "7.25.2-P1",
+            ArtifactSha256 = hash,
+            MinimumVersion = "7.25.2",
+            PublishedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            SignatureBase64 = string.Empty,
+        }, signer);
+
+        var verified = service.VerifyUpdateManifest(
+            downgrade,
+            artifact,
+            signer.ExportSubjectPublicKeyInfo(),
+            "7.25.2-P10",
+            TimeSpan.FromDays(14));
+
+        await verified.Valid.Should().BeFalse();
+        await verified.Error.Contains("downgrade", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
     }
 
     [Test]
@@ -222,4 +247,12 @@ public class NetworkAutomationTests
         await health.Total.Should().BeEqualTo(2);
         await health.DuplicateGenomes.Should().BeEqualTo(1);
     }
+    private static SignedUpdateManifest Sign(SignedUpdateManifest manifest, ECDsa signer)
+    {
+        var signature = signer.SignData(
+            System.Text.Encoding.UTF8.GetBytes(NetworkAutomationService.BuildManifestPayload(manifest)),
+            HashAlgorithmName.SHA256);
+        return manifest with { SignatureBase64 = Convert.ToBase64String(signature) };
+    }
+
 }
