@@ -398,6 +398,10 @@ public sealed class NetworkIntelligenceService
     public static string StrategyIdFor(RepairCandidate candidate)
     {
         ArgumentNullException.ThrowIfNull(candidate);
+        if (candidate.StrategyId.IsNotEmpty())
+        {
+            return candidate.StrategyId;
+        }
         if (candidate.Mutations.Count == 0)
         {
             return "baseline";
