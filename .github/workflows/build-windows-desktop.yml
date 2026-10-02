@@ -14,6 +14,7 @@ on:
       - '.github/workflows/build-windows-desktop.yml'
       - '.github/workflows/build.yml'
       - '.github/workflows/package-zip.yml'
+      - 'scripts/deterministic_zip.py'
       - 'pattn-discovery/**'
       - 'v2rayN/**'
 
