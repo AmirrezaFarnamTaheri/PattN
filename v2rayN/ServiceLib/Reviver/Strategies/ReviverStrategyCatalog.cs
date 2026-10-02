@@ -17,17 +17,26 @@ public static class ReviverStrategyCatalog
     public static IReadOnlyList<IRepairStrategy> CreateDefault(
         IDiscoveryCandidateProvider discoveryCandidates,
         IDnsRepairEvidenceProvider dnsRepairEvidence,
-        ProfileCoreCompatibility? compatibility = null)
+        ProfileCoreCompatibility? compatibility = null,
+        string? uploadStallFinalMaskJson = null)
     {
         ArgumentNullException.ThrowIfNull(discoveryCandidates);
         ArgumentNullException.ThrowIfNull(dnsRepairEvidence);
 
         compatibility ??= new ProfileCoreCompatibility();
-        return
-        [
+        var strategies = new List<IRepairStrategy>
+        {
             new DnsAddressFamilyStrategy(dnsRepairEvidence, compatibility),
             new EndpointReplacementStrategy(discoveryCandidates),
             new CoreFallbackStrategy(compatibility),
-        ];
+        };
+        if (uploadStallFinalMaskJson.IsNotEmpty())
+        {
+            strategies.Add(new UploadStallMitigationStrategy(
+                compatibility,
+                uploadStallFinalMaskJson!));
+        }
+
+        return strategies;
     }
 }
