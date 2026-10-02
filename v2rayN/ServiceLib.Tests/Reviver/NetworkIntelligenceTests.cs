@@ -1,3 +1,4 @@
+using ServiceLib.Discovery.Protocol;
 using ServiceLib.Models.Entities;
 using ServiceLib.Reviver.Intelligence;
 using ServiceLib.Reviver.Models;
@@ -25,6 +26,25 @@ public class NetworkIntelligenceTests
         await assessment.FailureClass.Should().BeEqualTo(ERepairFailureClass.UplinkStall);
         await (assessment.Confidence >= 0.90d).Should().BeTrue();
         await assessment.Reasons.Any(x => x.Contains("does not by itself prove DPI", StringComparison.Ordinal)).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task UplinkProbeEvidence_ShouldClassifyPostTlsUploadStall()
+    {
+        var service = new NetworkIntelligenceService();
+        var assessment = service.ClassifyUplinkProbe(new DiscoveryUplinkProbeResult
+        {
+            Connected = true,
+            TlsHandshakeSucceeded = true,
+            BodyFullyRead = false,
+            ResponseReceived = true,
+            BytesPlanned = 16 * 1024,
+            BytesReadByClient = 8 * 1024,
+            ChunksEmitted = 4,
+            DurationMs = 2500,
+        });
+
+        await assessment.FailureClass.Should().BeEqualTo(ERepairFailureClass.UplinkStall);
     }
 
     [Test]
