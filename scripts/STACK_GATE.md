@@ -42,6 +42,10 @@ Notes that matter when reading a failure:
 
 ## 2. `scripts/check_localization.py` — a view may not bind a missing resource key
 
+Two surfaces are checked in one run, because both are hand-maintained resx/Designer pairs:
+`ServiceLib` (`ResUI.resx` + the WPF/Avalonia views) and `AmazTool` (`Resource.resx` + the updater's
+`Resx.Resource.X` references -- the updater is a console app whose Designer file is *also* hand-edited).
+
 `{Binding i18n.X, Source={x:Static p:ResUI.X}}` compiles against the generated
 Designer member. Delete the `<data name="X">` entry from `ResUI.resx` and the
 build stays green while the window throws on load — a startup crash that looks
@@ -54,7 +58,7 @@ like a localization miss.
 | R3 | no culture `.resx` defines a key absent from `ResUI.resx`; `en` coverage reported |
 
 ```
-python3 scripts/check_localization.py                       # whole tree
+python3 scripts/check_localization.py                       # whole tree, both surfaces
 python3 scripts/check_localization.py --root <worktree>    # audit another checkout
 python3 scripts/check_localization.py --base <sha> --head HEAD   # PR-scoped (what CI runs)
 ```
@@ -66,11 +70,22 @@ gap so the number cannot be argued from memory.
 
 ## Verified state (2026-10-02, static only — no .NET/Go toolchain in this sandbox)
 
-| tree | keys | Designer members | views scanned | result |
-|---|---|---|---|---|
-| `feat/discovery-reviver-integration` 38c4a10 | 930 | 930 | 55 | pass |
-| `my-releases` 0d1dfbb | 605 | 605 | 53 | pass |
-| `feat/intelligence-roadmap` fc7dd06 (post-fix) | 943 | 943 | 55 | pass |
+| tree | surface | master keys | Designer members | files scanned | result |
+|---|---|---|---|---|---|
+| umbrella `59666ea` | ServiceLib | 930 | 930 | 141 | pass |
+| umbrella `59666ea` | AmazTool | 14 | 14 | 5 | pass |
+| `my-releases` 0d1dfbb | ServiceLib | 605 | 605 | 137 | pass |
+| #18 `fc7dd06` | ServiceLib | 943 | 943 | 141 | pass |
+
+Scanned-file count is 141 (not 55) because the reference patterns now cover `.cs` as well as
+`.xaml`/`.axaml`, `{x:Static resx:ResUI.X}`, `{x:Static p:ResUI.X}`, `@ResUI.X`, `Resx.Resource.X` and
+`i18n.X`.
+
+Negative controls (mutations, not repo states):
+
+* deleting `menuServers` from `ResUI.resx` -> **9 R1 findings** across both view heads, exit 1.
+* deleting `RestoreUpgradeSelf` from `Resource.resx` at #16 -> **R2** (Designer member orphaned),
+  **R1** (`UpgradeApp.cs` still references it) and **R3** (both culture resx files keep the key), exit 1.
 
 Negative test for R1/R3 (mutation, not a repo state): deleting the
 `menuServers` entry from `ResUI.resx` at #18 produced **11 R1 findings** (one per
