@@ -324,12 +324,33 @@ public sealed class NetworkAutomationService
         };
     }
 
+    /// <summary>
+    /// Verifies a signed update manifest against an artifact, a freshness window and the version
+    /// the caller says is installed.
+    /// </summary>
+    /// <remarks>
+    /// PRECONDITION -- do not wire this into a download path as-is. The public key is a *parameter*,
+    /// so this method cannot tell a trusted key from one that arrived next to the artifact: if both the
+    /// manifest and the SPKI come off the same channel, verification proves only that they agree with
+    /// each other. Before any caller trusts it, the SPKI must be resolved inside the application from a
+    /// pinned key id (a committed <c>pinned-keys</c> entry, hash-checked in CI, like
+    /// <c>.github/workflows/pub-key.yml</c> already does for the release key), and the manifest must
+    /// carry that key id. Requiring it at the call site is the whole point of the note: the trust root
+    /// has to be independent of the thing it vouches for. Until then this stays unreachable from
+    /// production code, which is how it is today (only tests call it).
+    /// <para>
+    /// <paramref name="currentVersion"/> must be the application's own version, never a value taken
+    /// from the manifest (its <c>MinimumVersion</c> in particular) -- that turns the downgrade guard
+    /// off, because the comparison is then performed against a number the publisher chose.
+    /// </para>
+    /// </remarks>
     public UpdateManifestVerification VerifyUpdateManifest(
         SignedUpdateManifest manifest,
         ReadOnlySpan<byte> artifactBytes,
         ReadOnlySpan<byte> subjectPublicKeyInfo,
         string currentVersion,
-        TimeSpan maximumManifestAge)
+        TimeSpan maximumManifestAge,
+        bool allowSameVersionReinstall = false)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         if (manifest.ArtifactSha256.IsNullOrEmpty()
@@ -345,9 +366,22 @@ public sealed class NetworkAutomationService
         {
             return new UpdateManifestVerification { Error = "Manifest or current version is invalid." };
         }
-        if (target.CompareTo(current) < 0)
+        var ordering = target.CompareTo(current);
+        if (ordering < 0)
         {
             return new UpdateManifestVerification { Error = "Update manifest would downgrade the application." };
+        }
+
+        // An equal version is not an upgrade. Re-verifying it is what a re-installer or a repair flow
+        // does, so it is allowed only when the caller says so explicitly: a path that silently accepts
+        // "same version" has usually lost track of which build it is on and will keep re-applying it.
+        if (ordering == 0 && !allowSameVersionReinstall)
+        {
+            return new UpdateManifestVerification
+            {
+                Error = "Update manifest targets the version already installed; pass "
+                        + nameof(allowSameVersionReinstall) + " only from an explicit reinstall flow.",
+            };
         }
         if (target.CompareTo(minimum) < 0)
         {
@@ -395,11 +429,25 @@ public sealed class NetworkAutomationService
             return new UpdateManifestVerification { Error = "Manifest signature is not valid base64." };
         }
 
+        if (subjectPublicKeyInfo.IsEmpty)
+        {
+            return new UpdateManifestVerification { Error = "No trust-root public key was supplied for manifest verification." };
+        }
+
         var payload = BuildManifestPayload(manifest);
         try
         {
             using var ecdsa = ECDsa.Create();
-            ecdsa.ImportSubjectPublicKeyInfo(subjectPublicKeyInfo, out _);
+            // The trailing parameter is the *ignored* count, so an over-long buffer cannot be
+            // mistaken for a well-formed key: require the SPKI to be exactly one DER blob.
+            ecdsa.ImportSubjectPublicKeyInfo(subjectPublicKeyInfo, out var consumed);
+            if (consumed != subjectPublicKeyInfo.Length)
+            {
+                return new UpdateManifestVerification
+                {
+                    Error = "Trust-root public key has trailing data after the DER blob.",
+                };
+            }
             var valid = ecdsa.VerifyData(
                 Encoding.UTF8.GetBytes(payload),
                 signature,
