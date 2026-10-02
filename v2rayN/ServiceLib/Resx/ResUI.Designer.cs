@@ -7555,5 +7555,83 @@ namespace ServiceLib.Resx {
             }
         }
 
+        public static string TbNetworkIntelligence {
+            get {
+                return ResourceManager.GetString("TbNetworkIntelligence", resourceCulture);
+            }
+        }
+
+        public static string TbRefreshNetworkIntelligence {
+            get {
+                return ResourceManager.GetString("TbRefreshNetworkIntelligence", resourceCulture);
+            }
+        }
+
+        public static string TbNetworkIntelligenceSummaryEmpty {
+            get {
+                return ResourceManager.GetString("TbNetworkIntelligenceSummaryEmpty", resourceCulture);
+            }
+        }
+
+        public static string TbNetworkIntelligenceSummaryLine {
+            get {
+                return ResourceManager.GetString("TbNetworkIntelligenceSummaryLine", resourceCulture);
+            }
+        }
+
+        public static string TbStrategyLearningSummaryEmpty {
+            get {
+                return ResourceManager.GetString("TbStrategyLearningSummaryEmpty", resourceCulture);
+            }
+        }
+
+        public static string TbStrategyLearningSummaryLine {
+            get {
+                return ResourceManager.GetString("TbStrategyLearningSummaryLine", resourceCulture);
+            }
+        }
+
+        public static string TbNetworkHeatmap {
+            get {
+                return ResourceManager.GetString("TbNetworkHeatmap", resourceCulture);
+            }
+        }
+
+        public static string LvCountry {
+            get {
+                return ResourceManager.GetString("LvCountry", resourceCulture);
+            }
+        }
+
+        public static string LvCarrierKey {
+            get {
+                return ResourceManager.GetString("LvCarrierKey", resourceCulture);
+            }
+        }
+
+        public static string LvSamples {
+            get {
+                return ResourceManager.GetString("LvSamples", resourceCulture);
+            }
+        }
+
+        public static string LvIPv4 {
+            get {
+                return ResourceManager.GetString("LvIPv4", resourceCulture);
+            }
+        }
+
+        public static string LvIPv6 {
+            get {
+                return ResourceManager.GetString("LvIPv6", resourceCulture);
+            }
+        }
+
+        public static string LvUploadStall {
+            get {
+                return ResourceManager.GetString("LvUploadStall", resourceCulture);
+            }
+        }
+
     }
 }
