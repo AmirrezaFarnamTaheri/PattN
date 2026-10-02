@@ -130,6 +130,8 @@ public partial class ProfilesViewModel
             var dnsHistory = new SqliteDnsRepairHistoryStore();
             var strategyOutcomes = new SqliteStrategyOutcomeStore();
             var intelligence = new NetworkIntelligenceService();
+            var networkFingerprints = new SqliteNetworkFingerprintStore();
+            var currentNetwork = (await networkFingerprints.ListRecentAsync(1, cancellationToken)).FirstOrDefault();
             var strategies = ReviverStrategyCatalog.CreateDefault(
                 candidateProvider,
                 new DiscoveryDnsRepairEvidenceProvider(engine),
@@ -142,7 +144,8 @@ public partial class ProfilesViewModel
                 observers: ReviverStrategyCatalog.CreateDefaultObservers(
                     dnsHistory,
                     strategyOutcomes,
-                    intelligence));
+                    intelligence,
+                    () => currentNetwork));
 
             var run = await reviver.ReviveAsync(
                 profile,
@@ -181,7 +184,8 @@ public partial class ProfilesViewModel
             var promotion = new RepairPromotionService(
                 new SqliteRepairPromotionHistoryStore(),
                 strategyOutcomes: strategyOutcomes,
-                intelligence: intelligence);
+                intelligence: intelligence,
+                currentNetwork: () => currentNetwork);
             var plan = promotion.Prepare(run.Session, candidate);
             var receipt = await promotion.PromoteAsync(
                 _config,
