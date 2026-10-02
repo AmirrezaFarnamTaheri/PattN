@@ -64,6 +64,80 @@ public class EndpointHistorySummaryTests
         await (summary.DecayedLatencyMs is > 0 and < 55).Should().BeTrue();
     }
 
+    [Test]
+    public async Task Lifecycle_ShouldClassifyRecoveryAfterRecentFailure()
+    {
+        var now = new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero);
+        var detail = new EndpointHistoryDetail
+        {
+            LogicalHost = "example.test",
+            Address = "203.0.113.7",
+            Points =
+            [
+                new EndpointHistoryPoint
+                {
+                    ObservedAt = now,
+                    Qualified = true,
+                    Reliability = 1,
+                },
+                new EndpointHistoryPoint
+                {
+                    ObservedAt = now.AddMinutes(-10),
+                    Qualified = false,
+                    Reliability = 0,
+                },
+            ],
+            Summary = new EndpointHistorySummary
+            {
+                Address = "203.0.113.7",
+                Samples = 2,
+                QualifiedObservations = 1,
+                RecentFailureStreak = 0,
+                DecayedReliability = 0.75,
+                LastObservedAt = now,
+            },
+        };
+
+        var lifecycle = EndpointHistoryQueryService.AssessLifecycle(detail);
+
+        await lifecycle.State.Should().BeEqualTo(EEndpointLifecycleState.Recovered);
+        await lifecycle.Reasons.Should().Contain("latest-qualified-after-prior-failure");
+    }
+
+    [Test]
+    public async Task Lifecycle_ShouldClassifyRepeatedFailuresAsDead()
+    {
+        var now = new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero);
+        var points = Enumerable.Range(0, 3)
+            .Select(i => new EndpointHistoryPoint
+            {
+                ObservedAt = now.AddMinutes(-i),
+                Qualified = false,
+                Reliability = 0,
+            })
+            .ToArray();
+        var detail = new EndpointHistoryDetail
+        {
+            LogicalHost = "example.test",
+            Address = "203.0.113.8",
+            Points = points,
+            Summary = new EndpointHistorySummary
+            {
+                Address = "203.0.113.8",
+                Samples = 3,
+                QualifiedObservations = 0,
+                RecentFailureStreak = 3,
+                DecayedReliability = 0.05,
+                LastObservedAt = now,
+            },
+        };
+
+        var lifecycle = EndpointHistoryQueryService.AssessLifecycle(detail);
+
+        await lifecycle.State.Should().BeEqualTo(EEndpointLifecycleState.Dead);
+        await lifecycle.Confidence.Should().BeGreaterThan(0.5d);
+    }
+
     private static EndpointObservationHistoryItem Observation(
         DateTimeOffset at,
         bool qualified,
