@@ -43,6 +43,7 @@ public sealed class ReviverService(
 
         var session = StartSession(profile);
         var diagnosis = await diagnostic.DiagnoseAsync(session, cancellationToken);
+        RepairMetrics.RecordDiagnosis(diagnosis);
         session.BaselineFailure = diagnosis.FailureClass;
         session.BaselineValidation = diagnosis.RuntimeValidation;
 
@@ -63,7 +64,9 @@ public sealed class ReviverService(
         }
 
         var planned = await PlanAsync(session, diagnosis.FailureClass, maxCandidates, cancellationToken);
+        RepairMetrics.RecordPlanned(planned.Count);
         var validated = await ValidateAsync(planned, validator, cancellationToken);
+        RepairMetrics.RecordValidated(validated.Count);
         var recommended = validated.FirstOrDefault();
         return new RepairRunResult
         {
