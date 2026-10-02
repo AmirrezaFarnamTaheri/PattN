@@ -157,6 +157,22 @@ jobs:
         )
         PY
 
+    - name: Generate declared dependency SBOM
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        SOURCE_REPOSITORY: ${{ github.repository }}
+        SOURCE_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        prefix="$ARTIFACT_NAME"
+        prefix="${prefix//[^A-Za-z0-9._-]/_}"
+        python3 scripts/generate_dependency_sbom.py \
+          --root . \
+          --output "dist/$prefix.dependencies.spdx.json" \
+          --source-sha "$SOURCE_SHA" \
+          --repository "$SOURCE_REPOSITORY"
+
     - name: Import GPG private key
       shell: bash
       env:
@@ -183,7 +199,7 @@ jobs:
         mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
         prefix="${{ inputs.artifact_name }}"
         prefix="${prefix//[^A-Za-z0-9._-]/_}"
-        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json")
+        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json" "$prefix.dependencies.spdx.json")
         (( ${#files[@]} )) || { echo "No files matched: $FILE_PATTERN"; exit 1; }
         for f in "${files[@]}"; do
           [[ -f "$f" ]] || { echo "Missing release metadata/file: $f"; exit 1; }
@@ -204,7 +220,7 @@ jobs:
         mapfile -t files < <(compgen -G "$FILE_PATTERN" || true)
         prefix="${{ inputs.artifact_name }}"
         prefix="${prefix//[^A-Za-z0-9._-]/_}"
-        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json")
+        files+=("$prefix.checksums.sha256" "$prefix.provenance.json" "$prefix.sbom.spdx.json" "$prefix.dependencies.spdx.json")
         (( ${#files[@]} )) || { echo "No release files matched: $FILE_PATTERN"; exit 1; }
 
         assets=()
