@@ -38,7 +38,12 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
 
             url = result.Url!;
             fileName = Utils.GetTempPath(Utils.GetGuid());
-            await downloadHandle.DownloadFileAsync(new() { FileUrl = url, FilePath = fileName }, blProxy, cancellationToken);
+            await downloadHandle.DownloadFileAsync(new()
+            {
+                FileUrl = url,
+                FilePath = fileName,
+                ExpectedSha256 = result.Sha256,
+            }, blProxy, cancellationToken);
         }
         else
         {
@@ -88,7 +93,12 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
             url = result.Url!;
             var ext = url.Contains(".tar.gz") ? ".tar.gz" : Path.GetExtension(url);
             fileName = Utils.GetTempPath(Utils.GetGuid() + ext);
-            await downloadHandle.DownloadFileAsync(new() { FileUrl = url, FilePath = fileName }, blProxy, cancellationToken);
+            await downloadHandle.DownloadFileAsync(new()
+            {
+                FileUrl = url,
+                FilePath = fileName,
+                ExpectedSha256 = result.Sha256,
+            }, blProxy, cancellationToken);
         }
         else
         {
@@ -166,7 +176,17 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
             {
                 return result;
             }
-            return await ParseDownloadUrl(type, result, cancellationToken);
+            var parsed = await ParseDownloadUrl(type, result, cancellationToken);
+            if (!parsed.Success || parsed.Url.IsNullOrEmpty())
+            {
+                return parsed;
+            }
+
+            return await BindGitHubReleaseAssetDigestAsync(
+                downloadHandle,
+                parsed,
+                blProxy,
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -224,6 +244,53 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
             tagName = lastUrl?.Split("/tag/").LastOrDefault();
         }
         return new UpdateResult(true, new SemanticVersion(tagName));
+    }
+
+    private async Task<UpdateResult> BindGitHubReleaseAssetDigestAsync(
+        DownloadService downloadHandle,
+        UpdateResult result,
+        bool blProxy,
+        CancellationToken cancellationToken)
+    {
+        if (!DownloadIntegrity.TryParseGitHubReleaseDownloadUrl(
+                result.Url,
+                out var owner,
+                out var repository,
+                out var tag,
+                out var assetName))
+        {
+            // Non-GitHub update sources retain their existing behavior. GitHub-hosted
+            // release assets, however, are required to carry a release-API digest.
+            return result;
+        }
+
+        var apiUrl =
+            $"https://api.github.com/repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repository)}/releases/tags/{Uri.EscapeDataString(tag)}";
+        var json = await downloadHandle.TryDownloadString(
+            apiUrl,
+            blProxy,
+            Global.AppName,
+            cancellationToken);
+        if (json.IsNullOrEmpty())
+        {
+            Logging.SaveLog($"Could not retrieve GitHub release metadata for integrity verification: {apiUrl}");
+            return new UpdateResult(false, ResUI.OperationFailed);
+        }
+
+        var release = JsonUtils.Deserialize<GitHubRelease>(json);
+        var asset = release?.Assets?.FirstOrDefault(x =>
+            string.Equals(x.Name, assetName, StringComparison.Ordinal)
+            || string.Equals(x.BrowserDownloadUrl, result.Url, StringComparison.OrdinalIgnoreCase));
+        if (asset is null
+            || !DownloadIntegrity.TryNormalizeSha256(asset.Digest, out var sha256))
+        {
+            Logging.SaveLog(
+                $"GitHub release asset '{assetName}' did not expose a valid SHA-256 digest; refusing an unverified runtime update.");
+            return new UpdateResult(false, ResUI.OperationFailed);
+        }
+
+        result.Sha256 = sha256;
+        return result;
     }
 
     [GeneratedRegex(@"v?(?<version>\d+\.\d+\.\d+(?:-[0-9a-zA-Z.-]+)?(?:\+[0-9a-zA-Z.-]+)?)", RegexOptions.IgnoreCase)]
