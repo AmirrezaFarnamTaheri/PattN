@@ -8,6 +8,12 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
 
     public async Task CheckUpdateGuiN(bool preRelease, bool blProxy = true, CancellationToken cancellationToken = default)
     {
+        if (RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater)
+        {
+            await UpdateFunc(false, ResUI.MsgRuntimeUpdateAuthenticationRequired);
+            return;
+        }
+
         var url = string.Empty;
         var fileName = string.Empty;
 
@@ -53,6 +59,12 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
 
     public async Task CheckUpdateCore(ECoreType type, bool preRelease, bool blProxy = true, CancellationToken cancellationToken = default)
     {
+        if (RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater)
+        {
+            await UpdateFunc(false, ResUI.MsgRuntimeUpdateAuthenticationRequired);
+            return;
+        }
+
         var url = string.Empty;
         var fileName = string.Empty;
 
@@ -111,6 +123,11 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
 
     public async Task<UpdateResult> CheckHasUpdateOnly(ECoreType type, bool preRelease, bool blProxy = true, CancellationToken cancellationToken = default)
     {
+        if (RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater)
+        {
+            return new UpdateResult(false, ResUI.MsgRuntimeUpdateAuthenticationRequired);
+        }
+
         if (!CoreInfoManager.Instance.IsCheckUpdateSupported(type))
         {
             return new UpdateResult(false, ResUI.MsgNotSupport);
@@ -148,6 +165,12 @@ public partial class UpdateService(Config config, Func<bool, string, Task> updat
 
     public async Task UpdateGeoFileAll(bool blProxy = true, CancellationToken cancellationToken = default)
     {
+        if (RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater)
+        {
+            await UpdateFunc(false, ResUI.MsgRuntimeUpdateAuthenticationRequired);
+            return;
+        }
+
         var requests = new List<FileDownloadRequest>();
         requests.AddRange(GetGeoFilesRequest());
         requests.AddRange(GetOtherFilesRequest());

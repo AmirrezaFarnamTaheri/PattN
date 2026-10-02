@@ -5502,6 +5502,12 @@ namespace ServiceLib.Resx {
         /// <summary>
         ///   查找类似 Upgrade App does not exist 的本地化字符串。
         /// </summary>
+        public static string MsgRuntimeUpdateAuthenticationRequired {
+            get {
+                return ResourceManager.GetString("MsgRuntimeUpdateAuthenticationRequired", resourceCulture);
+            }
+        }
+
         public static string UpgradeAppNotExistTip {
             get {
                 return ResourceManager.GetString("UpgradeAppNotExistTip", resourceCulture);
