@@ -71,8 +71,57 @@ jobs:
     - name: Ensure script permissions
       run: chmod 755 package-osx.sh release-assets.lock.sh
 
+    - name: Import Apple signing certificate
+      if: github.event_name != 'pull_request'
+      shell: bash
+      env:
+        APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      run: |
+        set -euo pipefail
+        [[ -n "$APPLE_CERTIFICATE_P12_BASE64" && -n "$APPLE_CERTIFICATE_PASSWORD" && -n "$APPLE_SIGNING_IDENTITY" ]] || {
+          echo "::error::macOS release requires Apple signing certificate secrets"
+          exit 1
+        }
+        keychain="$RUNNER_TEMP/pattn-signing.keychain-db"
+        password="$(openssl rand -hex 24)"
+        security create-keychain -p "$password" "$keychain"
+        security set-keychain-settings -lut 21600 "$keychain"
+        security unlock-keychain -p "$password" "$keychain"
+        printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/pattn-signing.p12"
+        security import "$RUNNER_TEMP/pattn-signing.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+        security list-keychains -d user -s "$keychain" login.keychain-db
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain"
+
     - name: Package dmg
+      env:
+        PATTN_MACOS_CODESIGN_IDENTITY: ${{ github.event_name != 'pull_request' && secrets.APPLE_SIGNING_IDENTITY || '' }}
       run: ./package-osx.sh "macos-$Arch" "PattN-macos-$Arch" "$PackageVersion"
+
+    - name: Notarize and staple DMG
+      if: github.event_name != 'pull_request'
+      shell: bash
+      env:
+        APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+        APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        APPLE_NOTARY_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_NOTARY_PRIVATE_KEY_BASE64 }}
+      run: |
+        set -euo pipefail
+        [[ -n "$APPLE_NOTARY_KEY_ID" && -n "$APPLE_NOTARY_ISSUER_ID" && -n "$APPLE_NOTARY_PRIVATE_KEY_BASE64" ]] || {
+          echo "::error::macOS release requires Apple notarization secrets"
+          exit 1
+        }
+        key="$RUNNER_TEMP/AuthKey_$APPLE_NOTARY_KEY_ID.p8"
+        printf '%s' "$APPLE_NOTARY_PRIVATE_KEY_BASE64" | base64 --decode > "$key"
+        dmg="PattN-macos-$Arch.dmg"
+        xcrun notarytool submit "$dmg" \
+          --key "$key" \
+          --key-id "$APPLE_NOTARY_KEY_ID" \
+          --issuer "$APPLE_NOTARY_ISSUER_ID" \
+          --wait
+        xcrun stapler staple "$dmg"
+        xcrun stapler validate "$dmg"
 
     - name: Smoke final DMG payload
       shell: bash
