@@ -219,6 +219,8 @@ public sealed class RepairPromotionService(
             BecameDefault = makeDefault,
         };
 
+        RepairMetrics.RecordPromotion(plan.StrategyId);
+
         if (historyStore is not null)
         {
             try
@@ -349,6 +351,8 @@ public sealed class RepairPromotionService(
                     removalError);
             }
         }
+
+        RepairMetrics.RecordRollback(receipt.StrategyId);
 
         if (historyStore is not null)
         {
