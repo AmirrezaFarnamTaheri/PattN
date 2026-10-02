@@ -83,19 +83,37 @@ public sealed class RepairPromotionHistoryQueryService
                 var stable = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "stable");
                 var regressed = group.Count(x => x.EventKind == "promoted" && x.OutcomeVerdict == "regressed");
                 var rated = improved + stable + regressed;
+                var humanPositive = group.Count(x =>
+                    x.EventKind == "human-confirmed" && x.OutcomeVerdict == "improved");
+                var humanNegative = group.Count(x =>
+                    x.EventKind == "human-confirmed" && x.OutcomeVerdict == "regressed");
+                var humanRated = humanPositive + humanNegative;
 
                 double weightedSuccess = 0;
                 double weightedTotal = 0;
+                double weightedLearningSuccess = 0;
+                double weightedLearningTotal = 0;
                 foreach (var entry in group.Where(x =>
-                             x.EventKind == "promoted"
+                             x.EventKind is "promoted" or "human-confirmed"
                              && x.OutcomeVerdict is "improved" or "stable" or "regressed"))
                 {
                     var ageDays = Math.Max(0d, (referenceTime - entry.ObservedAt).TotalDays);
-                    var weight = Math.Pow(0.5d, ageDays / 90d);
-                    weightedTotal += weight;
+                    var freshness = Math.Pow(0.5d, ageDays / 90d);
+                    var learningWeight = entry.EventKind == "human-confirmed" ? 2d : 1d;
+
+                    weightedLearningTotal += freshness * learningWeight;
                     if (entry.OutcomeVerdict is "improved" or "stable")
                     {
-                        weightedSuccess += weight;
+                        weightedLearningSuccess += freshness * learningWeight;
+                    }
+
+                    if (entry.EventKind == "promoted")
+                    {
+                        weightedTotal += freshness;
+                        if (entry.OutcomeVerdict is "improved" or "stable")
+                        {
+                            weightedSuccess += freshness;
+                        }
                     }
                 }
 
@@ -108,15 +126,23 @@ public sealed class RepairPromotionHistoryQueryService
                     Stable = stable,
                     Regressed = regressed,
                     RatedPromotions = rated,
+                    HumanConfirmedPositive = humanPositive,
+                    HumanConfirmedNegative = humanNegative,
                     SuccessRate = rated == 0
                         ? null
                         : (improved + stable) / (double)rated,
+                    HumanConfirmedSuccessRate = humanRated == 0
+                        ? null
+                        : humanPositive / (double)humanRated,
                     RollbackRate = promotions == 0
                         ? null
                         : Math.Clamp(rollbacks / (double)promotions, 0d, 1d),
                     RecencyWeightedSuccessRate = weightedTotal <= 0
                         ? null
                         : weightedSuccess / weightedTotal,
+                    RecencyWeightedLearningSuccessRate = weightedLearningTotal <= 0
+                        ? null
+                        : weightedLearningSuccess / weightedLearningTotal,
                     LatestEventAt = group.Max(x => x.ObservedAt),
                 };
             })
@@ -188,9 +214,12 @@ public sealed class RepairPromotionHistoryQueryService
         }
         if (!query.EventKind.IsNullOrEmpty()
             && !string.Equals(query.EventKind, "promoted", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(query.EventKind, "rolled-back", StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(query.EventKind, "rolled-back", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(query.EventKind, "human-confirmed", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Promotion history event kind must be 'promoted' or 'rolled-back'.", nameof(query.EventKind));
+            throw new ArgumentException(
+                "Promotion history event kind must be 'promoted', 'rolled-back', or 'human-confirmed'.",
+                nameof(query.EventKind));
         }
     }
 }
