@@ -67,7 +67,7 @@ This document reconciles the Discovery/Reviver forensic audits and the follow-on
 | Brainstorm item | Status | Implementation / boundary |
 |---|---|---|
 | Anonymous intelligence records | Implemented | derived network/genome keys only |
-| Sharing privacy model | Implemented | explicit opt-in + AnonymousAggregate mode + minimum cohort size |
+| Sharing privacy model | Client-side gate implemented | explicit opt-in + AnonymousAggregate mode + minimum local sample count; contributor-level cohort/k-anonymity must be enforced by any future exchange service |
 | Global intelligence transport | Interface/data contract ready; service backend external | no hard-coded third-party collection endpoint |
 | Heatmaps | Implemented backend | coarse country + hashed carrier aggregates |
 | Knowledge graph | Implemented backend | environment → failure → strategy weighted edges |
@@ -88,7 +88,7 @@ The intelligence layer supports endpoint lifecycle and failure history. A perman
 
 ### Global collection service
 
-The client enforces explicit opt-in and anonymous aggregation, but no remote service URL is embedded. Operating such a service requires a separate privacy/security design, retention policy, abuse controls, and deployment ownership.
+The client enforces explicit opt-in and local aggregate/sample gating, but no remote service URL is embedded. The local sample threshold is not contributor-level k-anonymity: one device can produce multiple samples. Any future exchange service must independently enforce contributor-level cohort privacy, retention, abuse controls, and deployment ownership.
 
 ## External evidence / credential gates
 
