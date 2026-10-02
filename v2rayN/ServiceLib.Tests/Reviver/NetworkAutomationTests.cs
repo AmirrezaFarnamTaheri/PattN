@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using ServiceLib.Reviver.Intelligence;
+using ServiceLib.Reviver.Models;
 
 namespace ServiceLib.Tests.Reviver;
 
@@ -471,7 +472,7 @@ public class NetworkAutomationTests
         var empty = service.VerifyUpdateManifest(manifest, artifact, ReadOnlySpan<byte>.Empty, "7.9.0", TimeSpan.FromDays(14));
 
         await empty.Valid.Should().BeFalse();
-        await empty.Error.Should().Be("No trust-root public key was supplied for manifest verification.");
+        await empty.Error.Should().BeEqualTo("No trust-root public key was supplied for manifest verification.");
     }
 
     [Test]

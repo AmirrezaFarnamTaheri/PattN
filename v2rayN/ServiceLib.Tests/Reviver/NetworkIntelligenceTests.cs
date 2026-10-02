@@ -263,22 +263,22 @@ public class NetworkIntelligenceTests
         // Deterministic for one installation...
         var a = service.BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "ir", TcpSucceeded = true });
         var b = other.BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "IR", TcpSucceeded = true });
-        a.CarrierKey.Should().Be(b.CarrierKey);
-        a.Key.Should().Be(b.Key);
+        await a.CarrierKey.Should().BeEqualTo(b.CarrierKey);
+        await a.Key.Should().BeEqualTo(b.Key);
 
         // ...but the key is what makes it a *derived* value: a bare SHA-256 of the carrier name must
         // never appear in the record, otherwise the "anonymous" key is a dictionary lookup.
         var unsalted = Convert.ToHexString(
                 System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(carrier.Trim().ToLowerInvariant())))
             [..24].ToLowerInvariant();
-        a.CarrierKey.Should().NotBe(unsalted);
+        await a.CarrierKey.Should().NotBeEqualTo(unsalted);
 
         // A different installation must not produce comparable keys.
         var c = new NetworkIntelligenceService(RandomNumberGenerator.GetBytes(32))
             .BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "IR", TcpSucceeded = true });
-        c.CarrierKey.Should().NotBe(a.CarrierKey);
+        await c.CarrierKey.Should().NotBeEqualTo(a.CarrierKey);
 
-        NetworkIntelligenceService.IsKeyedDerivedNetworkKey(a.Key).Should().BeTrue();
-        NetworkIntelligenceService.IsDerivedNetworkKey("net:v1:" + unsalted).Should().BeTrue("legacy rows stay readable");
+        await NetworkIntelligenceService.IsKeyedDerivedNetworkKey(a.Key).Should().BeTrue();
+        await NetworkIntelligenceService.IsDerivedNetworkKey("net:v1:" + unsalted).Should().BeTrue("legacy rows stay readable");
     }
 }
