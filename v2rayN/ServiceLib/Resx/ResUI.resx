@@ -2850,4 +2850,10 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbReviverConfidenceLine" xml:space="preserve">
     <value>Evidence confidence: {0:P0}</value>
   </data>
+  <data name="TbReviverFeedbackUnavailable" xml:space="preserve">
+    <value>No promoted repair is available for feedback.</value>
+  </data>
+  <data name="TbReviverFeedbackRecorded" xml:space="preserve">
+    <value>Repair feedback recorded.</value>
+  </data>
 </root>
