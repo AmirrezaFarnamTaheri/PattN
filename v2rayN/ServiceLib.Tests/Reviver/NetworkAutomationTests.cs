@@ -49,6 +49,69 @@ public class NetworkAutomationTests
     }
 
     [Test]
+    public async Task Optimization_ShouldRejectNonFiniteInput()
+    {
+        var service = new NetworkAutomationService();
+        var threw = false;
+        try
+        {
+            _ = service.ChooseOptimization(
+            [
+                new OptimizationOption
+                {
+                    Id = "invalid",
+                    RuntimeScore = double.NaN,
+                    LearnedSuccessRate = 0.5d,
+                    EvidenceConfidence = 0.9d,
+                    MutationRisk = 0.1d,
+                }
+            ]);
+        }
+        catch (ArgumentException)
+        {
+            threw = true;
+        }
+
+        await threw.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task ShadowTesting_ShouldRejectInvalidThresholdAndLatency()
+    {
+        var service = new NetworkAutomationService();
+        var badThreshold = false;
+        try
+        {
+            _ = service.EvaluateShadow(
+                [new ShadowSample { Success = true, LatencyMs = 10d }],
+                [new ShadowSample { Success = true, LatencyMs = 10d }],
+                minimumImprovement: double.NaN,
+                minimumSamples: 1);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            badThreshold = true;
+        }
+
+        var badLatency = false;
+        try
+        {
+            _ = service.EvaluateShadow(
+                [new ShadowSample { Success = true, LatencyMs = double.PositiveInfinity }],
+                [new ShadowSample { Success = true, LatencyMs = 10d }],
+                minimumImprovement: 0d,
+                minimumSamples: 1);
+        }
+        catch (ArgumentException)
+        {
+            badLatency = true;
+        }
+
+        await badThreshold.Should().BeTrue();
+        await badLatency.Should().BeTrue();
+    }
+
+    [Test]
     public async Task SyncCodec_ShouldRoundTripAnonymousRecords()
     {
         var service = new NetworkAutomationService();
@@ -72,6 +135,27 @@ public class NetworkAutomationTests
 
         await decoded.Count.Should().BeEqualTo(1);
         await decoded[0].NetworkKey.Should().BeEqualTo("net:key");
+    }
+
+    [Test]
+    public async Task SyncCodec_ShouldRejectOversizedEncryptedPayload()
+    {
+        var service = new NetworkAutomationService();
+        var key = RandomNumberGenerator.GetBytes(32);
+        var payload = new byte[8 * 1024 * 1024 + 30];
+        payload[0] = 1;
+
+        var threw = false;
+        try
+        {
+            _ = service.DecryptSyncPayload(payload, key);
+        }
+        catch (InvalidDataException)
+        {
+            threw = true;
+        }
+
+        await threw.Should().BeTrue();
     }
 
     [Test]
