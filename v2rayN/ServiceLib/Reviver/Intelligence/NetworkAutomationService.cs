@@ -102,7 +102,20 @@ public sealed class NetworkAutomationService
             throw new ArgumentOutOfRangeException(nameof(policy.MinimumAggregateSamples));
         }
 
-        var grouped = records
+        var suppliedRecords = records.ToArray();
+        if (suppliedRecords.Any(x => x is null
+                                     || x.NetworkKey.IsNullOrEmpty()
+                                     || x.GenomeKey.IsNullOrEmpty()
+                                     || x.StrategyId.IsNullOrEmpty()
+                                     || !double.IsFinite(x.Confidence)
+                                     || x.Confidence is < 0d or > 1d))
+        {
+            throw new ArgumentException(
+                "Share records require derived keys, a strategy ID, and finite confidence between 0 and 1.",
+                nameof(records));
+        }
+
+        var grouped = suppliedRecords
             .GroupBy(x => new
             {
                 x.NetworkKey,
@@ -296,7 +309,12 @@ public sealed class NetworkAutomationService
         IEnumerable<ReleaseComponentSecurity> components,
         bool requireSignatures = true)
     {
+        ArgumentNullException.ThrowIfNull(components);
         var rows = components.ToArray();
+        if (rows.Any(x => x is null))
+        {
+            throw new ArgumentException("Release security components cannot contain null entries.", nameof(components));
+        }
         return new ReleaseSecurityAssessment
         {
             Components = rows,
@@ -314,6 +332,13 @@ public sealed class NetworkAutomationService
         TimeSpan maximumManifestAge)
     {
         ArgumentNullException.ThrowIfNull(manifest);
+        if (manifest.ArtifactSha256.IsNullOrEmpty()
+            || manifest.ArtifactSha256.Length != 64
+            || manifest.ArtifactSha256.Any(ch => !Uri.IsHexDigit(ch))
+            || manifest.SignatureBase64.IsNullOrEmpty())
+        {
+            return new UpdateManifestVerification { Error = "Manifest hash or signature is missing or malformed." };
+        }
         if (!TryParsePattNVersion(manifest.Version, out var target)
             || !TryParsePattNVersion(currentVersion, out var current)
             || !TryParsePattNVersion(manifest.MinimumVersion, out var minimum))
@@ -391,7 +416,14 @@ public sealed class NetworkAutomationService
 
     public IReadOnlyList<HeatmapCell> BuildHeatmap(IEnumerable<NetworkFingerprint> fingerprints)
     {
-        return fingerprints
+        ArgumentNullException.ThrowIfNull(fingerprints);
+        var rows = fingerprints.ToArray();
+        if (rows.Any(x => x is null || x.DpiSignals is null))
+        {
+            throw new ArgumentException("Heatmap fingerprints cannot contain null records or signal sets.", nameof(fingerprints));
+        }
+
+        return rows
             .GroupBy(x => new { x.CountryCode, x.CarrierKey })
             .Select(group =>
             {
