@@ -13,6 +13,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/build-linux.yml'
+      - '.github/workflows/build.yml'
+      - '.github/workflows/package-zip.yml'
+      - 'pattn-discovery/**'
+      - 'v2rayN/**'
       - 'release-assets.lock.sh'
       - 'release-reproducibility.sh'
       - 'scripts/deterministic_zip.py'
@@ -26,8 +30,6 @@ on:
   push:
     branches:
       - master
-    tags:
-      - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -76,7 +78,10 @@ jobs:
         apt-get install -y sudo git rsync findutils tar gzip unzip which curl jq wget file ca-certificates desktop-file-utils xdg-utils fakeroot dpkg-dev libc6 libgcc-s1 libstdc++6 zlib1g libicu-dev libssl-dev
     - name: Checkout repo (for scripts)
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      with: { submodules: 'recursive', fetch-depth: '0' }
+      with:
+        persist-credentials: false
+        submodules: 'recursive'
+        fetch-depth: '0'
     - name: Trust checked-out workspace
       shell: bash
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -159,7 +164,10 @@ jobs:
         dnf repolist | grep -i epel || true
     - name: Checkout repo (for scripts)
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      with: { submodules: 'recursive', fetch-depth: '0' }
+      with:
+        persist-credentials: false
+        submodules: 'recursive'
+        fetch-depth: '0'
     - name: Trust checked-out workspace
       shell: bash
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -422,6 +430,7 @@ jobs:
     - name: Checkout exact workflow source
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
+        persist-credentials: false
         path: repo
         fetch-depth: 1
         submodules: recursive
@@ -610,6 +619,7 @@ jobs:
     - name: Checkout exact workflow source
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
+        persist-credentials: false
         path: repo
         fetch-depth: 1
         submodules: recursive

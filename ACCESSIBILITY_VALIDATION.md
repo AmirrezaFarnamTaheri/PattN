@@ -5,7 +5,7 @@ Static automation metadata and successful UI builds are prerequisites, not proof
 ## Standards target and claim discipline
 
 - Use **WCAG 2.2 AAA success criteria where they meaningfully map to a native desktop application**, with WCAG-EM 2-style reproducible evaluation records.
-- Use the current **WCAG 3 Working Draft only as an experimental quality lens**. It is not a finished Recommendation, and this project must not claim a final Bronze/Silver/Gold WCAG 3 rating from the draft.
+- Use the current **WCAG 3 Working Draft only as an experimental quality lens**. It is not a finished Recommendation, and this project must not claim final WCAG 3 conformance, a rating/tier/score, or certification from any Working Draft terminology.
 - WAI-ARIA applies to web content/applications. WPF and Avalonia must expose equivalent native semantics through Windows UI Automation, Linux AT-SPI, and the platform accessibility bridge used on macOS rather than adding ARIA-like strings to XAML.
 - A source review, passing build, automation-name audit, or screenshot is not a conformance result. Record the exact commit, platform, assistive technology, scaling, theme, and observed behavior.
 
@@ -20,7 +20,7 @@ Static automation metadata and successful UI builds are prerequisites, not proof
 ## Keyboard and focus
 
 - Use no mouse. Reach every actionable control with Tab/Shift+Tab or platform-standard menu/grid navigation.
-- Interactive controls added by Discovery/Reviver should provide an approximately 44 x 44 device-independent-pixel target where layout permits; document any compact-data-grid exception and ensure an equivalent keyboard path.
+- Interactive controls added by Discovery/Reviver should provide an approximately 44 x 44 device-independent-pixel pointer target where layout permits. If a compact control is smaller, provide an equivalent larger pointer target that meets the target-size rule or document the project deviation. Keyboard access is required independently and is not a pointer-target exception.
 - Verify focus order follows the visible task order and remains predictable after dialogs, refreshes, and tab changes.
 - Verify every focused control has a visible focus indicator at every tested scale/theme.
 - Verify menus, tabs, expanders, grids, scroll areas, and dialogs contain no keyboard trap.

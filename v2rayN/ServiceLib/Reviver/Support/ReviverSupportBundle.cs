@@ -151,26 +151,45 @@ public sealed class ReviverSupportBundleBuilder
         "bbr", "cubic"
     };
 
-    private readonly byte[] _salt;
+    private readonly byte[]? _fixedSaltForTests;
+    private readonly object _buildGate = new();
+    private byte[] _activeSalt = [];
 
     public ReviverSupportBundleBuilder()
-        : this(RandomNumberGenerator.GetBytes(32))
     {
     }
 
+    // Deterministic salt is test-only. Production bundles always receive a fresh random salt.
     internal ReviverSupportBundleBuilder(byte[] bundleSalt)
     {
         ArgumentNullException.ThrowIfNull(bundleSalt);
-        _salt = bundleSalt.ToArray();
-        if (_salt.Length < 16)
+        if (bundleSalt.Length < 16)
         {
             throw new ArgumentException("Support-bundle tokenization salt must be at least 16 bytes.", nameof(bundleSalt));
         }
+        _fixedSaltForTests = bundleSalt.ToArray();
     }
 
     public ReviverSupportBundle Build(RepairRunResult run)
     {
         ArgumentNullException.ThrowIfNull(run);
+        lock (_buildGate)
+        {
+            _activeSalt = _fixedSaltForTests?.ToArray() ?? RandomNumberGenerator.GetBytes(32);
+            try
+            {
+                return BuildCore(run);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(_activeSalt);
+                _activeSalt = [];
+            }
+        }
+    }
+
+    private ReviverSupportBundle BuildCore(RepairRunResult run)
+    {
         var profile = run.Session.Original.CreateWorkingCopy();
         var transport = profile.GetTransportExtra();
         var protocol = profile.GetProtocolExtra();
@@ -344,7 +363,7 @@ public sealed class ReviverSupportBundleBuilder
 
     private string Tokenize(string value)
     {
-        var hash = HMACSHA256.HashData(_salt, Encoding.UTF8.GetBytes(value.Trim()));
+        var hash = HMACSHA256.HashData(_activeSalt, Encoding.UTF8.GetBytes(value.Trim()));
         return "tok:" + Convert.ToHexString(hash.AsSpan(0, 12)).ToLowerInvariant();
     }
 

@@ -95,7 +95,8 @@ internal class UpgradeApp
                     // A single failed entry leaves the install tree half-updated; that is not a
                     // successful update and must never reach StartV2RayN().
                     aborted = true;
-                    sb.Append(ex.StackTrace);
+                    sb.AppendLine(ex.ToString());
+                    break;
                 }
             }
         }

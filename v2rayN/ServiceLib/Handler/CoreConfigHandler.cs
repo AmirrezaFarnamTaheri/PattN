@@ -130,6 +130,11 @@ public static class CoreConfigHandler
         var result = new RetResult();
         var initPort = AppManager.Instance.GetLocalPort(EInboundProtocol.speedtest);
         var port = Utils.GetFreePort(initPort + testItem.QueueNum);
+        if (port <= 0)
+        {
+            Logging.SaveLog("GenerateClientSpeedtestConfig: no free loopback port is available.");
+            return new RetResult(false, ResUI.OperationFailed);
+        }
         testItem.Port = port;
 
         if (context.RunCoreType == ECoreType.sing_box)

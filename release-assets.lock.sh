@@ -192,8 +192,11 @@ pattn_download_sha256() {
   if curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"; then
     # A successful transport with unexpected bytes is suspicious: fail closed
     # rather than hiding it behind a fallback origin.
-    pattn_verify_sha256 "$output" "$expected"
-    return
+    if pattn_verify_sha256 "$output" "$expected"; then
+      return 0
+    fi
+    rm -f "$output"
+    return 1
   fi
 
   rm -f "$output"
@@ -206,11 +209,17 @@ pattn_download_sha256() {
       }
       api_url="https://api.github.com/repos/patterniha/Xray-core/releases/assets/$asset_id"
       echo "[!] Primary Xray release endpoint unavailable; retrying immutable asset $asset_id" >&2
-      curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+      if ! curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
         --header 'Accept: application/octet-stream' \
         --header 'X-GitHub-Api-Version: 2022-11-28' \
-        "$api_url" -o "$output"
-      pattn_verify_sha256 "$output" "$expected"
+        "$api_url" -o "$output"; then
+        rm -f "$output"
+        return 1
+      fi
+      if ! pattn_verify_sha256 "$output" "$expected"; then
+        rm -f "$output"
+        return 1
+      fi
       ;;
     *)
       return 1
@@ -220,12 +229,26 @@ pattn_download_sha256() {
 
 pattn_download_sha512() {
   local url="$1" output="$2" expected="$3"
-  curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"
-  pattn_verify_sha512 "$output" "$expected"
+  rm -f "$output"
+  if ! curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"; then
+    rm -f "$output"
+    return 1
+  fi
+  if ! pattn_verify_sha512 "$output" "$expected"; then
+    rm -f "$output"
+    return 1
+  fi
 }
 
 pattn_download_git_blob() {
   local url="$1" output="$2" expected="$3"
-  curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"
-  pattn_verify_git_blob "$output" "$expected"
+  rm -f "$output"
+  if ! curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"; then
+    rm -f "$output"
+    return 1
+  fi
+  if ! pattn_verify_git_blob "$output" "$expected"; then
+    rm -f "$output"
+    return 1
+  fi
 }
