@@ -20,6 +20,7 @@ on:
       - 'package-*.sh'
       - 'release-assets.lock.sh'
       - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
   pull_request:
     paths:
       - 'v2rayN/ServiceLib/**'
@@ -35,6 +36,7 @@ on:
       - 'package-*.sh'
       - 'release-assets.lock.sh'
       - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -168,7 +170,22 @@ jobs:
           exit 1
         fi
 
-        python3 -m py_compile scripts/deterministic_zip.py
+        python3 -m py_compile scripts/deterministic_zip.py scripts/generate_dependency_sbom.py
+        dependency_sbom="$RUNNER_TEMP/dependencies.spdx.json"
+        python3 scripts/generate_dependency_sbom.py \
+          --root . \
+          --output "$dependency_sbom" \
+          --source-sha "$GITHUB_SHA" \
+          --repository "$GITHUB_REPOSITORY"
+        python3 - "$dependency_sbom" <<'PY'
+        import json
+        import sys
+        doc = json.load(open(sys.argv[1], encoding="utf-8"))
+        assert doc["spdxVersion"] == "SPDX-2.3"
+        packages = doc.get("packages", [])
+        assert any(p["name"] == "ReactiveUI" for p in packages), "NuGet dependency inventory missing ReactiveUI"
+        assert any(p["externalRefs"][0]["referenceLocator"].startswith("pkg:golang/") for p in packages), "Go dependency inventory empty"
+        PY
         zip_tree="$RUNNER_TEMP/deterministic zip tree"
         mkdir -p "$zip_tree/sub dir"
         printf 'alpha\n' > "$zip_tree/a file.txt"
