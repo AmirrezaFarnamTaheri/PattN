@@ -24,7 +24,7 @@ public sealed class NetworkIntelligenceService
             TcpSucceeded = result.Connected,
             TlsSucceeded = result.TlsHandshakeSucceeded,
             UploadSucceeded = result.BodyFullyRead,
-            DownstreamSucceeded = result.ResponseReceived,
+            DownstreamSucceeded = result.ResponseReceived && result.StatusCode is >= 200 and < 300,
             LatencyMs = result.DurationMs,
             ObservedAt = observedAt ?? DateTimeOffset.UtcNow,
         }, now);
