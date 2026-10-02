@@ -856,12 +856,32 @@ public partial class CoreConfigV2rayService
             configDelays = ["10-20"];
         }
 
+        ValidateNonNegativeFragmentRanges(configLengths, "lengths");
+        ValidateNonNegativeFragmentRanges(configDelays, "delays");
+
         var maxSplit = 0;
-        var parts = configMaxSplit.Split('-');
-        if (parts.Length > 0 && int.TryParse(parts[0], out var ms))
+        var parts = configMaxSplit.Split('-', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length == 0
+            || !int.TryParse(
+                parts[0],
+                System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var ms)
+            || ms < 0)
         {
-            maxSplit = ms;
+            throw new InvalidOperationException("Fragment maxSplit must be a non-negative integer or range.");
         }
+        if (parts.Length == 2
+            && (!int.TryParse(
+                    parts[1],
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var maxSplitUpper)
+                || maxSplitUpper < ms))
+        {
+            throw new InvalidOperationException("Fragment maxSplit range must be non-negative and ordered.");
+        }
+        maxSplit = ms;
 
         var fragmentMask = new Mask4Ray
         {
@@ -879,6 +899,36 @@ public partial class CoreConfigV2rayService
         };
 
         return fragmentMask;
+    }
+
+    private static void ValidateNonNegativeFragmentRanges(IEnumerable<string> values, string fieldName)
+    {
+        foreach (var value in values)
+        {
+            var raw = value?.Trim() ?? string.Empty;
+            var parts = raw.Split('-', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length == 0
+                || !int.TryParse(
+                    parts[0],
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var lower)
+                || lower < 0)
+            {
+                throw new InvalidOperationException($"Fragment {fieldName} entries must be non-negative integer ranges.");
+            }
+
+            if (parts.Length == 2
+                && (!int.TryParse(
+                        parts[1],
+                        System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var upper)
+                    || upper < lower))
+            {
+                throw new InvalidOperationException($"Fragment {fieldName} ranges must be ordered and non-negative.");
+            }
+        }
     }
 
     private List<Outbounds4Ray> CloneOutbounds(List<Outbounds4Ray> outbounds)
