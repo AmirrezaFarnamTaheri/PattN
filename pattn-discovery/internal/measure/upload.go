@@ -2,11 +2,13 @@ package measure
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/netip"
 	"net/url"
 	"strconv"
@@ -30,6 +32,8 @@ type UploadProbeOptions struct {
 }
 
 type UploadProbeResult struct {
+	Connected          bool    `json:"connected"`
+	TLSHandshakeSucceeded bool `json:"tlsHandshakeSucceeded"`
 	BytesPlanned       int     `json:"bytesPlanned"`
 	BytesReadByClient  int64   `json:"bytesReadByClient"`
 	ChunksEmitted      int64   `json:"chunksEmitted"`
@@ -69,6 +73,7 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	defer cancel()
 
 	body := &pacedUploadBody{
+		ctx: probeCtx,
 		total: options.TotalBytes,
 		chunks: options.Chunks,
 		delay: options.InterChunkDelay,
@@ -77,6 +82,17 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	if err != nil {
 		return UploadProbeResult{}, err
 	}
+	var connected atomic.Bool
+	var tlsSucceeded atomic.Bool
+	trace := &httptrace.ClientTrace{
+		GotConn: func(httptrace.GotConnInfo) {
+			connected.Store(true)
+		},
+		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
+			tlsSucceeded.Store(err == nil)
+		},
+	}
+	request = request.WithContext(httptrace.WithClientTrace(request.Context(), trace))
 	request.ContentLength = int64(options.TotalBytes)
 	request.Header.Set("Content-Type", "application/octet-stream")
 	request.Header.Set("User-Agent", "pattn-discovery/uplink-probe")
@@ -124,6 +140,8 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	start := time.Now()
 	response, requestErr := client.Do(request)
 	result := UploadProbeResult{
+		Connected:         connected.Load(),
+		TLSHandshakeSucceeded: tlsSucceeded.Load(),
 		BytesPlanned:      options.TotalBytes,
 		BytesReadByClient: body.bytesRead.Load(),
 		ChunksEmitted:     body.chunksEmitted.Load(),
@@ -136,6 +154,8 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	}
 	defer response.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
+	result.Connected = connected.Load()
+	result.TLSHandshakeSucceeded = tlsSucceeded.Load()
 	result.ResponseReceived = true
 	result.StatusCode = response.StatusCode
 	result.BytesReadByClient = body.bytesRead.Load()
@@ -145,6 +165,7 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 }
 
 type pacedUploadBody struct {
+	ctx           context.Context
 	total         int
 	chunks        int
 	delay         time.Duration
@@ -159,7 +180,13 @@ func (b *pacedUploadBody) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 	if b.chunkIndex > 0 && b.delay > 0 {
-		time.Sleep(b.delay)
+		timer := time.NewTimer(b.delay)
+		defer timer.Stop()
+		select {
+		case <-b.ctx.Done():
+			return 0, b.ctx.Err()
+		case <-timer.C:
+		}
 	}
 
 	base := b.total / b.chunks
