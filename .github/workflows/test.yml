@@ -59,7 +59,7 @@ jobs:
       run: |
         set -euo pipefail
         scripts=(
-          release-assets.lock.sh
+          release-assets.lock.sh release-reproducibility.sh
           package-debian.sh package-rhel.sh
           package-debian-riscv.sh package-rhel-riscv.sh
           package-debian-loong.sh package-rhel-loong.sh
@@ -69,6 +69,28 @@ jobs:
 
         # shellcheck source=release-assets.lock.sh
         source ./release-assets.lock.sh
+
+        # Native package reproducibility helper must be deterministic even when
+        # the input tree starts with different mtimes.
+        (
+          set -euo pipefail
+          # shellcheck source=release-reproducibility.sh
+          source ./release-reproducibility.sh
+          repro_tmp="$(mktemp -d)"
+          trap 'rm -rf "$repro_tmp"' EXIT
+          mkdir -p "$repro_tmp/a/tree" "$repro_tmp/b/tree"
+          printf 'same-payload\n' > "$repro_tmp/a/tree/payload.txt"
+          cp "$repro_tmp/a/tree/payload.txt" "$repro_tmp/b/tree/payload.txt"
+          touch -d '@1700000000' "$repro_tmp/a/tree/payload.txt"
+          touch -d '@1800000000' "$repro_tmp/b/tree/payload.txt"
+          SOURCE_DATE_EPOCH=1600000000
+          pattn_init_reproducible_build "$GITHUB_WORKSPACE"
+          pattn_normalize_tree_mtime "$repro_tmp/a/tree"
+          pattn_normalize_tree_mtime "$repro_tmp/b/tree"
+          pattn_reproducible_tar_gz "$repro_tmp/a" tree "$repro_tmp/a.tar.gz"
+          pattn_reproducible_tar_gz "$repro_tmp/b" tree "$repro_tmp/b.tar.gz"
+          cmp "$repro_tmp/a.tar.gz" "$repro_tmp/b.tar.gz"
+        )
 
         sdk_version="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["version"])')"
         sdk_roll_forward="$(python3 -c 'import json; print(json.load(open("global.json", encoding="utf-8"))["sdk"]["rollForward"])')"

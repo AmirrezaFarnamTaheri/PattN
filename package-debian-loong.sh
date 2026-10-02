@@ -4,6 +4,8 @@ set -euo pipefail
 LOCK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=release-assets.lock.sh
 source "$LOCK_DIR/release-assets.lock.sh"
+# shellcheck source=release-reproducibility.sh
+source "$LOCK_DIR/release-reproducibility.sh"
 
 VERSION_ARG=""
 WITH_CORE="both"
@@ -17,7 +19,10 @@ PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 OUTPUT_DIR="${HOME}/debbuild"
 DOTNET_LOONGARCH_VERSION="$PATTN_LOONG_DOTNET_VERSION"
 DOTNET_LOONGARCH_TAG="$PATTN_LOONG_DOTNET_TAG"
-DOTNET_LOONGARCH_BASE="https://github.com/loongson/dotnet/releases/download"
+# Microsoft does not currently publish a .NET 10 LoongArch64 Linux SDK. Keep
+# the vendor bootstrap origin overrideable so release operators can use an
+# organization-controlled immutable mirror while retaining the reviewed digest.
+DOTNET_LOONGARCH_BASE="${PATTN_LOONG_DOTNET_BASE:-https://github.com/loongson/dotnet/releases/download}"
 DOTNET_LOONGARCH_FILE="dotnet-sdk-${DOTNET_LOONGARCH_VERSION}-linux-loongarch64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_LOONGARCH_BASE}/${DOTNET_LOONGARCH_TAG}/${DOTNET_LOONGARCH_FILE}"
 
@@ -751,6 +756,10 @@ EOF
   [[ -f "$stage/opt/v2rayN/PattN" ]] && chmod 0755 "$stage/opt/v2rayN/PattN" || true
   [[ -f "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" ]] && chmod 0755 "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" || true
 
+  # Normalize all package payload/control mtimes to the source commit before dpkg-deb.
+  # dpkg-deb honors SOURCE_DATE_EPOCH for archive-member metadata as well.
+  pattn_normalize_tree_mtime "$stage"
+
   deb_out="$OUTPUT_DIR/v2rayn_${VERSION}_${deb_arch}.deb"
   dpkg-deb --root-owner-group --build "$stage" "$deb_out"
   verify_discovery_deb "$deb_out" "$short"
@@ -804,6 +813,7 @@ main() {
   install_dependencies
   prepare_workspace
   resolve_version
+  pattn_init_reproducible_build "$SCRIPT_DIR"
 
   mapfile -t targets < <(select_targets)
 

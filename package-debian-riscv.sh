@@ -4,6 +4,8 @@ set -euo pipefail
 LOCK_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=release-assets.lock.sh
 source "$LOCK_DIR/release-assets.lock.sh"
+# shellcheck source=release-reproducibility.sh
+source "$LOCK_DIR/release-reproducibility.sh"
 
 VERSION_ARG=""
 WITH_CORE="both"
@@ -16,7 +18,11 @@ PKGROOT="v2rayN-publish"
 PROJECT_HINT="v2rayN.Desktop/v2rayN.Desktop.csproj"
 OUTPUT_DIR="${HOME}/debbuild"
 DOTNET_RISCV_VERSION="$PATTN_RISCV_DOTNET_VERSION"
-DOTNET_RISCV_BASE="https://github.com/xujiegb/dotnet-riscv/releases/download"
+# Microsoft does not currently publish a .NET 10 RISC-V Linux SDK. The default
+# source is therefore an external bootstrap origin, but the bytes remain locked
+# by PATTN_RISCV_DOTNET_SHA256. Release operators can point this at an
+# organization-controlled immutable mirror without changing the reviewed digest.
+DOTNET_RISCV_BASE="${PATTN_RISCV_DOTNET_BASE:-https://github.com/xujiegb/dotnet-riscv/releases/download}"
 DOTNET_RISCV_FILE="dotnet-sdk-${DOTNET_RISCV_VERSION}-linux-riscv64.tar.gz"
 DOTNET_SDK_URL="${DOTNET_RISCV_BASE}/${DOTNET_RISCV_VERSION}/${DOTNET_RISCV_FILE}"
 
@@ -747,6 +753,10 @@ EOF
   [[ -f "$stage/opt/v2rayN/PattN" ]] && chmod 0755 "$stage/opt/v2rayN/PattN" || true
   [[ -f "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" ]] && chmod 0755 "$stage/opt/v2rayN/bin/pattn-discovery/pattn-discovery" || true
 
+  # Normalize all package payload/control mtimes to the source commit before dpkg-deb.
+  # dpkg-deb honors SOURCE_DATE_EPOCH for archive-member metadata as well.
+  pattn_normalize_tree_mtime "$stage"
+
   deb_out="$OUTPUT_DIR/v2rayn_${VERSION}_${deb_arch}.deb"
   dpkg-deb --root-owner-group --build "$stage" "$deb_out"
   verify_discovery_deb "$deb_out" "$short"
@@ -800,6 +810,7 @@ main() {
   install_dependencies
   prepare_workspace
   resolve_version
+  pattn_init_reproducible_build "$SCRIPT_DIR"
 
   mapfile -t targets < <(select_targets)
 
