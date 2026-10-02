@@ -27,4 +27,5 @@ public sealed record RepairRunResult
     public ProxyGenome? ProxyGenome { get; init; }
     public NetworkObservationFingerprint? NetworkFingerprint { get; init; }
     public RepairRecommendationExplanation? RecommendationExplanation { get; init; }
+    public RepairExperimentPlan? ExperimentPlan { get; init; }
 }
