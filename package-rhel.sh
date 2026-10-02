@@ -96,7 +96,7 @@ install_dependencies() {
   local sdk_tmp=""
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang ca-certificates
+    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang ca-certificates libicu
 
     case "$HOST_ARCH" in
       x86_64)
