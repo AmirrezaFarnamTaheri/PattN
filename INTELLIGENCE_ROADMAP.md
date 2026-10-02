@@ -24,7 +24,7 @@ This document reconciles the Discovery/Reviver forensic audits and the follow-on
 | Signed checksums | Implemented | release upload emits and signs SHA-256 manifests |
 | SBOM | Implemented | release upload emits and signs SPDX 2.3 inventory |
 | Provenance | Implemented | release upload emits and signs in-toto/SLSA-shaped provenance |
-| Runtime update verification | Implemented primitive | ECDSA-signed manifest + artifact SHA-256 + freshness + minimum-version/downgrade checks |
+| Runtime update verification | Verification primitive implemented; production updater integration still gated | ECDSA-signed manifest + artifact SHA-256 + freshness + minimum-version/downgrade checks exist, but the current `UpdateService` does not consume signed manifests and no repository trust-root key is configured |
 | Action pinning / least privilege | Implemented on current release stack | workflow actions pinned; PR permissions read-only by default |
 | Catalog rollback protection | Implemented | signed monotonic revision, expiry and independent high-water mark |
 | Helper supervision/framing | Implemented | bounded line size, restart backoff, stream/unary concurrency caps |
@@ -94,6 +94,7 @@ The client enforces explicit opt-in and local aggregate/sample gating, but no re
 
 These cannot be completed by source changes alone:
 
+- **Runtime updater trust root:** the current updater still discovers/downloads GitHub release assets directly. Wiring the signed-manifest verifier requires a deliberately distributed public key plus corresponding release-signing secret; those trust credentials must not be invented in source.
 - **Apple release credentials:** Developer ID certificate and App Store Connect notarization key secrets must be configured for signed/notarized release execution.
 - **Real carrier/DPI validation:** the uplink-stall and fragmentation hypotheses require controlled captures across affected networks; generic CI runners cannot establish carrier-specific behavior.
 - **Root KSK rollover:** the scheduled 2026-10-11 event must be re-audited after the real transition; pre-rollover synthetic fixtures are not equivalent to live evidence.
