@@ -6,6 +6,7 @@ public class StrategyOutcomeHistoryItem
     [PrimaryKey]
     public string Id { get; set; } = string.Empty;
 
+    public string CandidateId { get; set; } = string.Empty;
     public string StrategyId { get; set; } = string.Empty;
     public string GenomeKey { get; set; } = string.Empty;
     public string NetworkKey { get; set; } = string.Empty;
