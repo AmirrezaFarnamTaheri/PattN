@@ -54,17 +54,17 @@ public sealed class IntelligenceRetentionService
                 db.RunInTransaction(() =>
                 {
                     var rows = db.Table<StrategyOutcomeHistoryItem>()
-                    .Where(x => x.ObservedAtUnixMs < rawCutoff)
-                    .OrderBy(x => x.ObservedAtUnixMs)
-                    .Take(policy.BatchSize)
-                    .ToList();
-                batchCount = rows.Count;
-                if (batchCount == 0)
-                {
-                    return Task.CompletedTask;
-                }
+                        .Where(x => x.ObservedAtUnixMs < rawCutoff)
+                        .OrderBy(x => x.ObservedAtUnixMs)
+                        .Take(policy.BatchSize)
+                        .ToList();
+                    batchCount = rows.Count;
+                    if (batchCount == 0)
+                    {
+                        return;
+                    }
 
-                var aggregates = rows
+                    var aggregates = rows
                     .GroupBy(x => new
                     {
                         x.StrategyId,
@@ -91,8 +91,8 @@ public sealed class IntelligenceRetentionService
                     })
                     .ToArray();
 
-                foreach (var aggregate in aggregates)
-                {
+                    foreach (var aggregate in aggregates)
+                    {
                     var existing = db.Find<StrategyOutcomeAggregateItem>(aggregate.Id);
                     if (existing is null)
                     {
@@ -109,7 +109,7 @@ public sealed class IntelligenceRetentionService
                         existing.LatencySamples += aggregate.LatencySamples;
                         db.Update(existing);
                     }
-                }
+                    }
 
                     foreach (var row in rows)
                     {
