@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using ServiceLib.Discovery.Protocol;
 using ServiceLib.Reviver.Models;
 using ServiceLib.Reviver.Normalization;
 
@@ -12,6 +13,23 @@ namespace ServiceLib.Reviver.Intelligence;
 /// </summary>
 public sealed class NetworkIntelligenceService
 {
+    public FailureAssessment ClassifyUplinkProbe(
+        DiscoveryUplinkProbeResult result,
+        DateTimeOffset? observedAt = null,
+        DateTimeOffset? now = null)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return Classify(new NetworkObservation
+        {
+            TcpSucceeded = result.Connected,
+            TlsSucceeded = result.TlsHandshakeSucceeded,
+            UploadSucceeded = result.BodyFullyRead,
+            DownstreamSucceeded = result.ResponseReceived,
+            LatencyMs = result.DurationMs,
+            ObservedAt = observedAt ?? DateTimeOffset.UtcNow,
+        }, now);
+    }
+
     public FailureAssessment Classify(NetworkObservation observation, DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(observation);
