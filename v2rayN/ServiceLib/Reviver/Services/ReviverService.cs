@@ -65,7 +65,12 @@ public sealed class ReviverService(
 
         var planned = await PlanAsync(session, diagnosis.FailureClass, maxCandidates, cancellationToken);
         RepairMetrics.RecordPlanned(planned.Count);
-        var validated = await ValidateAsync(planned, validator, cancellationToken);
+        var experimentPlan = RepairExperimentPlanner.Plan(
+            diagnosis.FailureClass,
+            planned,
+            failureAssessment);
+        var validationOrder = RepairExperimentPlanner.OrderForValidation(planned, experimentPlan);
+        var validated = await ValidateAsync(validationOrder, validator, cancellationToken);
         RepairMetrics.RecordValidated(validated.Count);
         var recommended = validated.FirstOrDefault();
         return new RepairRunResult
@@ -81,6 +86,7 @@ public sealed class ReviverService(
             RecommendationExplanation = recommended is null
                 ? null
                 : RepairIntelligenceService.Explain(recommended, failureAssessment),
+            ExperimentPlan = experimentPlan,
         };
     }
 
