@@ -48,11 +48,14 @@ public sealed record ProviderAsnCatalogRemoteSourceView
     public string LastSignatureKeyId { get; init; } = string.Empty;
     public string LastSignatureCatalogSha256 { get; init; } = string.Empty;
     public DateTimeOffset? LastSignatureSignedAt { get; init; }
+    public long? LastSignatureRevision { get; init; }
+    public DateTimeOffset? LastSignatureExpiresAt { get; init; }
+    public long SignatureRevisionHighWatermark { get; init; }
 }
 
 public sealed record ProviderAsnCatalogSignatureEnvelope
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const string AlgorithmEcdsaP256Sha256 = "ecdsa-p256-sha256";
     public const string SignatureEncodingP1363 = "p1363";
 
@@ -77,8 +80,14 @@ public sealed record ProviderAsnCatalogSignatureEnvelope
     [JsonPropertyName("catalogSha256")]
     public string CatalogSha256 { get; init; } = string.Empty;
 
+    [JsonPropertyName("revision")]
+    public long Revision { get; init; }
+
     [JsonPropertyName("signedAt")]
     public DateTimeOffset SignedAt { get; init; }
+
+    [JsonPropertyName("expiresAt")]
+    public DateTimeOffset ExpiresAt { get; init; }
 
     [JsonPropertyName("signature")]
     public string SignatureBase64 { get; init; } = string.Empty;
@@ -93,7 +102,9 @@ public sealed record ProviderAsnCatalogSignatureValidation
     public string Status { get; init; } = string.Empty;
     public string KeyId { get; init; } = string.Empty;
     public string CatalogSha256 { get; init; } = string.Empty;
+    public long? Revision { get; init; }
     public DateTimeOffset? SignedAt { get; init; }
+    public DateTimeOffset? ExpiresAt { get; init; }
     public string FinalUri { get; init; } = string.Empty;
 }
 

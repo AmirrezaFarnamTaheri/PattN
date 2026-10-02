@@ -34,6 +34,18 @@ import (
 
 const EngineVersion = "0.1.0-dev"
 
+const maxTimeoutMilliseconds int64 = (1<<63 - 1) / int64(time.Millisecond)
+
+func requestTimeout(timeoutMs int, fallback time.Duration) (time.Duration, error) {
+	if timeoutMs <= 0 {
+		return fallback, nil
+	}
+	if int64(timeoutMs) > maxTimeoutMilliseconds {
+		return 0, fmt.Errorf("timeoutMs exceeds maximum supported duration")
+	}
+	return time.Duration(timeoutMs) * time.Millisecond, nil
+}
+
 type scanSession struct {
 	cancel    context.CancelFunc
 	gate      *scheduler.Gate
@@ -179,9 +191,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 		if base.Error != nil {
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnstrace.Trace(ctx, p.Domain, p.QueryType, dnstrace.Options{
 			RootServers: roots,
@@ -223,9 +236,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 		if base.Error != nil {
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnsauthority.Compare(ctx, p.Domain, p.QueryType, dnsauthority.Options{
 			Trace: dnstrace.Options{
@@ -277,9 +291,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			base.Error = &protocol.Error{Code: "invalid_params", Message: parseErr.Error()}
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnssecdiag.Inspect(ctx, p.Domain, dnstrace.Options{
 			RootServers: roots,
@@ -313,9 +328,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			base.Error = &protocol.Error{Code: "invalid_params", Message: parseErr.Error()}
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnschain.Validate(ctx, p.Domain, dnschain.Options{
 			Trace: dnstrace.Options{
@@ -352,9 +368,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			base.Error = &protocol.Error{Code: "invalid_params", Message: parseErr.Error()}
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnsvalidate.Validate(ctx, p.Domain, p.QueryType, dnstrace.Options{
 			RootServers: roots,
@@ -433,9 +450,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 		for _, resolver := range p.Candidates {
 			resolvers = append(resolvers, dnstruth.ResolverEndpoint{Name: resolver.Name, Address: resolver.Address, Port: resolver.Port, Kind: dnstruth.SourceCandidate, CatalogID: resolver.CatalogID, Policy: resolver.Policy, ServerName: resolver.ServerName, DoTPort: resolver.DoTPort, DoHURL: resolver.DoHURL})
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		checkDNSSEC := p.CheckDNSSEC != nil && *p.CheckDNSSEC
 		result, err := dnstruth.Compare(ctx, p.Domain, p.QueryType, dnstruth.CompareOptions{
@@ -473,9 +491,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			base.Error = &protocol.Error{Code: "invalid_params", Message: parseErr.Error()}
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		result, err := dnsrepair.Inspect(ctx, p.Domain, dnsrepair.Options{
 			TraceOptions: dnstrace.Options{
@@ -549,9 +568,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 			base.Error = &protocol.Error{Code: "invalid_params", Message: "resolver profile quorum must satisfy 0 <= minSuccesses <= attempts <= 7"}
 			break
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		check := func(value *bool, fallback bool) bool {
 			if value == nil {
@@ -626,9 +646,10 @@ func (e *Engine) Handle(ctx context.Context, req protocol.Request) protocol.Resp
 		if p.CheckHijack != nil {
 			checkHijack = *p.CheckHijack
 		}
-		timeout := time.Duration(p.TimeoutMs) * time.Millisecond
-		if p.TimeoutMs <= 0 {
-			timeout = 2 * time.Second
+		timeout, timeoutErr := requestTimeout(p.TimeoutMs, 2*time.Second)
+		if timeoutErr != nil {
+			base.Error = &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}
+			break
 		}
 		var dnssecRefs []netip.Addr
 		var dnssecStatus string
@@ -725,8 +746,9 @@ func (e *Engine) runResolverDiscovery(parent context.Context, req protocol.Reque
 	if strings.TrimSpace(p.Domain) == "" {
 		p.Domain = "example.com"
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 1200
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 1200*time.Millisecond)
+	if timeoutErr != nil {
+		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}})
 	}
 	if p.Concurrency <= 0 {
 		p.Concurrency = 128
@@ -760,7 +782,7 @@ func (e *Engine) runResolverDiscovery(parent context.Context, req protocol.Reque
 	}
 
 	summary, err := resolverdiscovery.Run(scanCtx, resolverdiscovery.Options{
-		Ranges: ranges, Port: p.Port, Domain: p.Domain, Timeout: time.Duration(p.TimeoutMs) * time.Millisecond,
+		Ranges: ranges, Port: p.Port, Domain: p.Domain, Timeout: timeout,
 		Concurrency: p.Concurrency, MaxTargets: p.MaxTargets, Gate: session.gate,
 	}, resolverdiscovery.Callbacks{
 		Result: func(result resolverdiscovery.Result) error {
@@ -830,8 +852,9 @@ func (e *Engine) runTCPScan(parent context.Context, req protocol.Request, emit f
 	if len(ports) == 0 {
 		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: "at least one non-zero port is required"}})
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 1500
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 1500*time.Millisecond)
+	if timeoutErr != nil {
+		return emit(protocol.Response{Version: protocol.Version, ID: req.ID, Error: &protocol.Error{Code: "invalid_params", Message: timeoutErr.Error()}})
 	}
 	if p.Concurrency <= 0 {
 		p.Concurrency = 256
@@ -866,7 +889,7 @@ func (e *Engine) runTCPScan(parent context.Context, req protocol.Request, emit f
 	}
 
 	summary, err := scan.RunTCP(scanCtx, scan.TCPOptions{
-		Ranges: ranges, Ports: ports, Timeout: time.Duration(p.TimeoutMs) * time.Millisecond,
+		Ranges: ranges, Ports: ports, Timeout: timeout,
 		Concurrency: p.Concurrency, MaxTargets: p.MaxTargets, Gate: session.gate,
 	}, scan.TCPCallbacks{
 		Result: func(result scan.TCPResult) error {
@@ -981,8 +1004,9 @@ func probeEndpoints(ctx context.Context, p endpointProbeParams) (endpointProbeRe
 	if p.MinSuccesses > p.Attempts {
 		return endpointProbeResponse{}, fmt.Errorf("minSuccesses cannot exceed attempts")
 	}
-	if p.TimeoutMs <= 0 {
-		p.TimeoutMs = 5000
+	timeout, timeoutErr := requestTimeout(p.TimeoutMs, 5*time.Second)
+	if timeoutErr != nil {
+		return endpointProbeResponse{}, timeoutErr
 	}
 	if p.Scheme == "" {
 		p.Scheme = "https"
@@ -1015,7 +1039,7 @@ func probeEndpoints(ctx context.Context, p endpointProbeParams) (endpointProbeRe
 				Scheme:             p.Scheme,
 				Path:               p.Path,
 				Method:             p.Method,
-				Timeout:            time.Duration(p.TimeoutMs) * time.Millisecond,
+				Timeout:            timeout,
 				InsecureSkipVerify: p.InsecureSkipVerify,
 			})
 			if probeErr != nil {

@@ -62,7 +62,7 @@ public sealed class SqliteEndpointPoolStore : IEndpointPoolStore, IEndpointPoolA
     public async Task<EndpointPoolItem> UpsertAsync(
         DiscoveryCandidateRequest request,
         DiscoveryEndpointCandidate candidate,
-        bool pinned = false,
+        bool? pinned = null,
         string? label = null,
         CancellationToken cancellationToken = default)
     {
@@ -127,7 +127,10 @@ public sealed class SqliteEndpointPoolStore : IEndpointPoolStore, IEndpointPoolA
             item.HttpHost = httpHost;
             item.Label = normalizedLabel ?? item.Label;
             item.Enabled = true;
-            item.Pinned = pinned;
+            if (pinned is bool pinValue)
+            {
+                item.Pinned = pinValue;
+            }
             item.Provider = candidate.Provider ?? item.Provider;
             item.Asn = candidate.Asn ?? item.Asn;
             item.Pop = candidate.Pop ?? item.Pop;

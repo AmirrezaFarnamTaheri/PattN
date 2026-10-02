@@ -20,6 +20,11 @@ internal static class DiscoveryEndpointAddress
             return false;
         }
 
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
         normalized = address.ToString();
         return true;
     }

@@ -19,6 +19,18 @@ public sealed record RepairValidationEvidence
     public double? ThroughputMbps { get; init; }
     public IReadOnlyList<ERepairFailureClass> Failures { get; init; } = [];
 
+    /// <summary>
+    /// Set when the evidence cannot be attributed to the core that was started for it -- e.g. the
+    /// core process exited, or stopped serving the probed loopback port, while the validation was
+    /// running. Successes measured against a *different* local listener still look like successes
+    /// (MeetsQuorum only counts them), so this flag is how the validator says "count these, but do
+    /// not trust them". Promotion and ranking gates must refuse such evidence.
+    /// </summary>
+    public bool IntegritySuspect { get; init; }
+
     public bool MeetsQuorum(int minimumSuccesses = 2)
         => Attempts > 0 && Successes >= minimumSuccesses;
+
+    public bool MeetsQuorumWithoutIntegrityDoubt(int minimumSuccesses = 2)
+        => MeetsQuorum(minimumSuccesses) && !IntegritySuspect;
 }

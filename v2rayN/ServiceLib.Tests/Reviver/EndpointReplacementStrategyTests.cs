@@ -1,6 +1,8 @@
 using ServiceLib.Discovery.Models;
 using ServiceLib.Discovery.Services;
 using ServiceLib.Reviver.Models;
+using ServiceLib.Reviver.Normalization;
+using ServiceLib.Reviver.Services;
 using ServiceLib.Reviver.Strategies;
 
 namespace ServiceLib.Tests.Reviver;
@@ -142,6 +144,47 @@ public class EndpointReplacementStrategyTests
 
         await profile.Sni.Should().BeEqualTo(string.Empty);
         await profile.GetTransportExtra().Host.Should().BeNull();
+    }
+
+    [Test]
+    public async Task PlanAsync_ShouldStampOriginatingStrategyId()
+    {
+        var profile = new ProfileItem
+        {
+            IndexId = "strategy-id-source",
+            ConfigType = EConfigType.VLESS,
+            CoreType = ECoreType.Xray,
+            Address = "origin.example.com",
+            Port = 443,
+            Password = Guid.NewGuid().ToString(),
+            Network = nameof(ETransport.raw),
+            StreamSecurity = string.Empty,
+        };
+        profile.SetProtocolExtra(new ProtocolExtraItem
+        {
+            Flow = string.Empty,
+            VlessEncryption = Global.None,
+        });
+
+        var strategy = new EndpointReplacementStrategy(new StubDiscoveryProvider(
+        [
+            new DiscoveryEndpointCandidate
+            {
+                Address = "203.0.113.20",
+                Port = 443,
+                Source = "fixture",
+            }
+        ]));
+        var service = new ReviverService(
+            new ProfileNormalizer(),
+            new ProfileInvariantRegistry(),
+            [strategy]);
+
+        var session = service.StartSession(profile);
+        var planned = await service.PlanAsync(session, ERepairFailureClass.ConnectionTimeout);
+
+        await planned.Should().HaveCount(1);
+        await planned[0].StrategyId.Should().BeEqualTo("endpoint-replacement");
     }
 
     [Test]

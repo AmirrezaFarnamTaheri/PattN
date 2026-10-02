@@ -12,8 +12,10 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
     private readonly int _speedTestPageSize = config.SpeedTestItem.SpeedTestPageSize ?? Global.SpeedTestPageSize;
     private readonly TimeSpan _delayInterval = TimeSpan.FromSeconds(config.SpeedTestItem.SpeedTestDelayInterval ?? 1);
     private readonly ProxyTestHistoryService _historyService = new();
-    private int MixedConcurrencyCount => Math.Max(1, _config.SpeedTestItem.MixedConcurrencyCount);
-    private int TestTimeoutSeconds => Math.Max(1, _config.SpeedTestItem.SpeedTestTimeout);
+    private int MixedConcurrencyCount => Math.Clamp(_config.SpeedTestItem.MixedConcurrencyCount, 1, 128);
+    private int TestTimeoutSeconds => Math.Clamp(_config.SpeedTestItem.SpeedTestTimeout, 1, 600);
+    private int RetryEachProxyCount => Math.Clamp(_config.SpeedTestItem.RetryEachProxyCount, 0, 20);
+    private int RetryFailedAfterBatchCount => Math.Clamp(_config.SpeedTestItem.RetryFailedAfterBatchCount, 0, 20);
 
     public Task RunLoop(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
@@ -72,19 +74,24 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         {
             try
             {
-                await ProfileExManager.Instance.SaveTo();
+                try
+                {
+                    await ProfileExManager.Instance.SaveTo();
+                }
+                finally
+                {
+                    await UpdateFunc("", ResUI.SpeedtestingCompleted);
+                }
             }
             finally
             {
-                await UpdateFunc("", ResUI.SpeedtestingCompleted);
-            }
+                lock (_runLock)
+                {
+                    _runCtsList.Remove(runCts);
+                }
 
-            lock (_runLock)
-            {
-                _runCtsList.Remove(runCts);
+                runCts.Dispose();
             }
-
-            runCts.Dispose();
         }
     }
 
@@ -98,15 +105,16 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
 
         var lastPassItems = lstSelected;
         var lastCompletedIds = new ConcurrentDictionary<string, byte>();
+        var runId = Guid.NewGuid().ToString("N");
+        var attempt = 1;
+        var finalOutcomesRecorded = false;
 
         try
         {
-            var runId = Guid.NewGuid().ToString("N");
-            var attempt = 1;
             var failed = await RunAndRecordPassAsync(
                 actionType, lstSelected, attempt, "initial", runId, lastCompletedIds, ct);
 
-            var perProxyRetries = Math.Max(0, _config.SpeedTestItem.RetryEachProxyCount);
+            var perProxyRetries = RetryEachProxyCount;
             for (var retry = 0; retry < perProxyRetries; retry++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -122,7 +130,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
 
             for (var retry = 0;
-                 retry < Math.Max(0, _config.SpeedTestItem.RetryFailedAfterBatchCount) && failed.Count > 0;
+                 retry < RetryFailedAfterBatchCount && failed.Count > 0;
                  retry++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -134,6 +142,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
 
             await RecordFinalOutcomesAsync(actionType, lstSelected, failed, runId, attempt, ct);
+            finalOutcomesRecorded = true;
             // A retention value of 0 intentionally means "keep history indefinitely".
             // Negative values are rejected by the settings UI; PruneAsync is defensive and
             // treats non-positive values as no pruning for externally edited configurations.
@@ -148,6 +157,18 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                 lastPassItems.Where(it => !lastCompletedIds.ContainsKey(it.IndexId)).ToList(),
                 actionType,
                 ResUI.SpeedtestingSkip).ConfigureAwait(false);
+
+            if (!finalOutcomesRecorded)
+            {
+                try
+                {
+                    await RecordCancelledOutcomesAsync(actionType, lstSelected, runId, attempt);
+                }
+                catch (Exception ex)
+                {
+                    Logging.SaveLog("Failed to persist cancelled proxy-test final outcomes.", ex);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -309,6 +330,38 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
                 ConfigType = item.ConfigType
             });
         }
+
+        await _historyService.RecordAsync(records);
+    }
+
+    private async Task RecordCancelledOutcomesAsync(
+        ESpeedActionType actionType,
+        List<ServerTestItem> testedItems,
+        string runId,
+        int attempt)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var records = testedItems
+            .Where(item => item.IndexId.IsNotEmpty())
+            .Select(item => new ProxyTestHistoryItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ProfileIndexId = item.IndexId,
+                TestedAtUnixMs = now,
+                RunId = runId,
+                ProfileFingerprint = ProxyTestHistoryService.ComputeProfileFingerprint(item.Profile),
+                ActionType = (int)actionType,
+                Attempt = attempt,
+                Phase = "cancelled",
+                IsFinalOutcome = true,
+                Success = false,
+                Skipped = true,
+                Message = "cancelled",
+                Address = item.Address ?? string.Empty,
+                Port = item.Port,
+                ConfigType = item.ConfigType
+            })
+            .ToList();
 
         await _historyService.RecordAsync(records);
     }
@@ -531,10 +584,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -622,10 +672,7 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
         finally
         {
-            if (processService != null)
-            {
-                await processService?.StopAsync();
-            }
+            await StopAndDisposeProcessAsync(processService);
         }
         return true;
     }
@@ -681,12 +728,32 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
             }
             finally
             {
-                if (processService != null)
-                {
-                    await processService.StopAsync();
-                }
+                await StopAndDisposeProcessAsync(processService);
             }
         });
+    }
+
+    private static async Task StopAndDisposeProcessAsync(ProcessService? processService)
+    {
+        if (processService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await processService.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            // Speed-test cleanup must not leak the temporary core or replace the
+            // measurement/cancellation result with a teardown-only failure.
+            Logging.SaveLog("SpeedtestService process cleanup", ex);
+        }
+        finally
+        {
+            processService.Dispose();
+        }
     }
 
     private async Task<int> DoRealPing(ServerTestItem it,

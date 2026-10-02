@@ -129,8 +129,34 @@ public sealed class AppManager
                     Address
                 )
                 """);
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_EndpointHistory_LogicalAddressTime
+                ON EndpointObservationHistoryItem (
+                    LogicalHost,
+                    HttpHost,
+                    Port,
+                    Network,
+                    StreamSecurity,
+                    Address,
+                    ObservedAtUnixMs DESC
+                )
+                """);
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_DnsResolverTelemetry_ResolverTime
+                ON DnsResolverTelemetryItem (
+                    ResolverCatalogId,
+                    ObservedAtUnixMs DESC
+                )
+                """);
         });
         SQLiteHelper.Instance.CreateTable<RepairPromotionHistoryItem>();
+        SQLiteHelper.Instance.RunInTransaction(db =>
+        {
+            db.Execute("""
+                CREATE INDEX IF NOT EXISTS IX_RepairPromotionHistory_StrategyTime
+                ON RepairPromotionHistoryItem (StrategyId, ObservedAtUnixMs DESC)
+                """);
+        });
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRegistryItem>();
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRevisionItem>();
         SQLiteHelper.Instance.CreateTable<ProviderAsnCatalogRemoteSourceItem>();

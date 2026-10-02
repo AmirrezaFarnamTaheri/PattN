@@ -211,7 +211,8 @@ public sealed class ProxyTestHistoryService
             config,
             profiles,
             persisted =>
-                expectedFingerprintById.TryGetValue(persisted.IndexId, out var expected)
+                !string.Equals(persisted.IndexId, config.IndexId, StringComparison.Ordinal)
+                && expectedFingerprintById.TryGetValue(persisted.IndexId, out var expected)
                 && string.Equals(
                     ComputeProfileFingerprint(persisted),
                     expected,
@@ -266,7 +267,7 @@ public sealed class ProxyTestHistoryService
         return new(
             profileIndexId,
             diagnosticRows.Count,
-            windowCount > 0 ? failureCount : diagnosticRows.Count - successCount,
+            diagnosticRows.Count - successCount,
             consecutiveFailures,
             diagnosticRows.Count == 0 ? 0 : (double)successCount / diagnosticRows.Count,
             averageDelay,
@@ -379,20 +380,91 @@ public sealed class ProxyTestHistoryService
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        var copy = JsonUtils.DeepCopy(profile)
-                   ?? throw new InvalidOperationException("Could not snapshot profile for test-history fingerprinting.");
+        // fp2 hashes the connection semantics consumed by the core generators, rather than
+        // ProfileItem's persistence JSON. This makes history stable across presentation/
+        // ownership edits, legacy alias cleanup, JSON property ordering, and null-vs-empty
+        // representation changes in the structured extra records.
+        var canonical = new
+        {
+            Schema = "fp2",
+            ConfigType = profile.ConfigType,
+            CoreType = profile.CoreType,
+            profile.ConfigVersion,
+            profile.PreSocksPort,
+            Address = profile.Address ?? string.Empty,
+            profile.Port,
+            Password = profile.Password ?? string.Empty,
+            Username = profile.Username ?? string.Empty,
+            Network = profile.Network ?? string.Empty,
+            StreamSecurity = profile.StreamSecurity ?? string.Empty,
+            AllowInsecure = profile.AllowInsecure ?? string.Empty,
+            Sni = profile.Sni ?? string.Empty,
+            Alpn = profile.Alpn ?? string.Empty,
+            CipherSuites = profile.CipherSuites ?? string.Empty,
+            DialMode = profile.DialMode ?? string.Empty,
+            TargetStrategy = profile.TargetStrategy ?? string.Empty,
+            Fingerprint = profile.Fingerprint ?? string.Empty,
+            PublicKey = profile.PublicKey ?? string.Empty,
+            ShortId = profile.ShortId ?? string.Empty,
+            SpiderX = profile.SpiderX ?? string.Empty,
+            Mldsa65Verify = profile.Mldsa65Verify ?? string.Empty,
+            profile.MuxEnabled,
+            Cert = profile.Cert ?? string.Empty,
+            CertSha = profile.CertSha ?? string.Empty,
+            EchConfigList = profile.EchConfigList ?? string.Empty,
+            EchOutbound = profile.EchOutbound ?? string.Empty,
+            VerifyPeerCertByName = profile.VerifyPeerCertByName ?? string.Empty,
+            Finalmask = profile.Finalmask ?? string.Empty,
+            ProtocolExtra = NormalizeFingerprintExtra(profile.GetProtocolExtra()),
+            TransportExtra = NormalizeFingerprintExtra(profile.GetTransportExtra()),
+        };
 
-        // Keep connection-affecting fields while excluding presentation/ownership metadata.
-        copy.IndexId = string.Empty;
-        copy.Subid = string.Empty;
-        copy.IsSub = false;
-        copy.DisplayLog = false;
-        copy.Remarks = string.Empty;
-
-        var json = JsonUtils.Serialize(copy, false);
+        var json = JsonUtils.Serialize(canonical, false);
         var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        return "fp2:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
     }
+
+    private static ProtocolExtraItem NormalizeFingerprintExtra(ProtocolExtraItem value)
+        => value with
+        {
+            CongestionControl = value.CongestionControl ?? string.Empty,
+            HttpHeaders = value.HttpHeaders ?? string.Empty,
+            AlterId = value.AlterId ?? string.Empty,
+            VmessSecurity = value.VmessSecurity ?? string.Empty,
+            Flow = value.Flow ?? string.Empty,
+            VlessEncryption = value.VlessEncryption ?? string.Empty,
+            SsMethod = value.SsMethod ?? string.Empty,
+            WgPublicKey = value.WgPublicKey ?? string.Empty,
+            WgPresharedKey = value.WgPresharedKey ?? string.Empty,
+            WgInterfaceAddress = value.WgInterfaceAddress ?? string.Empty,
+            WgReserved = value.WgReserved ?? string.Empty,
+            WgDns = value.WgDns ?? string.Empty,
+            SalamanderPass = value.SalamanderPass ?? string.Empty,
+            Ports = value.Ports ?? string.Empty,
+            HopInterval = value.HopInterval ?? string.Empty,
+            Hy2RealmUrl = value.Hy2RealmUrl ?? string.Empty,
+            GeckoMinPacketSize = value.GeckoMinPacketSize ?? string.Empty,
+            GeckoMaxPacketSize = value.GeckoMaxPacketSize ?? string.Empty,
+            GroupType = value.GroupType ?? string.Empty,
+            ChildItems = value.ChildItems ?? string.Empty,
+            SubChildItems = value.SubChildItems ?? string.Empty,
+            Filter = value.Filter ?? string.Empty,
+        };
+
+    private static TransportExtraItem NormalizeFingerprintExtra(TransportExtraItem value)
+        => value with
+        {
+            RawHeaderType = value.RawHeaderType ?? string.Empty,
+            Host = value.Host ?? string.Empty,
+            Path = value.Path ?? string.Empty,
+            XhttpMode = value.XhttpMode ?? string.Empty,
+            XhttpExtra = value.XhttpExtra ?? string.Empty,
+            GrpcAuthority = value.GrpcAuthority ?? string.Empty,
+            GrpcServiceName = value.GrpcServiceName ?? string.Empty,
+            GrpcMode = value.GrpcMode ?? string.Empty,
+            KcpHeaderType = value.KcpHeaderType ?? string.Empty,
+            KcpSeed = value.KcpSeed ?? string.Empty,
+        };
 
     private static int CountConsecutiveFailures(IReadOnlyList<ProxyTestHistoryItem> newestFirst)
     {
