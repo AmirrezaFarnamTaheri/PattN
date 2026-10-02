@@ -41,7 +41,7 @@ This document reconciles the Discovery/Reviver forensic audits and the follow-on
 | Explainable repair | Implemented | `RepairExplanation` |
 | Evidence decay | Implemented | configurable confidence half-life |
 | Learning from rollback | Implemented | promotion/rollback feed actual outcomes into strategy learning |
-| Uplink-stall evidence | Implemented | controlled bounded HTTPS upload probe through Discovery RPC |
+| Uplink-stall evidence | Implemented conservatively | controlled bounded HTTPS upload probe through Discovery RPC; a partial upload on that single exchange is not called `UplinkStall` unless separate downstream-success evidence exists |
 | Human feedback | Implemented | privacy-safe feedback store |
 | History growth control | Implemented | hot raw retention + daily aggregate rollups |
 
@@ -66,12 +66,12 @@ This document reconciles the Discovery/Reviver forensic audits and the follow-on
 
 | Brainstorm item | Status | Implementation / boundary |
 |---|---|---|
-| Anonymous intelligence records | Implemented | derived network/genome keys only |
-| Sharing privacy model | Client-side gate implemented | explicit opt-in + AnonymousAggregate mode + minimum local sample count; contributor-level cohort/k-anonymity must be enforced by any future exchange service |
+| Privacy-minimized intelligence records | Implemented | export accepts only PattN-derived network/genome keys; raw identifiers and the local `net:unknown` sentinel are rejected |
+| Sharing privacy model | Client-side gate implemented | explicit opt-in + AnonymousAggregate mode + derived-key validation + day-level time buckets + minimum local sample count; this is not contributor-level k-anonymity, which must be enforced by any future exchange service |
 | Global intelligence transport | Interface/data contract ready; service backend external | no hard-coded third-party collection endpoint |
 | Heatmaps | Implemented backend | coarse country + hashed carrier aggregates |
 | Knowledge graph | Implemented backend | environment → failure → strategy weighted edges |
-| Multi-device sync | Implemented primitive | AES-GCM encrypted anonymous-record payload |
+| Multi-device sync | Implemented primitive | AES-GCM encrypted privacy-minimized payload; derived-key validation runs before encryption and after decryption |
 | Predictive failure detection | Implemented | bounded heuristic risk signal with explanations |
 | Release security dashboard | Implemented backend model | digest/signature/provenance assessment |
 | Developer health dashboard | Implemented backend model | architecture health snapshot |
