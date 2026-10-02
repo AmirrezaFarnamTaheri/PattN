@@ -381,25 +381,25 @@ download_geo_assets() {
 
   mkdir -p "$bin_dir" "$srss_dir"
 
-  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geosite.dat" "$bin_dir/geosite.dat" "$PATTN_IRAN_GEOSITE_SHA256"
-  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geoip.dat" "$bin_dir/geoip.dat" "$PATTN_IRAN_GEOIP_SHA256"
+  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geosite.dat" "$bin_dir/geosite.dat" "$PATTN_IRAN_GEOSITE_SHA256" || return 1
+  pattn_download_sha256 "https://github.com/Chocolate4U/Iran-v2ray-rules/releases/download/${PATTN_IRAN_GEO_RELEASE}/geoip.dat" "$bin_dir/geoip.dat" "$PATTN_IRAN_GEOIP_SHA256" || return 1
   expected="$(pattn_raw_rule_blob_sha1 loyal geoip-only-cn-private.dat)"
-  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/geoip-only-cn-private.dat" "$bin_dir/geoip-only-cn-private.dat" "$expected"
+  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/geoip-only-cn-private.dat" "$bin_dir/geoip-only-cn-private.dat" "$expected" || return 1
   expected="$(pattn_raw_rule_blob_sha1 loyal Country.mmdb)"
-  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/Country.mmdb" "$bin_dir/Country.mmdb" "$expected"
-  pattn_download_git_blob "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/${PATTN_METACUBEX_RELEASE_COMMIT}/geoip.metadb" "$bin_dir/geoip.metadb" "$PATTN_METACUBEX_GEOIP_METADB_BLOB_SHA1"
+  pattn_download_git_blob "https://raw.githubusercontent.com/Loyalsoldier/geoip/${PATTN_LOYALSOLDIER_GEOIP_COMMIT}/Country.mmdb" "$bin_dir/Country.mmdb" "$expected" || return 1
+  pattn_download_git_blob "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/${PATTN_METACUBEX_RELEASE_COMMIT}/geoip.metadb" "$bin_dir/geoip.metadb" "$PATTN_METACUBEX_GEOIP_METADB_BLOB_SHA1" || return 1
 
   for f in geoip-private.srs geoip-cn.srs geoip-facebook.srs geoip-fastly.srs geoip-google.srs geoip-netflix.srs geoip-telegram.srs geoip-twitter.srs; do
     expected="$(pattn_raw_rule_blob_sha1 geoip "$f")"
-    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOIP_COMMIT}/$f" "$srss_dir/$f" "$expected"
+    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOIP_COMMIT}/$f" "$srss_dir/$f" "$expected" || return 1
   done
   for f in geosite-cn.srs geosite-gfw.srs geosite-google.srs geosite-greatfire.srs geosite-geolocation-cn.srs geosite-category-ads-all.srs geosite-private.srs; do
     expected="$(pattn_raw_rule_blob_sha1 geosite "$f")"
-    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOSITE_COMMIT}/$f" "$srss_dir/$f" "$expected"
+    pattn_download_git_blob "https://raw.githubusercontent.com/2dust/sing-box-rules/${PATTN_SING_RULE_GEOSITE_COMMIT}/$f" "$srss_dir/$f" "$expected" || return 1
   done
   for f in geosite-category-ir.srs geoip-ir.srs; do
     expected="$(pattn_raw_rule_blob_sha1 iran "$f")"
-    pattn_download_git_blob "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/${PATTN_IRAN_SING_RULES_COMMIT}/$f" "$srss_dir/$f" "$expected"
+    pattn_download_git_blob "https://raw.githubusercontent.com/chocolate4u/Iran-sing-box-rules/${PATTN_IRAN_SING_RULES_COMMIT}/$f" "$srss_dir/$f" "$expected" || return 1
   done
 
   unify_geo_layout "$outroot"
