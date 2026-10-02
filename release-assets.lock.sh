@@ -165,10 +165,57 @@ pattn_verify_git_blob() {
   }
 }
 
+pattn_xray_asset_id() {
+  # Pin the GitHub release asset object as an availability fallback in addition
+  # to the content digest. If the ordinary browser download endpoint is
+  # transiently unavailable, the REST asset endpoint returns the same reviewed
+  # bytes. A digest mismatch never falls back and always fails closed.
+  case "$1" in
+    Xray-linux-64.zip)          echo "591812214" ;;
+    Xray-linux-arm64-v8a.zip)   echo "591812088" ;;
+    Xray-linux-riscv64.zip)     echo "591812511" ;;
+    Xray-linux-loong64.zip)     echo "591812296" ;;
+    Xray-macos-64.zip)          echo "591814122" ;;
+    Xray-macos-arm64-v8a.zip)   echo "591811485" ;;
+    Xray-windows-32.zip)        echo "591811435" ;;
+    Xray-windows-64.zip)        echo "591812666" ;;
+    Xray-windows-arm64-v8a.zip) echo "591814157" ;;
+    *) return 1 ;;
+  esac
+}
+
 pattn_download_sha256() {
   local url="$1" output="$2" expected="$3"
-  curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"
-  pattn_verify_sha256 "$output" "$expected"
+  local asset="" asset_id="" api_url=""
+
+  rm -f "$output"
+  if curl --fail --location --silent --show-error --retry 3 --retry-all-errors "$url" -o "$output"; then
+    # A successful transport with unexpected bytes is suspicious: fail closed
+    # rather than hiding it behind a fallback origin.
+    pattn_verify_sha256 "$output" "$expected"
+    return
+  fi
+
+  rm -f "$output"
+  case "$url" in
+    https://github.com/patterniha/Xray-core/releases/download/v${PATTN_XRAY_VERSION}/*)
+      asset="${url##*/}"
+      asset_id="$(pattn_xray_asset_id "$asset")" || {
+        echo "No immutable Xray asset ID is locked for $asset" >&2
+        return 1
+      }
+      api_url="https://api.github.com/repos/patterniha/Xray-core/releases/assets/$asset_id"
+      echo "[!] Primary Xray release endpoint unavailable; retrying immutable asset $asset_id" >&2
+      curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+        --header 'Accept: application/octet-stream' \
+        --header 'X-GitHub-Api-Version: 2022-11-28' \
+        "$api_url" -o "$output"
+      pattn_verify_sha256 "$output" "$expected"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 pattn_download_sha512() {
