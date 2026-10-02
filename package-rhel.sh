@@ -96,7 +96,7 @@ install_dependencies() {
   local sdk_tmp=""
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang ca-certificates
+    sudo dnf -y install rpm-build rpmdevtools curl unzip tar jq rsync cpio golang ca-certificates libicu
 
     case "$HOST_ARCH" in
       x86_64)
@@ -625,7 +625,7 @@ BugURL:         https://github.com/patterniha/PattN/issues
 ExclusiveArch:  aarch64 x86_64
 Source0:        __PKGROOT__.tar.gz
 
-Requires:       cairo, pango, openssl, mesa-libEGL, mesa-libGL
+Requires:       cairo, pango, openssl, mesa-libEGL, mesa-libGL, libicu
 Requires:       glibc >= 2.39
 Requires:       fontconfig >= 2.15.0
 Requires:       desktop-file-utils >= 0.26

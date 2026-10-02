@@ -21,11 +21,13 @@ func main() {
 	}
 }
 
+const maxRequestFrameBytes = 16 * 1024 * 1024
+
 func run(ctx context.Context, in io.Reader, out io.Writer) error {
 	eng := engine.New()
 	scanner := bufio.NewScanner(in)
 	// Requests can carry large target batches; keep framing bounded but well above Scanner's default 64 KiB.
-	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), maxRequestFrameBytes)
 	enc := json.NewEncoder(out)
 	enc.SetEscapeHTML(false)
 	var writeMu sync.Mutex
@@ -173,6 +175,17 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 	if err := scanner.Err(); err != nil {
 		stopServer()
 		workers.Wait()
+		if errors.Is(err, bufio.ErrTooLong) {
+			if emitErr := emit(protocol.Response{
+				Version: protocol.Version,
+				Error: &protocol.Error{
+					Code:    "frame_too_large",
+					Message: fmt.Sprintf("NDJSON request exceeds %d bytes", maxRequestFrameBytes),
+				},
+			}); emitErr != nil {
+				return errors.Join(err, emitErr)
+			}
+		}
 		return err
 	}
 	stopServer()
