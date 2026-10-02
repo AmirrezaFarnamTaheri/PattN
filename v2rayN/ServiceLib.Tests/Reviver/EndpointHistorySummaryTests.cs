@@ -135,7 +135,7 @@ public class EndpointHistorySummaryTests
         var lifecycle = EndpointHistoryQueryService.AssessLifecycle(detail);
 
         await lifecycle.State.Should().BeEqualTo(EEndpointLifecycleState.Dead);
-        await lifecycle.Confidence.Should().BeGreaterThan(0.5d);
+        await (lifecycle.Confidence > 0.5d).Should().BeTrue();
     }
 
     private static EndpointObservationHistoryItem Observation(
