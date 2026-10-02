@@ -164,6 +164,64 @@ public class RepairPromotionHistoryQueryServiceTests
     }
 
     [Test]
+    public async Task BuildTimeline_ShouldReplayPromotionFeedbackAndRollbackChronologically()
+    {
+        var start = new DateTimeOffset(2026, 10, 2, 10, 0, 0, TimeSpan.Zero);
+        var timeline = RepairPromotionHistoryQueryService.BuildTimeline(
+            "profile-1",
+            [
+                new RepairPromotionHistoryEntry
+                {
+                    Id = "rollback",
+                    EventKind = "rolled-back",
+                    StrategyId = "endpoint-replacement",
+                    CandidateId = "candidate",
+                    OutcomeVerdict = "unknown",
+                    ObservedAt = start.AddMinutes(20),
+                },
+                new RepairPromotionHistoryEntry
+                {
+                    Id = "promotion",
+                    EventKind = "promoted",
+                    StrategyId = "endpoint-replacement",
+                    CandidateId = "candidate",
+                    OutcomeVerdict = "improved",
+                    Mutations =
+                    [
+                        new RepairMutation
+                        {
+                            Kind = ERepairMutationKind.ReplaceEndpoint,
+                            Field = nameof(ProfileItem.Address),
+                            From = "old",
+                            To = "new",
+                            Reason = "test",
+                            Confidence = ERepairConfidence.EvidenceBacked,
+                        }
+                    ],
+                    ObservedAt = start,
+                },
+                new RepairPromotionHistoryEntry
+                {
+                    Id = "feedback",
+                    EventKind = "human-confirmed",
+                    StrategyId = "endpoint-replacement",
+                    CandidateId = "candidate",
+                    OutcomeVerdict = "regressed",
+                    ObservedAt = start.AddMinutes(10),
+                },
+            ]);
+
+        await timeline.ProfileId.Should().BeEqualTo("profile-1");
+        await timeline.Events.Should().HaveCount(3);
+        await timeline.Events[0].EventKind.Should().BeEqualTo("promoted");
+        await timeline.Events[0].MutationFields.Should().Contain(nameof(ProfileItem.Address));
+        await timeline.Events[1].EventKind.Should().BeEqualTo("human-confirmed");
+        await timeline.Events[2].EventKind.Should().BeEqualTo("rolled-back");
+        await timeline.StartedAt.Should().BeEqualTo(start);
+        await timeline.EndedAt.Should().BeEqualTo(start.AddMinutes(20));
+    }
+
+    [Test]
     public async Task Summarize_ShouldRejectMalformedHistoricalEvidence()
     {
         var rows = new[]
