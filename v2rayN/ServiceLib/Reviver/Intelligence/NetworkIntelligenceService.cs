@@ -13,6 +13,24 @@ namespace ServiceLib.Reviver.Intelligence;
 /// </summary>
 public sealed class NetworkIntelligenceService
 {
+    /// <summary>
+    /// Secret backing the derived local keys. It is injected in tests so that expected digests are
+    /// reproducible; in the application it comes from <see cref="PrivacyKeyStore"/> (per-installation,
+    /// never shared, never logged).
+    /// </summary>
+    private readonly byte[] _privacyKey;
+
+    public NetworkIntelligenceService()
+        : this(PrivacyKeyStore.GetKey())
+    {
+    }
+
+    public NetworkIntelligenceService(byte[] privacyKey)
+    {
+        ArgumentNullException.ThrowIfNull(privacyKey);
+        _privacyKey = privacyKey.Length >= 16 ? privacyKey : RandomNumberGenerator.GetBytes(32);
+    }
+
     public FailureAssessment ClassifyUplinkProbe(
         DiscoveryUplinkProbeResult result,
         DateTimeOffset? observedAt = null,
@@ -130,7 +148,7 @@ public sealed class NetworkIntelligenceService
 
         return new NetworkFingerprint
         {
-            Key = "net:v1:" + HashToken(keyMaterial),
+            Key = "net:v2:" + HashToken(keyMaterial),
             CarrierKey = carrierKey,
             Asn = observation.Asn.Trim().ToUpperInvariant(),
             CountryCode = observation.CountryCode.Trim().ToUpperInvariant(),
@@ -172,7 +190,7 @@ public sealed class NetworkIntelligenceService
 
         return new ProxyGenome
         {
-            Key = "genome:v1:" + HashToken(keyMaterial),
+            Key = "genome:v2:" + HashToken(keyMaterial),
             Protocol = protocol,
             Transport = network,
             Core = core,
@@ -413,11 +431,18 @@ public sealed class NetworkIntelligenceService
         return string.Join("+", candidate.Mutations.Select(x => x.Kind.ToString()).Distinct().OrderBy(x => x, StringComparer.Ordinal));
     }
 
+    // v2 is the keyed derivation. v1 stays readable so history recorded before the key existed is
+    // still parseable, but it is legacy: those digests were unsalted and must never be handed to an
+    // exchange or an export that assumes the keyed property.
     public static bool IsDerivedNetworkKey(string? value)
-        => IsDerivedKey(value, "net:v1:");
+        => IsDerivedKey(value, "net:v2:") || IsDerivedKey(value, "net:v1:");
 
     public static bool IsDerivedGenomeKey(string? value)
-        => IsDerivedKey(value, "genome:v1:");
+        => IsDerivedKey(value, "genome:v2:") || IsDerivedKey(value, "genome:v1:");
+
+    /// <summary>True only for the current, keyed derivation.</summary>
+    public static bool IsKeyedDerivedNetworkKey(string? value)
+        => IsDerivedKey(value, "net:v2:");
 
     public static bool IsLocalNetworkKey(string? value)
         => IsDerivedNetworkKey(value)
@@ -457,14 +482,34 @@ public sealed class NetworkIntelligenceService
                / Math.Sqrt(cost);
     }
 
-    private static string HashToken(string value)
+    /// <summary>
+    /// Keyed derivation, deliberately *not* a bare hash. The material being keyed (carrier name,
+    /// ASN, country code, boolean link signals) has so few possible values that an unsalted digest is
+    /// inverted by simply hashing the whole candidate set, and equal digests would identify the same
+    /// subscriber across installations. HMAC with the per-installation secret defeats both, and the
+    /// digest is truncated only after the MAC (12 bytes of a MAC are not separately attackable).
+    /// </summary>
+    private string HashToken(string value)
     {
         if (value.IsNullOrEmpty())
         {
             return string.Empty;
         }
-        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-        return Convert.ToHexString(digest.AsSpan(0, 12)).ToLowerInvariant();
+
+        Span<byte> mac = stackalloc byte[32];
+        if (!System.Security.Cryptography.HMACSHA256.TryComputeHash(
+                _privacyKey,
+                Encoding.UTF8.GetBytes(value),
+                mac,
+                out var written)
+            || written != mac.Length)
+        {
+            // Never fall back to an unkeyed digest: an unavailable key must not silently degrade
+            // the only privacy control this layer has.
+            return string.Empty;
+        }
+
+        return Convert.ToHexString(mac[..12]).ToLowerInvariant();
     }
 
     private static double Clamp01(double value)

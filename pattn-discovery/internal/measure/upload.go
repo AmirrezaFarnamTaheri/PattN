@@ -41,6 +41,16 @@ var nonPublicProbePrefixes = []netip.Prefix{
 	netip.MustParsePrefix("2001:20::/28"),
 }
 
+// probeResolver is the only DNS path the probe uses. Production keeps
+// net.DefaultResolver; tests substitute a stub to prove that an IP-literal
+// destination is dialed without any resolver round-trip (finding F-07).
+var probeResolver netResolver = net.DefaultResolver
+
+// netResolver is the resolution surface the probe needs (net.Resolver satisfies it).
+type netResolver interface {
+	LookupNetIP(ctx context.Context, network, host string, opts *net.LookupOptions) ([]netip.Addr, error)
+}
+
 type UploadProbeOptions struct {
 	URL             string
 	TotalBytes      int
@@ -49,6 +59,10 @@ type UploadProbeOptions struct {
 	InterChunkDelay time.Duration
 	AllowPrivate    bool
 	RootCAs         *x509.CertPool
+	// UseSystemProxy opts into HTTP(S)_PROXY handling. It stays false by default:
+	// an uplink-stall measurement taken through a corporate proxy measures the
+	// proxy, not the path, and would be recorded as link evidence.
+	UseSystemProxy bool
 }
 
 type UploadProbeResult struct {
@@ -118,22 +132,39 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 	request.Header.Set("User-Agent", "pattn-discovery/uplink-probe")
 
 	dialer := &net.Dialer{Timeout: options.Timeout}
+	// The dial target may be a pinned address, so pin the certificate name to the
+	// URL host instead of to the socket address (a bare IP would otherwise be
+	// compared against a DNS-name certificate and fail).
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    options.RootCAs,
+		// With a custom DialContext, http.Transport ignores ForceAttemptHTTP2 and
+		// negotiates HTTP/2 only through ALPN.
+		NextProtos: []string{"h2", "http/1.1"},
+	}
+	if host := parsed.Hostname(); netip.ParseAddr(host) == (netip.Addr{}) {
+		tlsConfig.ServerName = host
+	}
 	transport := &http.Transport{
-		Proxy: nil,
-		ForceAttemptHTTP2: true,
-		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			RootCAs: options.RootCAs,
-		},
+		TLSClientConfig: tlsConfig,
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 			host, port, err := net.SplitHostPort(address)
 			if err != nil {
 				return nil, err
 			}
+			if literal, perr := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")); perr == nil {
+				// The destination is already an address: dialing it must not cost a
+				// resolver query (which would leak the probe target to the system
+				// resolver, and fail outright where DNS is the thing being measured).
+				if !isPublicProbeAddress(literal.Unmap()) && !options.AllowPrivate {
+					return nil, errors.New("upload probe destination is not a public address")
+				}
+				return dialer.DialContext(ctx, network, address)
+			}
 			if options.AllowPrivate {
 				return dialer.DialContext(ctx, network, address)
 			}
-			addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+			addrs, err := probeResolver.LookupNetIP(ctx, "ip", host)
 			if err != nil {
 				return nil, err
 			}
@@ -150,6 +181,12 @@ func ProbeUpload(ctx context.Context, options UploadProbeOptions) (UploadProbeRe
 			}
 			return nil, errors.New("upload probe destination resolved only to private/special addresses")
 		},
+	}
+	if options.UseSystemProxy {
+		// Proxy is applied by the transport before DialContext, so the pinned-address
+		// path above is bypassed on purpose: an operator who opts into the system
+		// proxy accepts that the proxy resolves the name.
+		transport.Proxy = http.ProxyFromEnvironment
 	}
 	defer transport.CloseIdleConnections()
 

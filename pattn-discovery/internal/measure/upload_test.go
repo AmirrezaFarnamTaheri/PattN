@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -99,4 +100,79 @@ func TestPublicProbeAddressRejectsSpecialUseRanges(t *testing.T) {
 			t.Fatalf("expected public address to be accepted: %s", raw)
 		}
 	}
+}
+
+// TestProbeUploadDoesNotResolveIPLiteral hosts the fix for finding F-07: an
+// IP-literal probe target used to go through net.DefaultResolver twice, so the
+// probe leaked its destination to the system resolver and failed completely on
+// the exact link it is meant to measure (DNS down).
+func TestProbeUploadDoesNotResolveIPLiteral(t *testing.T) {
+	var queries int
+	restore := useStubResolver(t, func(ctx context.Context, network, host string) ([]netip.Addr, error) {
+		queries++
+		return nil, &net.DNSError{Err: "stub resolver must not be used", Name: host}
+	})
+	defer restore()
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	// server.URL is https://127.0.0.1:port -- a literal address.
+	private, err := ProbeUpload(context.Background(), UploadProbeOptions{
+		URL:        server.URL,
+		TotalBytes: 4096,
+		Chunks:     4,
+		Timeout:    3 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if queries != 0 {
+		t.Fatalf("resolver was queried %d times for an IP-literal host", queries)
+	}
+	if private.Error == "" || private.Connected {
+		t.Fatalf("non-public literal must be refused without dialing, got %+v", private)
+	}
+}
+
+func TestProbeUploadQueriesResolverOnceForNamedHost(t *testing.T) {
+	var hosts []string
+	restore := useStubResolver(t, func(ctx context.Context, network, host string) ([]netip.Addr, error) {
+		hosts = append(hosts, host)
+		return []netip.Addr{netip.MustParseAddr("127.0.0.1")}, nil
+	})
+	defer restore()
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	defer server.Close()
+
+	if _, err := ProbeUpload(context.Background(), UploadProbeOptions{
+		URL:          "https://uplink.invalid/probe",
+		TotalBytes:   4096,
+		Chunks:       4,
+		Timeout:      3 * time.Second,
+		AllowPrivate: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(hosts) != 1 || hosts[0] != "uplink.invalid" {
+		t.Fatalf("unexpected resolver queries: %v", hosts)
+	}
+}
+
+func useStubResolver(t *testing.T, lookup func(context.Context, string, string) ([]netip.Addr, error)) func() {
+	t.Helper()
+	previous := probeResolver
+	probeResolver = stubResolver{lookup: lookup}
+	return func() { probeResolver = previous }
+}
+
+type stubResolver struct {
+	lookup func(context.Context, string, string) ([]netip.Addr, error)
+}
+
+func (r stubResolver) LookupNetIP(ctx context.Context, network, host string, _ *net.LookupOptions) ([]netip.Addr, error) {
+	return r.lookup(ctx, network, host)
 }

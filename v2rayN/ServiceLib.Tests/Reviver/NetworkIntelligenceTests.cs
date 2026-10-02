@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using ServiceLib.Discovery.Protocol;
 using ServiceLib.Models.Entities;
 using ServiceLib.Reviver.Intelligence;
@@ -247,5 +248,37 @@ public class NetworkIntelligenceTests
 
         await (prediction.Risk >= 0.65d).Should().BeTrue();
         await (prediction.Reasons.Count >= 2).Should().BeTrue();
+    }
+
+    [Test]
+    public void HashToken_ShouldBeKeyedDeterministicAndNotAnUnsaltedDigest()
+    {
+        var key = new byte[32];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(key);
+        var service = new NetworkIntelligenceService(key);
+        var other = new NetworkIntelligenceService(key);
+
+        var carrier = "MCI";
+
+        // Deterministic for one installation...
+        var a = service.BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "ir", TcpSucceeded = true });
+        var b = other.BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "IR", TcpSucceeded = true });
+        a.CarrierKey.Should().Be(b.CarrierKey);
+        a.Key.Should().Be(b.Key);
+
+        // ...but the key is what makes it a *derived* value: a bare SHA-256 of the carrier name must
+        // never appear in the record, otherwise the "anonymous" key is a dictionary lookup.
+        var unsalted = Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(carrier.Trim().ToLowerInvariant())))
+            [..24].ToLowerInvariant();
+        a.CarrierKey.Should().NotBe(unsalted);
+
+        // A different installation must not produce comparable keys.
+        var c = new NetworkIntelligenceService(RandomNumberGenerator.GetBytes(32))
+            .BuildFingerprint(new NetworkObservation { Carrier = carrier, Asn = "AS1234", CountryCode = "IR", TcpSucceeded = true });
+        c.CarrierKey.Should().NotBe(a.CarrierKey);
+
+        NetworkIntelligenceService.IsKeyedDerivedNetworkKey(a.Key).Should().BeTrue();
+        NetworkIntelligenceService.IsDerivedNetworkKey("net:v1:" + unsalted).Should().BeTrue("legacy rows stay readable");
     }
 }
