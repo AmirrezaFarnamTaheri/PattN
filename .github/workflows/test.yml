@@ -120,8 +120,9 @@ jobs:
         fi
 
         if grep -nE 'refs/heads/(master|main|release|rule-set)|releases/latest/download' \
-          .github/workflows/build-windows-x86.yml; then
-          echo "::error::Windows x86 packaging reintroduced a mutable, unverified asset URL"
+          .github/workflows/build-windows-x86.yml \
+          .github/workflows/package-zip.yml; then
+          echo "::error::release workflow reintroduced a mutable, unverified asset URL"
           exit 1
         fi
 
