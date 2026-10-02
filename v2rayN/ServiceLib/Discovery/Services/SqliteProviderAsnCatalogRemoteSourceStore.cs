@@ -14,6 +14,20 @@ public sealed class SqliteProviderAsnCatalogRemoteSourceStore : IProviderAsnCata
             return null;
         }
         return await SQLiteHelper.Instance.TableAsync<ProviderAsnCatalogRemoteSourceItem>()
+            .Where(x => x.RegistryId == registryId && x.RemovedAtUnixMs == null)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<ProviderAsnCatalogRemoteSourceItem?> GetIncludingRemovedAsync(
+        string registryId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (registryId.IsNullOrEmpty())
+        {
+            return null;
+        }
+        return await SQLiteHelper.Instance.TableAsync<ProviderAsnCatalogRemoteSourceItem>()
             .Where(x => x.RegistryId == registryId)
             .FirstOrDefaultAsync();
     }
@@ -28,6 +42,7 @@ public sealed class SqliteProviderAsnCatalogRemoteSourceStore : IProviderAsnCata
             throw new ArgumentOutOfRangeException(nameof(maxItems));
         }
         return await SQLiteHelper.Instance.TableAsync<ProviderAsnCatalogRemoteSourceItem>()
+            .Where(x => x.RemovedAtUnixMs == null)
             .OrderByDescending(x => x.ConfigurationUpdatedAtUnixMs)
             .Take(maxItems)
             .ToListAsync();
@@ -47,7 +62,7 @@ public sealed class SqliteProviderAsnCatalogRemoteSourceStore : IProviderAsnCata
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var item = await GetAsync(registryId, cancellationToken);
+        var item = await GetIncludingRemovedAsync(registryId, cancellationToken);
         if (item is not null)
         {
             await SQLiteHelper.Instance.DeleteAsync(item);

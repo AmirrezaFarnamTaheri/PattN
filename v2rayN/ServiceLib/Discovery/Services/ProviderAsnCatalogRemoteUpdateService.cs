@@ -104,21 +104,29 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         var tlsPinsJson = ProviderAsnCatalogTransportPinning.SerializePins(tlsPins);
 
         var observedAt = now ?? DateTimeOffset.UtcNow;
-        var existing = await sources.GetAsync(registryId, cancellationToken);
-        var beforeRevision = existing is null
+        var existing = await sources.GetIncludingRemovedAsync(registryId, cancellationToken);
+        var activeExisting = existing is { RemovedAtUnixMs: null } ? existing : null;
+        var beforeRevision = activeExisting is null
             ? null
-            : ProviderAsnCatalogRemoteSourceRevisionProjector.Clone(existing);
-        var sameConfiguration = existing is not null
-                                && string.Equals(existing.Uri, catalogUri.AbsoluteUri, StringComparison.Ordinal)
-                                && string.Equals(existing.SignatureUri, signatureUri?.AbsoluteUri ?? string.Empty, StringComparison.Ordinal)
-                                && existing.SignaturePolicy == (int)config.SignaturePolicy
-                                && string.Equals(existing.TrustedKeyId, config.TrustedKeyId, StringComparison.Ordinal)
+            : ProviderAsnCatalogRemoteSourceRevisionProjector.Clone(activeExisting);
+        var preservesSignatureContinuity = activeExisting is not null
+                                           && !activeExisting.TrustedPublicKeySpkiBase64.IsNullOrEmpty()
+                                           && string.Equals(
+                                               activeExisting.TrustedPublicKeySpkiBase64.Trim(),
+                                               config.TrustedPublicKeySpkiBase64.Trim(),
+                                               StringComparison.Ordinal);
+
+        var sameConfiguration = activeExisting is not null
+                                && string.Equals(activeExisting.Uri, catalogUri.AbsoluteUri, StringComparison.Ordinal)
+                                && string.Equals(activeExisting.SignatureUri, signatureUri?.AbsoluteUri ?? string.Empty, StringComparison.Ordinal)
+                                && activeExisting.SignaturePolicy == (int)config.SignaturePolicy
+                                && string.Equals(activeExisting.TrustedKeyId, config.TrustedKeyId, StringComparison.Ordinal)
                                 && string.Equals(
-                                    existing.TrustedPublicKeySpkiBase64,
+                                    activeExisting.TrustedPublicKeySpkiBase64,
                                     config.TrustedPublicKeySpkiBase64,
                                     StringComparison.Ordinal)
                                 && ProviderAsnCatalogTransportPinning
-                                    .DeserializePins(existing.TlsSpkiPinsSha256Json)
+                                    .DeserializePins(activeExisting.TlsSpkiPinsSha256Json)
                                     .SequenceEqual(tlsPins);
 
         var item = existing ?? new ProviderAsnCatalogRemoteSourceItem
@@ -126,6 +134,7 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             RegistryId = registryId,
         };
 
+        item.RemovedAtUnixMs = null;
         item.Uri = catalogUri.AbsoluteUri;
         item.SignatureUri = signatureUri?.AbsoluteUri ?? string.Empty;
         item.SignaturePolicy = (int)config.SignaturePolicy;
@@ -141,11 +150,21 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             item.CacheUpdatedAtUnixMs = 0;
             item.LastCheckedAtUnixMs = 0;
             item.LastFetchedAtUnixMs = null;
-            item.LastSignatureValid = null;
-            item.LastSignatureStatus = string.Empty;
-            item.LastSignatureKeyId = string.Empty;
-            item.LastSignatureCatalogSha256 = string.Empty;
-            item.LastSignatureSignedAtUnixMs = null;
+
+            // Configuration changes may reset display/cache metadata, but the monotonic
+            // signature revision high-water mark below is deliberately never reset. That
+            // high-water state belongs to the registry identity, not to a particular URI,
+            // TLS pin set, or signing key.
+            if (!preservesSignatureContinuity)
+            {
+                item.LastSignatureValid = null;
+                item.LastSignatureStatus = string.Empty;
+                item.LastSignatureKeyId = string.Empty;
+                item.LastSignatureCatalogSha256 = string.Empty;
+                item.LastSignatureSignedAtUnixMs = null;
+                item.LastSignatureRevision = null;
+                item.LastSignatureExpiresAtUnixMs = null;
+            }
         }
 
         await sources.UpsertAsync(item, cancellationToken);
@@ -216,8 +235,10 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             return;
         }
 
+        var removedAt = DateTimeOffset.UtcNow;
         var beforeRevision = ProviderAsnCatalogRemoteSourceRevisionProjector.Clone(existing);
-        await sources.RemoveAsync(registryId, cancellationToken);
+        var tombstone = CreateRemovedSourceTombstone(existing, removedAt);
+        await sources.UpsertAsync(tombstone, cancellationToken);
 
         if (sourceRevisionStore is not null)
         {
@@ -232,7 +253,7 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
                         {
                             Reason = "remove",
                         },
-                        DateTimeOffset.UtcNow),
+                        removedAt),
                     CancellationToken.None);
             }
             catch (Exception revisionError)
@@ -370,6 +391,27 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         item.LastSignatureKeyId = signatureValidation.KeyId;
         item.LastSignatureCatalogSha256 = signatureValidation.CatalogSha256;
         item.LastSignatureSignedAtUnixMs = signatureValidation.SignedAt?.ToUnixTimeMilliseconds();
+        item.LastSignatureRevision = signatureValidation.Revision;
+        item.LastSignatureExpiresAtUnixMs = signatureValidation.ExpiresAt?.ToUnixTimeMilliseconds();
+
+        if (signatureValidation.Attempted
+            && signatureValidation.Valid
+            && signatureValidation.Revision is long acceptedRevision)
+        {
+            if (acceptedRevision > item.SignatureRevisionHighWatermark)
+            {
+                item.SignatureRevisionHighWatermark = acceptedRevision;
+                item.SignatureRevisionHighWatermarkCatalogSha256 = signatureValidation.CatalogSha256;
+            }
+            else if (acceptedRevision == item.SignatureRevisionHighWatermark
+                     && item.SignatureRevisionHighWatermarkCatalogSha256.IsNullOrEmpty())
+            {
+                // Migration from a pre-high-water schema: bind the existing accepted
+                // revision to its content hash without lowering the revision.
+                item.SignatureRevisionHighWatermarkCatalogSha256 = signatureValidation.CatalogSha256;
+            }
+        }
+
         await sources.UpsertAsync(item, cancellationToken);
 
         ProviderAsnCatalogUpdatePlan? updatePlan = null;
@@ -378,7 +420,10 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
         {
             var bytes = fetchedBytes
                 ? contentResponse.Bytes
-                : await File.ReadAllBytesAsync(registry.FilePath, cancellationToken);
+                : await BoundedFileRead.ReadAllBytesAsync(
+                    registry.FilePath,
+                    ProviderAsnEndpointCatalogDocument.MaximumDocumentBytes,
+                    cancellationToken);
             updatePlan = await catalogs.PrepareUpdateAsync(
                 registryId,
                 bytes,
@@ -670,6 +715,9 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             LastSignatureKeyId = item.LastSignatureKeyId,
             LastSignatureCatalogSha256 = item.LastSignatureCatalogSha256,
             LastSignatureSignedAt = FromUnixMs(item.LastSignatureSignedAtUnixMs),
+            LastSignatureRevision = item.LastSignatureRevision,
+            LastSignatureExpiresAt = FromUnixMs(item.LastSignatureExpiresAtUnixMs),
+            SignatureRevisionHighWatermark = item.SignatureRevisionHighWatermark,
         };
 
     public async Task<ProviderAsnCatalogRemoteApplyProvenanceView?> GetRevisionProvenanceAsync(
@@ -711,10 +759,40 @@ public sealed class ProviderAsnCatalogRemoteUpdateService(
             SignatureStatus = signature?.Status ?? string.Empty,
             SignatureKeyId = signature?.KeyId ?? string.Empty,
             SignatureCatalogSha256 = signature?.CatalogSha256 ?? string.Empty,
+            SignatureRevision = signature?.Revision,
             SignatureSignedAtUnixMs = signature?.SignedAt?.ToUnixTimeMilliseconds(),
+            SignatureExpiresAtUnixMs = signature?.ExpiresAt?.ToUnixTimeMilliseconds(),
             CheckedAtUnixMs = preview.CheckedAt.ToUnixTimeMilliseconds(),
             AppliedAtUnixMs = revision.AppliedAt.ToUnixTimeMilliseconds(),
         };
+    }
+
+    private static ProviderAsnCatalogRemoteSourceItem CreateRemovedSourceTombstone(
+        ProviderAsnCatalogRemoteSourceItem source,
+        DateTimeOffset removedAt)
+    {
+        var item = ProviderAsnCatalogRemoteSourceRevisionProjector.Clone(source);
+        item.Uri = string.Empty;
+        item.SignatureUri = string.Empty;
+        item.SignaturePolicy = (int)ProviderAsnCatalogSignaturePolicy.None;
+        item.TrustedKeyId = string.Empty;
+        item.TrustedPublicKeySpkiBase64 = string.Empty;
+        item.TlsSpkiPinsSha256Json = string.Empty;
+        item.ETag = string.Empty;
+        item.LastModifiedUnixMs = null;
+        item.RemoteContentSha256 = string.Empty;
+        item.CacheUpdatedAtUnixMs = 0;
+        item.LastCheckedAtUnixMs = 0;
+        item.LastFetchedAtUnixMs = null;
+        item.LastSignatureValid = null;
+        item.LastSignatureStatus = string.Empty;
+        item.LastSignatureKeyId = string.Empty;
+        item.LastSignatureCatalogSha256 = string.Empty;
+        item.LastSignatureSignedAtUnixMs = null;
+        item.LastSignatureRevision = null;
+        item.LastSignatureExpiresAtUnixMs = null;
+        item.RemovedAtUnixMs = removedAt.ToUnixTimeMilliseconds();
+        return item;
     }
 
     private static bool SameAuthority(Uri left, Uri right)

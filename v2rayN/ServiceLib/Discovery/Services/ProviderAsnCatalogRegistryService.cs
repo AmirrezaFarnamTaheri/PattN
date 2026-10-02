@@ -25,6 +25,10 @@ public sealed class ProviderAsnCatalogRegistryService(
         cancellationToken.ThrowIfCancellationRequested();
 
         var path = NormalizePath(filePath);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            path,
+            cancellationToken);
+
         var existing = await store.FindByPathAsync(path, cancellationToken);
         if (existing is null)
         {
@@ -39,13 +43,14 @@ public sealed class ProviderAsnCatalogRegistryService(
             existing = all.FirstOrDefault(x => PathEquals(x.FilePath, path));
         }
 
-        // Recovery must precede the authoritative file read. A process may have
-        // died after replacing the catalog but before committing registry state.
-        // Reading first would cache transient bytes and then continue with stale
-        // content after recovery restored the prior file.
+        // The path lease is held for the complete registration/re-registration
+        // operation. Recover under that already-held lease before the authoritative
+        // file read so neither an update nor another registration can change bytes or
+        // registry metadata between validation and the final upsert.
         if (existing is not null)
         {
-            existing = await ProviderAsnCatalogApplyRecovery.RecoverWithLeaseAsync(
+            existing = await RequireRegistryAsync(existing.Id, cancellationToken);
+            existing = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
                 existing,
                 store,
                 _updates,
@@ -163,6 +168,20 @@ public sealed class ProviderAsnCatalogRegistryService(
         auditPolicy ??= new ProviderAsnCatalogAuditPolicy();
         ValidateAuditPolicy(auditPolicy);
         var item = await RequireRegisteredRegistryAsync(id, cancellationToken);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            item.FilePath,
+            cancellationToken);
+        item = await RequireRegistryAsync(id, cancellationToken);
+        item = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
+            item,
+            store,
+            _updates,
+            cancellationToken);
+        if (item.UnregisteredAtUnixMs is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider/ASN catalog registry item '{id}' is retired. Re-register its file before modifying it.");
+        }
         var catalog = await JsonProviderAsnEndpointCatalog.LoadAsync(item.FilePath, cancellationToken);
         if (!string.Equals(catalog.Document.Id.Trim(), item.CatalogId, StringComparison.Ordinal))
         {
@@ -189,6 +208,20 @@ public sealed class ProviderAsnCatalogRegistryService(
         CancellationToken cancellationToken = default)
     {
         var item = await RequireRegisteredRegistryAsync(id, cancellationToken);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            item.FilePath,
+            cancellationToken);
+        item = await RequireRegistryAsync(id, cancellationToken);
+        item = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
+            item,
+            store,
+            _updates,
+            cancellationToken);
+        if (item.UnregisteredAtUnixMs is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider/ASN catalog registry item '{id}' is retired. Re-register its file before modifying it.");
+        }
         if (enabled && !item.Enabled)
         {
             await EnsureNoEnabledCatalogIdCollisionAsync(item.CatalogId, item.Id, cancellationToken);
@@ -214,6 +247,21 @@ public sealed class ProviderAsnCatalogRegistryService(
         CancellationToken cancellationToken = default)
     {
         var item = await RequireRegisteredRegistryAsync(id, cancellationToken);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            item.FilePath,
+            cancellationToken);
+        item = await RequireRegistryAsync(id, cancellationToken);
+        item = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
+            item,
+            store,
+            _updates,
+            cancellationToken);
+        if (item.UnregisteredAtUnixMs is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider/ASN catalog registry item '{id}' is retired. Re-register its file before modifying it.");
+        }
+
         item.DisplayName = displayName?.Trim().NullIfEmpty() ?? item.CatalogId;
         item.UpdatedAtUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         await store.UpsertAsync(item, cancellationToken);
@@ -228,6 +276,21 @@ public sealed class ProviderAsnCatalogRegistryService(
     {
         options ??= new ProviderAsnCatalogUnregisterOptions();
         var item = await RequireRegisteredRegistryAsync(id, cancellationToken);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            item.FilePath,
+            cancellationToken);
+        item = await RequireRegistryAsync(id, cancellationToken);
+        item = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
+            item,
+            store,
+            _updates,
+            cancellationToken);
+        if (item.UnregisteredAtUnixMs is not null)
+        {
+            throw new InvalidOperationException(
+                $"Provider/ASN catalog registry item '{id}' is already retired.");
+        }
+
         var retiredAt = now ?? DateTimeOffset.UtcNow;
         var retired = Clone(item);
 
@@ -261,6 +324,15 @@ public sealed class ProviderAsnCatalogRegistryService(
         CancellationToken cancellationToken = default)
     {
         var item = await RequireRegistryAsync(id, cancellationToken);
+        await using var operationLease = await ProviderAsnCatalogApplyRecovery.AcquireOperationLeaseAsync(
+            item.FilePath,
+            cancellationToken);
+        item = await RequireRegistryAsync(id, cancellationToken);
+        item = await ProviderAsnCatalogApplyRecovery.RecoverIfNeededAsync(
+            item,
+            store,
+            _updates,
+            cancellationToken);
         if (item.UnregisteredAtUnixMs is null)
         {
             throw new InvalidOperationException(

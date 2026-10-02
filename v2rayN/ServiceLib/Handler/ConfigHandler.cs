@@ -8,6 +8,11 @@ public static class ConfigHandler
 {
     private static readonly string _configRes = Global.ConfigFileName;
     private static readonly string _tag = "ConfigHandler";
+    // Serializes the normal default-selection path with conditional destructive
+    // profile removal. SQLite transactions protect rows, but Config.IndexId is
+    // in-memory state; without this gate a selection change can occur after a
+    // deletion predicate reads IndexId and before db.Delete commits.
+    private static readonly SemaphoreSlim _profileSelectionMutationGate = new(1, 1);
 
     #region ConfigHandler
 
@@ -366,7 +371,16 @@ public static class ConfigHandler
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(currentPredicate);
-        return await RemoveServersCoreAsync(indexes, currentPredicate);
+
+        await _profileSelectionMutationGate.WaitAsync();
+        try
+        {
+            return await RemoveServersCoreAsync(indexes, currentPredicate);
+        }
+        finally
+        {
+            _profileSelectionMutationGate.Release();
+        }
     }
 
     private static async Task<List<ProfileItem>> RemoveServersCoreAsync(
@@ -485,16 +499,24 @@ public static class ConfigHandler
             return -1;
         }
 
-        var previous = config.IndexId;
-        config.IndexId = indexId;
-
-        if (await SaveConfig(config) != 0)
+        await _profileSelectionMutationGate.WaitAsync();
+        try
         {
-            config.IndexId = previous;
-            return -1;
-        }
+            var previous = config.IndexId;
+            config.IndexId = indexId;
 
-        return 0;
+            if (await SaveConfig(config) != 0)
+            {
+                config.IndexId = previous;
+                return -1;
+            }
+
+            return 0;
+        }
+        finally
+        {
+            _profileSelectionMutationGate.Release();
+        }
     }
 
     /// <summary>

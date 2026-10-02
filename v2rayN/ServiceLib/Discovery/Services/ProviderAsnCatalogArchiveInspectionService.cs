@@ -31,7 +31,10 @@ public sealed class ProviderAsnCatalogArchiveInspectionService
                 $"Provider catalog archive size {info.Length} is outside the allowed range.");
         }
 
-        var payload = await File.ReadAllTextAsync(path, cancellationToken);
+        var payload = await BoundedFileRead.ReadAllUtf8TextAsync(
+            path,
+            options.MaximumArchiveBytes,
+            cancellationToken);
         var bundle = JsonUtils.Deserialize<ProviderAsnCatalogArchiveBundle>(payload)
             ?? throw new InvalidOperationException("Provider catalog archive JSON could not be decoded.");
 

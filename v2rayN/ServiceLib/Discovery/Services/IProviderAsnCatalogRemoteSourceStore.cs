@@ -8,6 +8,11 @@ public interface IProviderAsnCatalogRemoteSourceStore
         string registryId,
         CancellationToken cancellationToken = default);
 
+    Task<ProviderAsnCatalogRemoteSourceItem?> GetIncludingRemovedAsync(
+        string registryId,
+        CancellationToken cancellationToken = default)
+        => GetAsync(registryId, cancellationToken);
+
     Task<IReadOnlyList<ProviderAsnCatalogRemoteSourceItem>> ListAsync(
         int maxItems = 500,
         CancellationToken cancellationToken = default);

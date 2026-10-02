@@ -532,7 +532,12 @@ public partial class CoreConfigSingboxService
                     {
                         var edMetadata = TransportPathParameters.Extract(wsPath, "ed");
                         wsPath = edMetadata.Path;
-                        if (int.TryParse(edMetadata.Value, out var edValue) && edValue >= 0)
+                        if (int.TryParse(
+                                edMetadata.Value,
+                                System.Globalization.NumberStyles.None,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out var edValue)
+                            && edValue >= 0)
                         {
                             transport.max_early_data = edValue;
                             transport.early_data_header_name = "Sec-WebSocket-Protocol";
@@ -540,7 +545,7 @@ public partial class CoreConfigSingboxService
 
                         var ehMetadata = TransportPathParameters.Extract(wsPath, "eh");
                         wsPath = ehMetadata.Path;
-                        if (ehMetadata.Value.IsNotEmpty())
+                        if (IsHttpToken(ehMetadata.Value))
                         {
                             transport.early_data_header_name = ehMetadata.Value;
                         }
@@ -829,4 +834,26 @@ public partial class CoreConfigSingboxService
             query_server_name = queryServerName,
         }, ParseDnsAddress(echDnsServer));
     }
+
+    private static bool IsHttpToken(string? value)
+    {
+        if (value.IsNullOrEmpty())
+        {
+            return false;
+        }
+
+        foreach (var ch in value!)
+        {
+            var alphaNumeric = ch is >= '0' and <= '9'
+                or >= 'A' and <= 'Z'
+                or >= 'a' and <= 'z';
+            if (!alphaNumeric && !"!#$%&'*+-.^_`|~".Contains(ch))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 }
