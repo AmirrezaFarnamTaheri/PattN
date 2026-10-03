@@ -46,6 +46,7 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
         cmbCoreType6.ItemsSource = Global.CoreTypes;
         cmbCoreType7.ItemsSource = Global.CoreTypes;
         cmbCoreType9.ItemsSource = Global.CoreTypes;
+        cmbCoreType14.ItemsSource = Global.CoreTypes;
 
         cmbMixedConcurrencyCount.ItemsSource = new[] { 1, 2, 4, 8, 16, 32, 64 };
         cmbSpeedTestTimeout.ItemsSource = new[] { 2, 5, 10, 15, 30, 60, 120 };
@@ -156,6 +157,7 @@ public partial class OptionSettingWindow : WindowBase<OptionSettingViewModel>
             this.Bind(ViewModel, vm => vm.CoreType6, v => v.cmbCoreType6.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.CoreType7, v => v.cmbCoreType7.SelectedValue).DisposeWith(disposables);
             this.Bind(ViewModel, vm => vm.CoreType9, v => v.cmbCoreType9.SelectedValue).DisposeWith(disposables);
+            this.Bind(ViewModel, vm => vm.CoreType14, v => v.cmbCoreType14.SelectedValue).DisposeWith(disposables);
 
             this.BindCommand(ViewModel, vm => vm.SaveCmd, v => v.btnSave).DisposeWith(disposables);
         });

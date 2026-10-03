@@ -762,13 +762,13 @@ public class CoreConfigV2rayServiceTests
     }
 
     [Test]
-    public async Task GenerateClientConfigContent_Tun_ShouldEnableAutoSystemDns()
+    public async Task GenerateClientConfigContent_Tun_ShouldSetAutoSystemDnsToGatewayOnLinux()
     {
         var config = CoreConfigTestFactory.CreateConfigWithTun(ECoreType.Xray, false);
         CoreConfigTestFactory.BindAppManagerConfig(config);
 
         var node = CoreConfigTestFactory.CreateVmessNode(ECoreType.Xray, "n-main", "main");
-        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray);
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.Xray) with { IsLinux = true };
 
         var result = new CoreConfigV2rayService(context).GenerateClientConfigContent();
 
@@ -777,14 +777,19 @@ public class CoreConfigV2rayServiceTests
         var tunInbound = cfg.inbounds.FirstOrDefault(i => i.protocol == "tun");
 
         await tunInbound.Should().NotBeNull();
-        await tunInbound!.settings.autoSystemDNS.Should().BeEqualTo(true);
+        await tunInbound!.settings.autoSystemDnsToGateway.Should().BeEqualTo(true);
 
-        // Xray-core takes over system DNS only when it can derive an address from an IPv4 gateway
-        // and a query to that address on port 53 is routed to a "dns" outbound.
+        // Xray-core hands the system resolver an address derived from the gateway, and does not
+        // start unless a query to that address on port 53 is routed to a "dns" outbound.
         await tunInbound.settings.gateway.Should().Contain(x => !x.Contains(':'));
         await cfg.routing.rules.Should().Contain(r =>
             r.port == "53" && r.inboundTag != null && r.inboundTag.Contains("tun") && r.outboundTag == Global.DnsOutboundTag);
         await cfg.outbounds.Should().Contain(o => o.tag == Global.DnsOutboundTag && o.protocol == "dns");
+
+        // The option is Linux-only in Xray-core, so other systems do not get it.
+        var otherResult = new CoreConfigV2rayService(context with { IsLinux = false }).GenerateClientConfigContent();
+        var otherCfg = JsonUtils.Deserialize<V2rayConfig>(otherResult.Data!.ToString())!;
+        await otherCfg.inbounds.First(i => i.protocol == "tun").settings.autoSystemDnsToGateway.Should().BeNull();
     }
 
     [Test]
