@@ -119,6 +119,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       REF_NAME: ${{ needs.prepare.outputs.release_ref }}
+      PLATFORM_WAIT_TIMEOUT_SECONDS: "19800"
     steps:
       - name: Trigger platform release workflows
         shell: bash
@@ -131,7 +132,11 @@ jobs:
             build-windows-desktop.yml
             build-windows-x86.yml
           )
+          run_file="$RUNNER_TEMP/platform-release-runs.tsv"
+          : > "$run_file"
+
           for workflow in "${workflows[@]}"; do
+            dispatched_after="$(date -u +%s)"
             args=(
               workflow run "$workflow"
               --repo "$GITHUB_REPOSITORY"
@@ -145,4 +150,74 @@ jobs:
               args+=(-f "exotic_arch=true")
             fi
             gh "${args[@]}"
+
+            run_id=""
+            for _ in $(seq 1 60); do
+              response="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=30")"
+              run_id="$(jq -r \
+                --arg sha "$GITHUB_SHA" \
+                --arg ref "$REF_NAME" \
+                --argjson after "$dispatched_after" '
+                  [
+                    .workflow_runs[]
+                    | select(.event == "workflow_dispatch")
+                    | select(.head_sha == $sha)
+                    | select(.head_branch == $ref)
+                    | select((.created_at | fromdateiso8601) >= $after)
+                  ]
+                  | sort_by(.created_at)
+                  | last
+                  | .id // empty
+                ' <<<"$response")"
+              [[ -n "$run_id" ]] && break
+              sleep 2
+            done
+            [[ -n "$run_id" ]] || {
+              echo "::error::could not discover dispatched run for $workflow at $REF_NAME / $GITHUB_SHA"
+              exit 1
+            }
+            printf '%s\t%s\n' "$workflow" "$run_id" | tee -a "$run_file"
+          done
+
+      - name: Wait for platform release workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_file="$RUNNER_TEMP/platform-release-runs.tsv"
+          [[ -s "$run_file" ]] || {
+            echo "::error::platform release run ledger is missing"
+            exit 1
+          }
+
+          deadline=$((SECONDS + PLATFORM_WAIT_TIMEOUT_SECONDS))
+          while :; do
+            pending=0
+            failed=0
+
+            while IFS="$(printf '\t')" read -r workflow run_id; do
+              payload="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+              status="$(jq -r '.status' <<<"$payload")"
+              conclusion="$(jq -r '.conclusion // ""' <<<"$payload")"
+              echo "$workflow run=$run_id status=$status conclusion=${conclusion:-pending}"
+
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" != "success" ]]; then
+                  echo "::error::$workflow run $run_id completed with conclusion '$conclusion'"
+                  failed=1
+                fi
+              else
+                pending=$((pending + 1))
+              fi
+            done < "$run_file"
+
+            (( failed == 0 )) || exit 1
+            if (( pending == 0 )); then
+              echo "All platform release workflows completed successfully."
+              break
+            fi
+            if (( SECONDS >= deadline )); then
+              echo "::error::timed out waiting for $pending platform release workflow(s)"
+              exit 1
+            fi
+            sleep 20
           done
