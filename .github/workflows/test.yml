@@ -19,6 +19,7 @@ on:
       - '.github/workflows/**'
       - 'package-*.sh'
       - 'release-assets.lock.sh'
+      - 'release-reproducibility.sh'
       - 'scripts/deterministic_zip.py'
       - 'scripts/generate_dependency_sbom.py'
   pull_request:
@@ -35,6 +36,7 @@ on:
       - '.github/workflows/**'
       - 'package-*.sh'
       - 'release-assets.lock.sh'
+      - 'release-reproducibility.sh'
       - 'scripts/deterministic_zip.py'
       - 'scripts/generate_dependency_sbom.py'
 
@@ -263,7 +265,25 @@ jobs:
             text = (Path(".github/workflows") / name).read_text(encoding="utf-8")
             if not re.search(r"(?ms)^concurrency:\s*\n(?:^[ \t].*\n)*?^[ \t]+cancel-in-progress:\s*true\s*$", text):
                 failures.append(f"{name}: top-level test/assurance runs must cancel superseded queued/running runs")
+        def push_paths(workflow_text):
+            push = re.search(r"(?ms)^  push:\\n(?P<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:|\\Z)", workflow_text)
+            if not push:
+                return set()
+            paths = re.search(r"(?ms)^    paths:\\n(?P<body>(?:^      - .+\\n?)+)", push.group("body"))
+            if not paths:
+                return set()
+            return {
+                line.strip()[2:].strip().strip("'\\\"")
+                for line in paths.group("body").splitlines()
+                if line.strip().startswith("- ")
+            }
+
+        code_test_text = Path(".github/workflows/test.yml").read_text(encoding="utf-8")
         stale_canceller = Path(".github/workflows/cancel-stale-tests.yml").read_text(encoding="utf-8")
+        if push_paths(code_test_text) != push_paths(stale_canceller):
+            failures.append(
+                "cancel-stale-tests.yml: push paths must exactly match test.yml so cancellation always has a replacement run"
+            )
         for needle in [
             "actions: write",
             "actions/workflows/test.yml/runs?per_page=100&branch=$CURRENT_BRANCH",
