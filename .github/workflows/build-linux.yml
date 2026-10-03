@@ -446,6 +446,25 @@ jobs:
           echo "::error::LoongArch build source $source_commit does not match workflow SHA $GITHUB_SHA"
           exit 1
         }
+    - name: Setup Go for LoongArch helper
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version: '1.23.12'
+        cache: false
+    - name: Cross-build LoongArch discovery helper
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$GITHUB_WORKSPACE/prebuilt"
+        (
+          cd repo/pattn-discovery
+          CGO_ENABLED=0 GOOS=linux GOARCH=loong64 \
+            go build -buildvcs=false -trimpath -ldflags="-s -w" \
+            -o "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64" ./cmd/pattn-discovery
+        )
+        chmod 0755 "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
+        test -s "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
+        sha256sum "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
     - name: Download verified QEMU prebuild
       shell: bash
       run: |
@@ -556,10 +575,20 @@ jobs:
         run_cmd "rsync -a --info=progress2 /workspace/repo/ /root/v2rayN-src/"
         run_cmd "cd /root/v2rayN-src && git config --global --add safe.directory /root/v2rayN-src"
         run_cmd "cd /root/v2rayN-src && chmod 755 package-debian-loong.sh"
-        send -- "cd /root/v2rayN-src; cat >/tmp/run-loong-build.sh <<'SCRIPT'\nset +e\nset -o pipefail\nbash -x ./package-debian-loong.sh \"\$RELEASE_TAG\" 2>&1 | tee /tmp/build.log\nrc=\$?\nmkdir -p /workspace/dist/deb-loong64\ncp -av /root/debbuild/*.deb /workspace/dist/deb-loong64/ 2>/dev/null || true\ncp -av /tmp/build.log /workspace/dist/deb-loong64/package-build.log 2>/dev/null || true\necho __BUILD_DONE__\$rc\nSCRIPT\nRELEASE_TAG=\"$release_tag\" bash /tmp/run-loong-build.sh\r"
+        send -- "cd /root/v2rayN-src; cat >/tmp/run-loong-build.sh <<'SCRIPT'\nset +e\nset -o pipefail\nbash -x ./package-debian-loong.sh \"\$RELEASE_TAG\" 2>&1 | tee /tmp/build.log\nrc=\$?\nmkdir -p /workspace/dist/deb-loong64\ncp -av /root/debbuild/*.deb /workspace/dist/deb-loong64/ 2>/dev/null || true\ncp -av /tmp/build.log /workspace/dist/deb-loong64/package-build.log 2>/dev/null || true\necho __BUILD_DONE__\$rc\nSCRIPT\nPATTN_DISCOVERY_PREBUILT=/workspace/prebuilt/pattn-discovery-loong64 RELEASE_TAG=\"$release_tag\" bash /tmp/run-loong-build.sh\r"
         expect {
-          -re "__BUILD_DONE__0" { send -- "poweroff\r" }
-          default { exit 1 }
+          -re {__BUILD_DONE__([0-9]+)} {
+            set rc $expect_out(1,string)
+            if {$rc != 0} {
+              puts stderr "LoongArch package build failed with rc=$rc"
+              send -- "poweroff\r"
+              exit $rc
+            }
+            send -- "poweroff\r"
+            expect eof
+          }
+          eof { exit 1 }
+          timeout { exit 1 }
         }
         EOF
     - name: Collect DEBs
@@ -635,6 +664,25 @@ jobs:
           echo "::error::LoongArch build source $source_commit does not match workflow SHA $GITHUB_SHA"
           exit 1
         }
+    - name: Setup Go for LoongArch helper
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version: '1.23.12'
+        cache: false
+    - name: Cross-build LoongArch discovery helper
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$GITHUB_WORKSPACE/prebuilt"
+        (
+          cd repo/pattn-discovery
+          CGO_ENABLED=0 GOOS=linux GOARCH=loong64 \
+            go build -buildvcs=false -trimpath -ldflags="-s -w" \
+            -o "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64" ./cmd/pattn-discovery
+        )
+        chmod 0755 "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
+        test -s "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
+        sha256sum "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-loong64"
     - name: Download verified QEMU prebuild
       shell: bash
       run: |
@@ -745,10 +793,20 @@ jobs:
         run_cmd "rsync -a --info=progress2 /workspace/repo/ /root/v2rayN-src/"
         run_cmd "cd /root/v2rayN-src && git config --global --add safe.directory /root/v2rayN-src"
         run_cmd "cd /root/v2rayN-src && chmod 755 package-rhel-loong.sh"
-        send -- "cd /root/v2rayN-src; cat >/tmp/run-loong-rpm-build.sh <<'SCRIPT'\nset +e\nset -o pipefail\nbash -x ./package-rhel-loong.sh \"\$RELEASE_TAG\" 2>&1 | tee /tmp/build.log\nrc=\$?\nmkdir -p /workspace/dist/rpm-loong64\nfind /root/rpmbuild/RPMS -name '*.rpm' -exec cp -av {} /workspace/dist/rpm-loong64/ \\; 2>/dev/null || true\ncp -av /tmp/build.log /workspace/dist/rpm-loong64/package-build.log 2>/dev/null || true\necho __BUILD_DONE__\$rc\nSCRIPT\nRELEASE_TAG=\"$release_tag\" bash /tmp/run-loong-rpm-build.sh\r"
+        send -- "cd /root/v2rayN-src; cat >/tmp/run-loong-rpm-build.sh <<'SCRIPT'\nset +e\nset -o pipefail\nbash -x ./package-rhel-loong.sh \"\$RELEASE_TAG\" 2>&1 | tee /tmp/build.log\nrc=\$?\nmkdir -p /workspace/dist/rpm-loong64\nfind /root/rpmbuild/RPMS -name '*.rpm' -exec cp -av {} /workspace/dist/rpm-loong64/ \\; 2>/dev/null || true\ncp -av /tmp/build.log /workspace/dist/rpm-loong64/package-build.log 2>/dev/null || true\necho __BUILD_DONE__\$rc\nSCRIPT\nPATTN_DISCOVERY_PREBUILT=/workspace/prebuilt/pattn-discovery-loong64 RELEASE_TAG=\"$release_tag\" bash /tmp/run-loong-rpm-build.sh\r"
         expect {
-          -re "__BUILD_DONE__0" { send -- "poweroff\r" }
-          default { exit 1 }
+          -re {__BUILD_DONE__([0-9]+)} {
+            set rc $expect_out(1,string)
+            if {$rc != 0} {
+              puts stderr "LoongArch package build failed with rc=$rc"
+              send -- "poweroff\r"
+              exit $rc
+            }
+            send -- "poweroff\r"
+            expect eof
+          }
+          eof { exit 1 }
+          timeout { exit 1 }
         }
         EOF
     - name: Collect RPMs
