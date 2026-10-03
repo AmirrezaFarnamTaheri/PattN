@@ -1,0 +1,88 @@
+name: Bootstrap update signing key
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - my-releases
+    paths:
+      - '.github/workflows/bootstrap-update-signing-key.yml'
+
+concurrency:
+  group: bootstrap-update-signing-key
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: my-releases
+          fetch-depth: 0
+
+      - name: Refuse automatic key rotation
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -s release-trust/pattn-update-signing-public.pem || -s release-trust/pattn-update-signing-private.pem.gpg ]]; then
+            echo "Update signing trust root already exists; automatic rotation is forbidden."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate and escrow update signing key
+        if: steps.state.outputs.exists != 'true'
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          [[ -n "$GPG_PRIVATE_KEY" ]] || { echo "::error::GPG_PRIVATE_KEY is required"; exit 1; }
+
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          install -m 700 -d ~/.gnupg
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          fingerprint="$(gpg --batch --list-secret-keys --with-colons | awk -F: '$1 == "fpr" { print $10; exit }')"
+          [[ -n "$fingerprint" ]] || { echo "::error::No release GPG secret key found"; exit 1; }
+
+          mkdir -p release-trust
+          openssl ecparam -name prime256v1 -genkey -noout -out "$work/update-private.pem"
+          chmod 600 "$work/update-private.pem"
+          openssl ec -in "$work/update-private.pem" -pubout -out release-trust/pattn-update-signing-public.pem
+
+          gpg --batch --yes --trust-model always \
+            --output release-trust/pattn-update-signing-private.pem.gpg \
+            --encrypt --recipient "$fingerprint" "$work/update-private.pem"
+
+          cat > release-trust/update-signing-selftest.json <<'EOF'
+{"schema":"pattn-update-signing-selftest-v1","message":"PattN pinned update trust root"}
+EOF
+          openssl dgst -sha256 -sign "$work/update-private.pem" \
+            -out release-trust/update-signing-selftest.json.sig \
+            release-trust/update-signing-selftest.json
+
+          openssl dgst -sha256 -verify release-trust/pattn-update-signing-public.pem \
+            -signature release-trust/update-signing-selftest.json.sig \
+            release-trust/update-signing-selftest.json
+
+          sha256sum release-trust/pattn-update-signing-public.pem \
+            > release-trust/pattn-update-signing-public.pem.sha256
+
+      - name: Commit pinned public key and encrypted signer
+        if: steps.state.outputs.exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release-trust/
+          git commit -m "security: pin portable update signing trust root"
+          git push origin HEAD:my-releases
