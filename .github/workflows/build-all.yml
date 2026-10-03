@@ -115,7 +115,6 @@ jobs:
       actions: write
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 350
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
