@@ -423,7 +423,8 @@ jobs:
           ssh "${ssh_base[@]}" pattn@127.0.0.1 \
             'mkdir -p /home/pattn/repo && tar -C /home/pattn/repo -xf -'
         ssh "${ssh_base[@]}" pattn@127.0.0.1 'mkdir -p /home/pattn/prebuilt'
-        scp "${ssh_base[@]}" \
+        scp -i "$key" -P "$ssh_port" \
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           "$GITHUB_WORKSPACE/prebuilt/pattn-discovery-riscv64" \
           pattn@127.0.0.1:/home/pattn/prebuilt/pattn-discovery-riscv64
 
@@ -448,10 +449,12 @@ jobs:
           2>&1 | tee "$RUNNER_TEMP/rpm-riscv64-build.log"
 
         mkdir -p "$GITHUB_WORKSPACE/dist/deb-riscv64" "$GITHUB_WORKSPACE/dist/rpm-riscv64"
-        scp "${ssh_base[@]}" \
+        scp -i "$key" -P "$ssh_port" \
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           'pattn@127.0.0.1:/home/pattn/debbuild/*.deb' \
           "$GITHUB_WORKSPACE/dist/deb-riscv64/"
-        scp "${ssh_base[@]}" \
+        scp -i "$key" -P "$ssh_port" \
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           'pattn@127.0.0.1:/home/pattn/rpmbuild/RPMS/riscv64/*.rpm' \
           "$GITHUB_WORKSPACE/dist/rpm-riscv64/"
 
