@@ -61,12 +61,19 @@ def main() -> int:
     require(riscv_rpm, "ubuntu|debian", "package-rhel-riscv.sh")
     require(riscv_rpm, "mkdir -p \"$RPM_TOPDIR\"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}", "package-rhel-riscv.sh")
 
-    # Every newer Code Test push cancels stale work on the same branch. Native
-    # workflow concurrency handles PRs; the API cleanup handles trusted pushes.
+    # Every newly requested Code Test run actively cancels older work on the
+    # same branch. The privileged canceller is loaded from the default branch
+    # through workflow_run, so it never executes untrusted PR code.
     require(code_test, "cancel-in-progress: true", "test.yml")
+    require(stale, "workflow_run:", "cancel-stale-tests.yml")
+    require(stale, "workflows: [Code Test]", "cancel-stale-tests.yml")
+    require(stale, "types: [requested]", "cancel-stale-tests.yml")
     require(stale, "actions: write", "cancel-stale-tests.yml")
-    require(stale, "actions/workflows/test.yml/runs", "cancel-stale-tests.yml")
+    require(stale, "github.event.workflow_run.run_number", "cancel-stale-tests.yml")
+    require(stale, ".run_number < $current_run_number", "cancel-stale-tests.yml")
+    require(stale, "actions/workflows/test.yml/runs?per_page=100&branch=$CURRENT_BRANCH", "cancel-stale-tests.yml")
     require(stale, 'actions/runs/$run_id/cancel', "cancel-stale-tests.yml")
+    require(stale, 'actions/runs/$run_id/force-cancel', "cancel-stale-tests.yml")
 
     print("release CI contracts are enforced")
     return 0
