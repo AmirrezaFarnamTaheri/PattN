@@ -8,7 +8,7 @@ on:
         type: string
     secrets:
       GPG_PRIVATE_KEY:
-        required: true
+        required: false
   workflow_dispatch:
     inputs:
       release_tag:
@@ -22,7 +22,22 @@ jobs:
   publish:
     runs-on: ubuntu-26.04
     steps:
+    - name: Detect optional GPG signing key
+      id: gpg
+      shell: bash
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      run: |
+        set -euo pipefail
+        if [[ -n "$GPG_PRIVATE_KEY" ]]; then
+          echo "present=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "present=false" >> "$GITHUB_OUTPUT"
+          echo "No GPG_PRIVATE_KEY configured; skipping public-key release asset."
+        fi
+
     - name: Import GPG private key
+      if: steps.gpg.outputs.present == 'true'
       shell: bash
       env:
         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -32,6 +47,7 @@ jobs:
         printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
 
     - name: Export GPG public key
+      if: steps.gpg.outputs.present == 'true'
       shell: bash
       run: |
         set -euo pipefail
@@ -40,6 +56,7 @@ jobs:
         gpg --batch --armor --export "$fingerprint" > PattN-public-key.asc
 
     - name: Upload GPG public key to release
+      if: steps.gpg.outputs.present == 'true'
       uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2.11.5
       with:
         file: PattN-public-key.asc
