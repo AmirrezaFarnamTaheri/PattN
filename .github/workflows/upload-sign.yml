@@ -256,8 +256,8 @@ jobs:
         done
         (( ${#assets[@]} )) || { echo "No regular release files matched"; exit 1; }
 
+        notes_file="../.github/release-notes/$RELEASE_TAG.md"
         if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-          notes_file="../.github/release-notes/$RELEASE_TAG.md"
           create_args=(release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --prerelease)
           if [[ -f "$notes_file" ]]; then
             create_args+=(--notes-file "$notes_file")
@@ -275,4 +275,15 @@ jobs:
             echo "Release $RELEASE_TAG was created concurrently; continuing with asset upload."
           fi
         fi
+
+        # The optional public-key job may win the release-creation race. Always
+        # converge the release metadata to the curated notes before uploading
+        # assets so publication order cannot leave a placeholder release body.
+        edit_args=(release edit "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --prerelease)
+        if [[ -f "$notes_file" ]]; then
+          edit_args+=(--notes-file "$notes_file")
+        else
+          edit_args+=(--notes ".")
+        fi
+        gh "${edit_args[@]}"
         gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

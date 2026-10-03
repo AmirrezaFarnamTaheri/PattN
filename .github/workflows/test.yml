@@ -266,6 +266,8 @@ jobs:
             "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
             "id-token: write",
             "attestations: write",
+            'edit_args=(release edit "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --prerelease)',
+            'edit_args+=(--notes-file "$notes_file")',
         ]
         for needle in required:
             if needle not in upload:
