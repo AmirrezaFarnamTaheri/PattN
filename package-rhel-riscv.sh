@@ -79,12 +79,12 @@ detect_environment() {
   HOST_ARCH="$(uname -m)"
 
   case "$OS_ID" in
-    rhel|rocky|almalinux|fedora|centos)
+    rhel|rocky|almalinux|fedora|centos|ubuntu|debian)
       echo "Detected supported system: ${OS_NAME:-$OS_ID} ${OS_VERSION_ID:-}"
       ;;
     *)
       die "Unsupported system: ${OS_NAME:-unknown} (${OS_ID:-unknown}).
-This script only supports: RHEL / Rocky / AlmaLinux / Fedora / CentOS."
+This script supports RHEL-family systems plus Debian/Ubuntu RISC-V build guests."
       ;;
   esac
 
@@ -98,13 +98,32 @@ This script only supports: RHEL / Rocky / AlmaLinux / Fedora / CentOS."
 install_dependencies() {
   local install_ok=0
   local tmp_dotnet=""
+  local deps=()
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y install \
-      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang binutils \
-      glibc-devel kernel-headers libatomic file ca-certificates libicu \
-      && install_ok=1
+    deps=(
+      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio binutils
+      glibc-devel kernel-headers libatomic file ca-certificates libicu
+    )
+    if [[ -z "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+      deps+=(golang)
+    fi
+    sudo dnf -y install "${deps[@]}" && install_ok=1
+  elif command -v apt-get >/dev/null 2>&1; then
+    # Ubuntu 26.04 publishes rpm/rpmbuild/rpm2cpio for riscv64. This path is
+    # used by the official Ubuntu RISC-V QEMU guest in release CI.
+    deps=(
+      rpm rpm2cpio cpio curl unzip tar jq rsync git python3 binutils
+      gcc make libc6-dev libatomic1 file ca-certificates libicu-dev
+    )
+    if [[ -z "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+      deps+=(golang-go)
+    fi
+    sudo apt-get update
+    sudo apt-get -y install "${deps[@]}" && install_ok=1
+  fi
 
+  if [[ "$install_ok" -eq 1 ]]; then
     mkdir -p "$HOME/.dotnet"
     tmp_dotnet="$(mktemp -d)"
     pattn_download_sha256 "$DOTNET_SDK_URL" "$tmp_dotnet/$DOTNET_RISCV_FILE" "$PATTN_RISCV_DOTNET_SHA256"
@@ -113,17 +132,14 @@ install_dependencies() {
 
     export PATH="$HOME/.dotnet:$PATH"
     export DOTNET_ROOT="$HOME/.dotnet"
-
     dotnet --info >/dev/null 2>&1 || install_ok=0
   fi
 
   if [[ "$install_ok" -ne 1 ]]; then
-    echo "Could not auto-install dependencies for '$OS_ID'. Make sure these are available:"
-    echo "dotnet-riscv SDK, curl, unzip, tar, rsync, git, python3, rpm, rpmdevtools, rpm-build (on Red Hat branch)"
+    echo "Could not auto-install RISC-V RPM build dependencies for '$OS_ID'."
     exit 1
   fi
 }
-
 prepare_workspace() {
   SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
   PUBLISH_ROOT="$SCRIPT_DIR/.pattn-package-publish"
@@ -729,7 +745,11 @@ package_binary() {
   stage_discovery_helper "$workdir/$PKGROOT" "$rid"
   verify_staged_elf_architecture "$workdir/$PKGROOT" "$rid"
 
-  rpmdev-setuptree
+  if command -v rpmdev-setuptree >/dev/null 2>&1; then
+    rpmdev-setuptree
+  else
+    mkdir -p "$RPM_TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+  fi
   sourcedir="${RPM_TOPDIR}/SOURCES"
   specdir="${RPM_TOPDIR}/SPECS"
   specfile="${specdir}/v2rayN.spec"
