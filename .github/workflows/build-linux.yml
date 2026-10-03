@@ -434,19 +434,26 @@ jobs:
           exit 1
         }
 
-        ssh "${ssh_base[@]}" pattn@127.0.0.1 \
-          "cd /home/pattn/repo && chmod 755 package-debian-riscv.sh package-rhel-riscv.sh && \
-           PATTN_SOURCE_PINNED=1 \
-           PATTN_DISCOVERY_PREBUILT=/home/pattn/prebuilt/pattn-discovery-riscv64 \
-           ./package-debian-riscv.sh '$RELEASE_TAG'" \
+        ssh "${ssh_base[@]}" pattn@127.0.0.1 bash -s -- "$RELEASE_TAG" <<'REMOTE_DEB' \
           2>&1 | tee "$RUNNER_TEMP/deb-riscv64-build.log"
+        set -euo pipefail
+        release_tag="$1"
+        cd /home/pattn/repo
+        chmod 755 package-debian-riscv.sh package-rhel-riscv.sh
+        PATTN_SOURCE_PINNED=1 \
+        PATTN_DISCOVERY_PREBUILT=/home/pattn/prebuilt/pattn-discovery-riscv64 \
+          ./package-debian-riscv.sh "$release_tag"
+        REMOTE_DEB
 
-        ssh "${ssh_base[@]}" pattn@127.0.0.1 \
-          "cd /home/pattn/repo && \
-           PATTN_SOURCE_PINNED=1 \
-           PATTN_DISCOVERY_PREBUILT=/home/pattn/prebuilt/pattn-discovery-riscv64 \
-           ./package-rhel-riscv.sh '$RELEASE_TAG'" \
+        ssh "${ssh_base[@]}" pattn@127.0.0.1 bash -s -- "$RELEASE_TAG" <<'REMOTE_RPM' \
           2>&1 | tee "$RUNNER_TEMP/rpm-riscv64-build.log"
+        set -euo pipefail
+        release_tag="$1"
+        cd /home/pattn/repo
+        PATTN_SOURCE_PINNED=1 \
+        PATTN_DISCOVERY_PREBUILT=/home/pattn/prebuilt/pattn-discovery-riscv64 \
+          ./package-rhel-riscv.sh "$release_tag"
+        REMOTE_RPM
 
         mkdir -p "$GITHUB_WORKSPACE/dist/deb-riscv64" "$GITHUB_WORKSPACE/dist/rpm-riscv64"
         scp -i "$key" -P "$ssh_port" \
