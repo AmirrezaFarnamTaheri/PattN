@@ -277,6 +277,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     needs: package-x86
     strategy:
       fail-fast: false
