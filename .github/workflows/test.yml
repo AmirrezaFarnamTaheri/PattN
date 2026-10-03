@@ -286,30 +286,18 @@ jobs:
             ):
                 failures.append(f"{name}: top-level test/assurance runs must cancel superseded queued/running runs")
 
-        def push_paths(workflow_text):
-            push = re.search(r"(?ms)^  push:\n(?P<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:|\Z)", workflow_text)
-            if not push:
-                return set()
-            paths = re.search(r"(?ms)^    paths:\n(?P<body>(?:^      - .+\n?)+)", push.group("body"))
-            if not paths:
-                return set()
-            return {
-                line.strip()[2:].strip().strip("'\\\"")
-                for line in paths.group("body").splitlines()
-                if line.strip().startswith("- ")
-            }
-
         code_test_text = Path(".github/workflows/test.yml").read_text(encoding="utf-8")
         stale_canceller = Path(".github/workflows/cancel-stale-tests.yml").read_text(encoding="utf-8")
-        if push_paths(code_test_text) != push_paths(stale_canceller):
-            failures.append(
-                "cancel-stale-tests.yml: push paths must exactly match test.yml so cancellation always has a replacement run"
-            )
         for needle in [
+            "workflow_run:",
+            "workflows: [Code Test]",
+            "types: [requested]",
             "actions: write",
+            "github.event.workflow_run.run_number",
+            ".run_number < $current_run_number",
             "actions/workflows/test.yml/runs?per_page=100&branch=$CURRENT_BRANCH",
             'actions/runs/$run_id/cancel',
-            ".head_sha != $sha",
+            'actions/runs/$run_id/force-cancel',
         ]:
             if needle not in stale_canceller:
                 failures.append(f"cancel-stale-tests.yml: missing stale-run cancellation control: {needle}")
