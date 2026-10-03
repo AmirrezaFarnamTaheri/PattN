@@ -41,6 +41,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     needs: build
     uses: ./.github/workflows/package-zip.yml
     with:
@@ -191,6 +193,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     needs: dmg
     strategy:
       matrix:
