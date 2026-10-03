@@ -13,6 +13,10 @@ Runtime network updates may be re-enabled only after all of these are implemente
 5. **Release CI** — publishing fails if the signed manifest is absent, malformed, expired, or does not cover every runtime-updatable artifact.
 6. **Negative tests** — wrong key, modified manifest, modified asset, expiry, replay/downgrade, wrong platform/arch and unknown/revoked key all fail closed.
 
+## Release provenance versus updater trust
+
+Release CI now emits GitHub OIDC-backed build attestations in addition to checksums/SBOM/provenance files. These authenticate the build/repository identity for operators and release verification, but they are **not** used as an implicit in-app update trust root. The installed client still has no deliberately enrolled key/identity policy for verifying a future update manifest, so runtime self-update remains fail-closed.
+
 ## Current state
 
 `RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater` is deliberately `true`. Application, core and geo runtime network update entry points return a localized trust error without performing a download. Subscription refresh and other non-`UpdateService` network features are unaffected.
