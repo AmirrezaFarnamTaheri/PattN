@@ -62,9 +62,8 @@ jobs:
             --output release-trust/pattn-update-signing-private.pem.gpg \
             --encrypt --recipient "$fingerprint" "$work/update-private.pem"
 
-          cat > release-trust/update-signing-selftest.json <<'EOF'
-{"schema":"pattn-update-signing-selftest-v1","message":"PattN pinned update trust root"}
-EOF
+          printf '%s\n' '{"schema":"pattn-update-signing-selftest-v1","message":"PattN pinned update trust root"}' \
+            > release-trust/update-signing-selftest.json
           openssl dgst -sha256 -sign "$work/update-private.pem" \
             -out release-trust/update-signing-selftest.json.sig \
             release-trust/update-signing-selftest.json
