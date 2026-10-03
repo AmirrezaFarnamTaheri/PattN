@@ -1,33 +1,12 @@
 name: Cancel stale test runs
 
 on:
-  push:
-    branches:
-      - master
-      - my-releases
-      - feat/discovery-reviver-integration
-    # Keep this in lockstep with test.yml. A stale run is cancelled only when
-    # this push also creates its replacement Code Test run.
-    paths:
-      - 'v2rayN/ServiceLib/**'
-      - 'v2rayN/ServiceLib.UdpTest/**'
-      - 'v2rayN/ServiceLib.Tests/**'
-      - 'v2rayN/v2rayN/**'
-      - 'v2rayN/v2rayN.Desktop/**'
-      - 'v2rayN/Directory.Build.*'
-      - 'v2rayN/Directory.Packages.props'
-      - 'pattn-discovery/**'
-      - 'global.json'
-      - '.github/workflows/**'
-      - 'package-*.sh'
-      - 'release-assets.lock.sh'
-      - 'release-reproducibility.sh'
-      - 'scripts/deterministic_zip.py'
-      - 'scripts/generate_dependency_sbom.py'
-  workflow_dispatch:
+  workflow_run:
+    workflows: [Code Test]
+    types: [requested]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 permissions:
@@ -36,49 +15,72 @@ permissions:
 
 jobs:
   cancel-stale-code-test:
-    # Keep actions:write off pull_request entirely. PR runs use test.yml's native
-    # concurrency cancellation; this API cleanup is only for trusted landing
-    # pushes where a stuck runner can delay the normal cancellation transition.
+    # workflow_run executes the workflow definition from the default branch,
+    # so this job never executes untrusted PR code despite holding actions:write.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Cancel older queued/running Code Test runs on this ref
+      - name: Cancel older queued/running Code Test runs on this branch
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          CURRENT_SHA: ${{ github.sha }}
-          CURRENT_BRANCH: ${{ github.ref_name }}
+          CURRENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          CURRENT_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          CURRENT_SHA: ${{ github.event.workflow_run.head_sha }}
+          CURRENT_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
 
+          [[ -n "$CURRENT_BRANCH" ]] || {
+            echo "::error::Code Test workflow_run has no head branch"
+            exit 1
+          }
+
           response="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test.yml/runs?per_page=100&branch=$CURRENT_BRANCH")"
           mapfile -t stale_ids < <(
-            jq -r --arg sha "$CURRENT_SHA" '
-              .workflow_runs[]
-              | select(.head_sha != $sha)
-              | select(.status == "queued"
-                    or .status == "pending"
-                    or .status == "waiting"
-                    or .status == "requested"
-                    or .status == "in_progress")
-              | .id
-            ' <<<"$response"
+            jq -r               --argjson current_id "$CURRENT_RUN_ID"               --argjson current_run_number "$CURRENT_RUN_NUMBER" '
+                .workflow_runs[]
+                | select(.id != $current_id)
+                | select(.run_number < $current_run_number)
+                | select(.status == "queued"
+                      or .status == "pending"
+                      or .status == "waiting"
+                      or .status == "requested"
+                      or .status == "in_progress")
+                | .id
+              ' <<<"$response"
           )
 
           for run_id in "${stale_ids[@]}"; do
-            echo "Cancelling stale Code Test run $run_id on $CURRENT_BRANCH"
+            echo "Cancelling stale Code Test run $run_id on $CURRENT_BRANCH (replacement run $CURRENT_RUN_ID, sha=$CURRENT_SHA)"
             if ! gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel" >/dev/null 2>&1; then
-              # A race to completed/cancelled is benign. Re-read before deciding
-              # whether this is a real cancellation failure.
               status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq '.status + "/" + (.conclusion // "")' 2>/dev/null || true)"
               case "$status" in
                 completed/*)
                   echo "Run $run_id already completed while cancellation raced: $status"
+                  continue
                   ;;
                 *)
-                  echo "::error::failed to cancel stale Code Test run $run_id (status=$status)"
-                  exit 1
+                  echo "Normal cancellation for run $run_id did not complete immediately (status=$status); checking before force-cancel."
                   ;;
               esac
+            fi
+
+            completed=0
+            for _ in 1 2 3 4 5; do
+              status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq '.status + "/" + (.conclusion // "")' 2>/dev/null || true)"
+              case "$status" in
+                completed/*)
+                  echo "Run $run_id is no longer active: $status"
+                  completed=1
+                  break
+                  ;;
+              esac
+              sleep 2
+            done
+
+            if (( completed == 0 )); then
+              echo "Force-cancelling unresponsive stale Code Test run $run_id (status=$status)"
+              gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/force-cancel" >/dev/null
             fi
           done
