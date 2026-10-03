@@ -12,8 +12,6 @@ on:
       - my-releases
     paths:
       - '.github/release-request.json'
-    tags:
-      - '*'
 
 concurrency:
   group: release-all-${{ case(inputs.release_tag != '', inputs.release_tag, github.ref_name) }}
