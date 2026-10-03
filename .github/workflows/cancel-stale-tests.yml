@@ -6,6 +6,24 @@ on:
       - master
       - my-releases
       - feat/discovery-reviver-integration
+    # Keep this in lockstep with test.yml. A stale run is cancelled only when
+    # this push also creates its replacement Code Test run.
+    paths:
+      - 'v2rayN/ServiceLib/**'
+      - 'v2rayN/ServiceLib.UdpTest/**'
+      - 'v2rayN/ServiceLib.Tests/**'
+      - 'v2rayN/v2rayN/**'
+      - 'v2rayN/v2rayN.Desktop/**'
+      - 'v2rayN/Directory.Build.*'
+      - 'v2rayN/Directory.Packages.props'
+      - 'pattn-discovery/**'
+      - 'global.json'
+      - '.github/workflows/**'
+      - 'package-*.sh'
+      - 'release-assets.lock.sh'
+      - 'release-reproducibility.sh'
+      - 'scripts/deterministic_zip.py'
+      - 'scripts/generate_dependency_sbom.py'
   workflow_dispatch:
 
 concurrency:
