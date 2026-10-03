@@ -22,7 +22,9 @@ The review re-checked source, current-head workflow state/logs, split-to-umbrell
 
 ## Current conclusion
 
-The core Discovery/Reviver architecture is no longer blocked by the headline defects in the October 1 reports. The remaining work is either (a) a current CI validation step for just-pushed fixes, (b) a trust/product design decision that cannot be safely invented in code, or (c) future/date-dependent validation.
+The PR #1–#9 stack is merged into `my-releases`. The concrete release/runtime blockers from the October 1–2 reports are closed or fail-closed: packaging inputs are digest/source pinned, macOS packages carry and smoke the discovery helper, native payload reproducibility is gated, superseded test/assurance runs cancel automatically, and release assets are backed by GitHub OIDC provenance attestations even when an optional GPG key is not configured.
+
+The remaining items are not unimplemented release blockers: human-reviewed translations for non-Persian locales, the date-gated 2026-10-11 live KSK evidence review, and the documented impossibility of atomic CAS against arbitrary non-cooperating local writers. Speculative carrier/DPI automation and global sharing remain deliberately outside the release contract until reproducible evidence/privacy requirements exist.
 
 ## Closed / implemented
 
@@ -113,7 +115,7 @@ The core Discovery/Reviver architecture is no longer blocked by the headline def
 - `global.json` and Go toolchain are exact-pinned for release gates.
 - macOS DMGs include and smoke the packaged discovery helper; release builds support Apple signing/notarization/stapling.
 - Release upload has a valid tag regex and `GH_REPO`.
-- Release output includes SHA-256 inventories, SPDX metadata, SLSA-style provenance metadata, and detached signatures.
+- Release output includes SHA-256 inventories, SPDX metadata, SLSA-style provenance metadata, and mandatory GitHub OIDC build attestations. Detached GPG signatures/public-key assets are an optional additional layer when a repository signing key is configured.
 - ZIP packaging has an explicit deterministic two-build self-check using the source commit timestamp.
 - The current-head RPM failure was reproduced from logs: UBI10 lacked ICU before the locked .NET SDK started. `libicu` is now installed in the RHEL build path and declared as an RPM runtime dependency for x64/arm64, RISC-V, and LoongArch packages.
 - DEB/RPM builds now normalize `SOURCE_DATE_EPOCH`, payload mtimes, tar ordering/ownership, gzip headers and RPM build metadata; pull-request CI performs a second native-package build and requires byte-for-byte equality.
@@ -160,18 +162,11 @@ Future work should extend these primitives instead of creating parallel stores/c
 
 ### 1. Portable runtime-update authenticity
 
-**Status: open security design.**
+**Status: release-safety closed by fail-closed disablement; authenticated self-update remains a future feature.**
 
-The hardened release pipeline publishes digests/signatures/provenance, but the legacy portable updater still downloads application/core/geo update payloads without verifying a client-pinned trust root. A checksum fetched from the same release metadata is not sufficient authentication.
+The legacy application/core/geo runtime updater is blocked by `RuntimeUpdateTrustPolicy.BlockUnauthenticatedLegacyUpdater = true`. `UpdateService` checks this boundary before update discovery/download entry points, and `RuntimeUpdateTrustPolicyTests.LegacyRuntimeUpdater_ShouldRemainFailClosedWithoutPinnedTrustRoot` is the regression gate. This removes the unauthenticated execution path for both packaged and portable builds rather than pretending a same-origin checksum is an independent trust root.
 
-A complete fix requires an explicit update trust design:
-- pinned public verification key or equivalent independently anchored trust root;
-- signed update manifest containing version, artifact digest, minimum accepted version, timestamp/expiry, and platform/architecture;
-- rollback/downgrade policy;
-- fail-closed verification before the archive reaches `AmazTool.UpgradeApp`;
-- migration/key-rotation procedure.
-
-Do not claim this fixed until the client trust root is deliberately selected and shipped. Packaged installs already disable PattN self-update; portable installs remain affected.
+`UPDATE_TRUST_BOOTSTRAP.md` defines the only acceptable re-enable contract: a client-pinned public key, signed canonical manifest, platform/architecture and downgrade/freshness binding, fail-closed verification before installation, reviewed key rotation, and negative tests. Until that contract is deliberately implemented, runtime network update remains disabled.
 
 ### 2. Full release reproducibility beyond ZIP
 
@@ -306,4 +301,5 @@ No branch should be merged solely on this ledger if its current-head required ch
 - Do not resurrect rejected audit patches from stale blobs.
 - Do not add carrier/DPI mitigation strategies without a reproducible fixture and real-core validation.
 - Do not weaken digest/signature/source-pinning checks to make an exotic build pass.
+- Superseded top-level test/assurance workflow runs must keep `cancel-in-progress: true`; `Code Test` statically gates this policy.
 - Do not mark the 2026-10-11 KSK review complete before authenticated post-rollover evidence exists.
