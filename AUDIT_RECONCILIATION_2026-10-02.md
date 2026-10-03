@@ -228,6 +228,33 @@ The repository already contains KSK-2024 and a scheduled authenticated IANA sour
 
 The application write gate/sidecar leases protect cooperating PattN writers. There is no portable filesystem primitive in the current design that turns arbitrary third-party writers into an atomic compare-and-swap with replacement. Keep this in the local attacker/host-integrity threat model; do not present it as a remote catalog vulnerability.
 
+## Later meta-audit / intelligence roadmap disposition
+
+The third supplied report mixes release findings with strategic product proposals. Every category is explicitly disposed here so roadmap ideas are not mistaken for unresolved release defects.
+
+### Critical table
+
+- **Supply-chain SBOM/provenance:** implemented through locked downloads, SHA inventories, SPDX/dependency SBOMs, SLSA-style provenance metadata, and mandatory GitHub OIDC attestations.
+- **Runtime update security:** unsafe legacy runtime updating is fail-closed and regression-tested; authenticated self-update remains disabled until the pinned-manifest contract is deliberately implemented.
+- **Strategy planner:** implemented by `RepairExperimentPlanner`, including conflict detection and deterministic bounded validation ordering.
+- **Failure confidence engine:** implemented by `RepairIntelligenceService.Assess` / `RepairFailureAssessment`; confidence describes evidence quality and does not authorize mutation.
+- **Privacy model:** implemented by `IntelligencePrivacyPolicy` with `LocalOnly` default and a constrained anonymous event shape; no remote sharing transport exists.
+
+### High-value table
+
+- **Proxy genome:** implemented without credentials/endpoints/subscription identifiers.
+- **Strategy learning:** implemented in the existing promotion history with recency decay and stronger human-confirmed weighting; live runtime validation remains authoritative.
+- **Endpoint lifecycle:** implemented through endpoint observations, history queries, reliability summaries, cleanup/retention and fleet-health aggregation.
+- **A/B / active experiments:** implemented as bounded conflict-aware candidate experiments plus repeated real-core validation; no blind simultaneous mutation is used.
+- **Human feedback / observability:** structured human-confirmed outcomes and process-local repair metrics exist.
+- **Subscription intelligence:** subscription fleet health aggregates independent proxy entries; it does not collapse a subscription into a single proxy identity.
+
+### Deliberately not shipped as automatic policy
+
+- **Carrier/DPI profiles, exact packet-count rules, static Cloudflare/Anycast blocklists:** field observations are useful hypotheses, but the supplied evidence is insufficient to safely encode universal automatic mutations. Upload-stall probing therefore emits a narrower evidence class and any mitigation still passes real-core validation.
+- **Global anonymous knowledge base / multi-device sync:** not shipped because they require an explicit remote service, consent UX, key/account model, data minimization review and deletion semantics. The local privacy boundary is in place first.
+- **Predictive/autonomous optimization / knowledge graph:** roadmap concepts, not correctness fixes. They must not bypass the existing bounded mutation, real-core validation, rollback and operator-control invariants.
+
 ## Stack gates (2026-10-02, second pass)
 
 The three static gates that run in `.github/workflows/stack-audit.yml` now encode one incident each.
