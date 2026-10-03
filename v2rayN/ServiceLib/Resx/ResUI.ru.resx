@@ -1935,4 +1935,7 @@
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>Тег "{0}" в EchOutbound уже используется другим outbound</value>
   </data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>Добавить сервер [MASQUE]</value>
+  </data>
 </root>

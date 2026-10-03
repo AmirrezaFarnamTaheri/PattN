@@ -399,6 +399,9 @@
   <data name="MsgServerTitle" xml:space="preserve">
     <value>Filter, press Enter to execute</value>
   </data>
+  <data name="menuCheckAndUpdate" xml:space="preserve">
+    <value>Check and Update</value>
+  </data>
   <data name="menuCheckUpdate" xml:space="preserve">
     <value>Check Update</value>
   </data>
@@ -1934,5 +1937,8 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   </data>
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>The tag "{0}" of EchOutbound is already used by another outbound</value>
+  </data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>Add [MASQUE]</value>
   </data>
 </root>

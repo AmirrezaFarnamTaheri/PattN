@@ -97,6 +97,15 @@ public partial class CoreConfigV2rayService
                 // PattN: respect the user's Route Only setting in TUN mode (upstream forces true)
                 // tunInbound.sniffing.routeOnly = true;
 
+                if (context.IsWindows && _config.TunModeItem.StrictRoute == true)
+                {
+                    tunInbound.settings.autoSystemWfpBlockLeak = ["dns", "misconfigtun"];
+                }
+                if (context.IsLinux)
+                {
+                    tunInbound.settings.autoSystemDnsToGateway = true;
+                }
+
                 if (_config.TunModeItem.RouteExcludeAddress is { Count: > 0 })
                 {
                     var wholeInternet = IPNetwork2.Parse("0.0.0.0/0");

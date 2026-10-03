@@ -399,6 +399,9 @@
   <data name="MsgServerTitle" xml:space="preserve">
     <value>过滤器，按回车执行</value>
   </data>
+  <data name="menuCheckAndUpdate" xml:space="preserve">
+    <value>检查并更新</value>
+  </data>
   <data name="menuCheckUpdate" xml:space="preserve">
     <value>检查更新</value>
   </data>
@@ -1926,5 +1929,8 @@
   </data>
   <data name="MsgEchOutboundTagConflict" xml:space="preserve">
     <value>EchOutbound 的 tag "{0}" 已被其他出站使用</value>
+  </data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>添加 [MASQUE]</value>
   </data>
 </root>
