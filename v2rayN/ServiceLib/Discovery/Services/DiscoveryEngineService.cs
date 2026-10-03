@@ -25,6 +25,10 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
     private int _consecutiveHelperFailures;
     private long _nextStartAllowedUnixMs;
     private const int MaxProtocolLineChars = 4 * 1024 * 1024;
+    // A crash backoff must outlive ordinary process-exit/stdio scheduling jitter on
+    // loaded CI and user systems; 250 ms allowed an immediate restart storm after
+    // the first failed request had already spent that budget unwinding.
+    private const int InitialHelperRestartBackoffMs = 1_000;
 
     public DiscoveryEngineService(string? executablePath = null)
     {
@@ -892,7 +896,7 @@ public sealed class DiscoveryEngineService : IAsyncDisposable, IDiscoveryEndpoin
     private void RegisterHelperFailure()
     {
         var failures = Math.Min(8, Interlocked.Increment(ref _consecutiveHelperFailures));
-        var delayMs = Math.Min(30_000, 250 * (1 << (failures - 1)));
+        var delayMs = Math.Min(30_000, InitialHelperRestartBackoffMs * (1 << (failures - 1)));
         Volatile.Write(
             ref _nextStartAllowedUnixMs,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + delayMs);
