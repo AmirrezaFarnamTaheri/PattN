@@ -52,6 +52,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/package-zip.yml
     with:
       target: linux
@@ -792,6 +794,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload deb x64 arm64
     needs: deb
     uses: ./.github/workflows/upload-sign.yml
@@ -803,6 +807,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload rpm x64 arm64
     needs: rpm
     uses: ./.github/workflows/upload-sign.yml
@@ -813,6 +819,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload rpm riscv64
     if: (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     needs: rpm-riscv64
@@ -824,6 +832,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload deb riscv64
     if: (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     needs: deb-riscv64
@@ -835,6 +845,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload deb loong64
     if: (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     needs: deb-loong64
@@ -846,6 +858,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload rpm loong64
     if: (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     needs: rpm-loong64
