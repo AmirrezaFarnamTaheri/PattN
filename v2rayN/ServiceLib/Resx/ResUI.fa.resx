@@ -2501,4 +2501,10 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>سابقهٔ بازنگری در دسترس نیست: {0}</value></data>
   <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} رویداد · {1} ارتقا · {2} بازگردانی · {3} بهبود · {4} پایدار · {5} پسرفت</value></data>
   <data name="MsgRuntimeUpdateAuthenticationRequired" xml:space="preserve"><value>به‌روزرسانی شبکه‌ای در زمان اجرا تا زمانی که PattN ریشهٔ اعتماد مستقل و سنجاق‌شده و اعتبارسنج مانیفست امضاشده ارائه نکند غیرفعال است. به‌جای آن یک بستهٔ انتشار تأییدشده نصب کنید.</value></data>
+  <data name="menuCheckAndUpdate" xml:space="preserve">
+    <value>بررسی و به‌روزرسانی</value>
+  </data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>افزودن [MASQUE]</value>
+  </data>
 </root>

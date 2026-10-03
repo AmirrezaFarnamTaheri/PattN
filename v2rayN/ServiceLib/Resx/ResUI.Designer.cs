@@ -808,6 +808,15 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Add [MASQUE] 的本地化字符串。
+        /// </summary>
+        public static string menuAddMasqueServer {
+            get {
+                return ResourceManager.GetString("menuAddMasqueServer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Add [NaïveProxy] 的本地化字符串。
         /// </summary>
         public static string menuAddNaiveServer {
@@ -942,6 +951,15 @@ namespace ServiceLib.Resx {
             }
         }
         
+        /// <summary>
+        ///   查找类似 Check and Update 的本地化字符串。
+        /// </summary>
+        public static string menuCheckAndUpdate {
+            get {
+                return ResourceManager.GetString("menuCheckAndUpdate", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   查找类似 Only Check 的本地化字符串。
         /// </summary>

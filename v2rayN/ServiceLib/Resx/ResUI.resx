@@ -399,6 +399,9 @@
   <data name="MsgServerTitle" xml:space="preserve">
     <value>Filter, press Enter to execute</value>
   </data>
+  <data name="menuCheckAndUpdate" xml:space="preserve">
+    <value>Check and Update</value>
+  </data>
   <data name="menuCheckUpdate" xml:space="preserve">
     <value>Check Update</value>
   </data>
@@ -2852,4 +2855,7 @@ The "Get Certificate" action may fail if a self-signed certificate is used or if
   <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>Revision history unavailable: {0}</value></data>
   <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} events · {1} promotions · {2} rollbacks · {3} improved · {4} stable · {5} regressed</value></data>
   <data name="MsgRuntimeUpdateAuthenticationRequired" xml:space="preserve"><value>Runtime network updates are disabled until PattN ships an independently pinned update trust root and signed manifest verifier. Install a verified release package instead.</value></data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>Add [MASQUE]</value>
+  </data>
 </root>

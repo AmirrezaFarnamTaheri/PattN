@@ -2327,4 +2327,7 @@
   <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>Check the Reviver upload probe settings: URL must be HTTP(S), payload 1024–1048576 bytes, timeout 1–60 seconds, and finalMask (when set) must contain a non-empty tcp array.</value></data>
   <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>Revision history unavailable: {0}</value></data>
   <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} events · {1} promotions · {2} rollbacks · {3} improved · {4} stable · {5} regressed</value></data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>Добавить сервер [MASQUE]</value>
+  </data>
 </root>

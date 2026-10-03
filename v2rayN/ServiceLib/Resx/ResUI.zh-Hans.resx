@@ -399,6 +399,9 @@
   <data name="MsgServerTitle" xml:space="preserve">
     <value>过滤器，按回车执行</value>
   </data>
+  <data name="menuCheckAndUpdate" xml:space="preserve">
+    <value>检查并更新</value>
+  </data>
   <data name="menuCheckUpdate" xml:space="preserve">
     <value>检查更新</value>
   </data>
@@ -2319,4 +2322,7 @@
   <data name="FillReviverUploadProbeParameterError" xml:space="preserve"><value>Check the Reviver upload probe settings: URL must be HTTP(S), payload 1024–1048576 bytes, timeout 1–60 seconds, and finalMask (when set) must contain a non-empty tcp array.</value></data>
   <data name="TbDiscoveryRevisionHistoryUnavailable" xml:space="preserve"><value>Revision history unavailable: {0}</value></data>
   <data name="TbDiscoveryPromotionSummary" xml:space="preserve"><value>{0} events · {1} promotions · {2} rollbacks · {3} improved · {4} stable · {5} regressed</value></data>
+  <data name="menuAddMasqueServer" xml:space="preserve">
+    <value>添加 [MASQUE]</value>
+  </data>
 </root>
