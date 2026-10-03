@@ -6,11 +6,10 @@ on:
       - master
       - my-releases
       - feat/discovery-reviver-integration
-  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,10 +18,9 @@ permissions:
 
 jobs:
   cancel-stale-code-test:
-    # Fork pull_request tokens are read-only. Do not use pull_request_target just
-    # to gain cancellation permission; same-repo branches and landing pushes are
-    # the only cases where this cleanup is both needed and safely authorized.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Keep actions:write off pull_request entirely. PR runs use test.yml's native
+    # concurrency cancellation; this API cleanup is only for trusted landing
+    # pushes where a stuck runner can delay the normal cancellation transition.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -30,8 +28,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          CURRENT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          CURRENT_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          CURRENT_SHA: ${{ github.sha }}
+          CURRENT_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
