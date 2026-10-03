@@ -15,10 +15,17 @@ def require(text: str, needle: str, label: str) -> None:
         raise SystemExit(f"{label}: missing required contract: {needle}")
 
 
+def forbid(text: str, needle: str, label: str) -> None:
+    if needle in text:
+        raise SystemExit(f"{label}: forbidden release contract remains: {needle}")
+
+
 def main() -> int:
     build_all = read(".github/workflows/build-all.yml")
     build_linux = read(".github/workflows/build-linux.yml")
     loong = read("package-rhel-loong.sh")
+    riscv_rpm = read("package-rhel-riscv.sh")
+    release_lock = read("release-assets.lock.sh")
     code_test = read(".github/workflows/test.yml")
     stale = read(".github/workflows/cancel-stale-tests.yml")
 
@@ -41,6 +48,18 @@ def main() -> int:
     # environment must not pull an unneeded distro Go package.
     require(loong, 'if [[ -z "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then', "package-rhel-loong.sh")
     require(loong, "deps+=(golang)", "package-rhel-loong.sh")
+
+    # RISC-V must run on a real GitHub-hosted label. GitHub does not provide
+    # an ubuntu-*-riscv hosted runner, so retained RISC-V releases use a pinned
+    # official Ubuntu RISC-V image under QEMU on the standard x64 fleet.
+    forbid(build_linux, "ubuntu-24.04-riscv", "build-linux.yml")
+    require(build_linux, "riscv64:", "build-linux.yml")
+    require(build_linux, "runs-on: ubuntu-26.04", "build-linux.yml")
+    require(build_linux, "qemu-system-riscv64", "build-linux.yml")
+    require(build_linux, "PATTN_UBUNTU_RISCV_IMAGE_SHA256", "build-linux.yml")
+    require(release_lock, "PATTN_UBUNTU_RISCV_IMAGE_SHA256", "release-assets.lock.sh")
+    require(riscv_rpm, "ubuntu|debian", "package-rhel-riscv.sh")
+    require(riscv_rpm, "mkdir -p \"$RPM_TOPDIR\"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}", "package-rhel-riscv.sh")
 
     # Every newer Code Test push cancels stale work on the same branch. Native
     # workflow concurrency handles PRs; the API cleanup handles trusted pushes.
