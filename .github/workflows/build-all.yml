@@ -84,8 +84,8 @@ jobs:
             exit 1
           fi
 
-          existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
-          if [[ -n "$existing" ]]; then
+          existing=""
+          if existing="$(git rev-parse --verify --quiet "refs/tags/$tag")"; then
             [[ "$existing" == "$GITHUB_SHA" ]] || {
               echo "::error::tag '$tag' already points to $existing, not $GITHUB_SHA"
               exit 1

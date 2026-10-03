@@ -316,6 +316,10 @@ jobs:
         orchestrator = Path(".github/workflows/build-all.yml").read_text(encoding="utf-8")
         if '[[ "$workflow" == "build-linux.yml" ]]' not in orchestrator or 'args+=(-f "exotic_arch=true")' not in orchestrator:
             failures.append("build-all.yml: orchestrated releases must enable retained RISC-V/LoongArch Linux packages")
+        if 'git rev-parse --verify --quiet "refs/tags/$tag"' not in orchestrator:
+            failures.append("build-all.yml: release tag existence must be checked from fetched refs")
+        if "git/ref/tags/$tag\" --jq '.object.sha' 2>/dev/null || true" in orchestrator:
+            failures.append("build-all.yml: missing-tag API errors must not be captured as an existing tag SHA")
         upload = Path(".github/workflows/upload-sign.yml").read_text(encoding="utf-8")
         required = [
             "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
