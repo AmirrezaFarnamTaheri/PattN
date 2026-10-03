@@ -79,12 +79,12 @@ detect_environment() {
   HOST_ARCH="$(uname -m)"
 
   case "$OS_ID" in
-    debian)
+    debian|ubuntu)
       echo "Detected supported system: ${OS_NAME:-$OS_ID} ${OS_VERSION_ID:-}"
       ;;
     *)
       die "Unsupported system: ${OS_NAME:-unknown} (${OS_ID:-unknown}).
-This script only supports: Debian."
+This script supports Debian/Ubuntu RISC-V build guests."
       ;;
   esac
 
@@ -98,15 +98,21 @@ This script only supports: Debian."
 install_dependencies() {
   local install_ok=0
   local tmp_dotnet=""
+  local deps=(
+    curl unzip tar jq rsync ca-certificates git dpkg-dev fakeroot file
+    desktop-file-utils xdg-utils wget gcc make pkg-config binutils
+    libicu-dev libssl-dev libfontconfig1 libfreetype6 zlib1g
+  )
+
+  if [[ -z "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+    deps+=(golang-go)
+  fi
 
   mkdir -p "$OUTPUT_DIR"
 
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
-    sudo apt-get -y install \
-      curl unzip tar jq rsync ca-certificates git dpkg-dev fakeroot file \
-      desktop-file-utils xdg-utils wget gcc make pkg-config golang-go binutils \
-      libicu-dev libssl-dev libfontconfig1 libfreetype6 zlib1g
+    sudo apt-get -y install "${deps[@]}"
 
     mkdir -p "$HOME/.dotnet"
     tmp_dotnet="$(mktemp -d)"
