@@ -434,7 +434,8 @@ jobs:
           exit 1
         }
 
-        # shellcheck disable=SC2029 -- RELEASE_TAG intentionally expands locally and is passed as remote bash $1.
+        # RELEASE_TAG intentionally expands locally and is passed as remote bash $1.
+        # shellcheck disable=SC2029
         ssh "${ssh_base[@]}" pattn@127.0.0.1 bash -s -- "$RELEASE_TAG" <<'REMOTE_DEB' \
           2>&1 | tee "$RUNNER_TEMP/deb-riscv64-build.log"
         set -euo pipefail
@@ -446,7 +447,8 @@ jobs:
           ./package-debian-riscv.sh "$release_tag"
         REMOTE_DEB
 
-        # shellcheck disable=SC2029 -- RELEASE_TAG intentionally expands locally and is passed as remote bash $1.
+        # RELEASE_TAG intentionally expands locally and is passed as remote bash $1.
+        # shellcheck disable=SC2029
         ssh "${ssh_base[@]}" pattn@127.0.0.1 bash -s -- "$RELEASE_TAG" <<'REMOTE_RPM' \
           2>&1 | tee "$RUNNER_TEMP/rpm-riscv64-build.log"
         set -euo pipefail
