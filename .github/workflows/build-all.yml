@@ -134,8 +134,17 @@ jobs:
             build-windows-x86.yml
           )
           for workflow in "${workflows[@]}"; do
-            gh workflow run "$workflow" \
-              --repo "$GITHUB_REPOSITORY" \
-              --ref "$REF_NAME" \
+            args=(
+              workflow run "$workflow"
+              --repo "$GITHUB_REPOSITORY"
+              --ref "$REF_NAME"
               -f "release_tag=$RELEASE_TAG"
+            )
+            if [[ "$workflow" == "build-linux.yml" ]]; then
+              # RISC-V and LoongArch are retained release targets, not proof-only
+              # side jobs. The Linux reusable release must explicitly opt them in
+              # when dispatched because workflow_dispatch defaults this input off.
+              args+=(-f "exotic_arch=true")
+            fi
+            gh "${args[@]}"
           done
