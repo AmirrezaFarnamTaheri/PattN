@@ -27,7 +27,7 @@ def main() -> int:
     # fail if a platform workflow does not conclude successfully.
     require(build_all, "Wait for platform release workflows", "build-all.yml")
     require(build_all, "actions/workflows/$workflow/runs", "build-all.yml")
-    require(build_all, 'conclusion != "success"', "build-all.yml")
+    require(build_all, 'if [[ "$conclusion" != "success" ]]; then', "build-all.yml")
     require(build_all, "PLATFORM_WAIT_TIMEOUT_SECONDS", "build-all.yml")
 
     # The LoongArch VM wrapper must terminate promptly on a non-zero package
