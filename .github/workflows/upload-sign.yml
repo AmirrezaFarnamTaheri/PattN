@@ -257,6 +257,11 @@ jobs:
         (( ${#assets[@]} )) || { echo "No regular release files matched"; exit 1; }
 
         if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-          gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes "." --prerelease
+          notes_file="../.github/release-notes/$RELEASE_TAG.md"
+          if [[ -f "$notes_file" ]]; then
+            gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes-file "$notes_file" --prerelease
+          else
+            gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes "." --prerelease
+          fi
         fi
         gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
