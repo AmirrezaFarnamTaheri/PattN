@@ -195,7 +195,34 @@ jobs:
             pending=0
             failed=0
 
-            while IFS=\t' read -r workflow run_id; do
+            while IFS=
+              payload="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+              status="$(jq -r '.status' <<<"$payload")"
+              conclusion="$(jq -r '.conclusion // ""' <<<"$payload")"
+              echo "$workflow run=$run_id status=$status conclusion=${conclusion:-pending}"
+
+              if [[ "$status" == "completed" ]]; then
+                if [[ "$conclusion" != "success" ]]; then
+                  echo "::error::$workflow run $run_id completed with conclusion '$conclusion'"
+                  failed=1
+                fi
+              else
+                pending=$((pending + 1))
+              fi
+            done < "$run_file"
+
+            (( failed == 0 )) || exit 1
+            if (( pending == 0 )); then
+              echo "All platform release workflows completed successfully."
+              break
+            fi
+            if (( SECONDS >= deadline )); then
+              echo "::error::timed out waiting for $pending platform release workflow(s)"
+              exit 1
+            fi
+            sleep 20
+          done
+\t' read -r workflow run_id; do
               payload="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
               status="$(jq -r '.status' <<<"$payload")"
               conclusion="$(jq -r '.conclusion // ""' <<<"$payload")"
