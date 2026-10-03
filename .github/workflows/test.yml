@@ -256,12 +256,22 @@ jobs:
             "dns-fuzz-corpus.yml",
             "dns-trust-anchor-source-check.yml",
             "resolver-catalog-audit.yml",
+            "cancel-stale-tests.yml",
         ]
         failures = []
         for name in cancellable:
             text = (Path(".github/workflows") / name).read_text(encoding="utf-8")
             if not re.search(r"(?ms)^concurrency:\s*\n(?:^[ \t].*\n)*?^[ \t]+cancel-in-progress:\s*true\s*$", text):
                 failures.append(f"{name}: top-level test/assurance runs must cancel superseded queued/running runs")
+        stale_canceller = Path(".github/workflows/cancel-stale-tests.yml").read_text(encoding="utf-8")
+        for needle in [
+            "actions: write",
+            "actions/workflows/test.yml/runs?per_page=100&branch=$CURRENT_BRANCH",
+            'actions/runs/$run_id/cancel',
+            ".head_sha != $sha",
+        ]:
+            if needle not in stale_canceller:
+                failures.append(f"cancel-stale-tests.yml: missing stale-run cancellation control: {needle}")
         orchestrator = Path(".github/workflows/build-all.yml").read_text(encoding="utf-8")
         if '[[ "$workflow" == "build-linux.yml" ]]' not in orchestrator or 'args+=(-f "exotic_arch=true")' not in orchestrator:
             failures.append("build-all.yml: orchestrated releases must enable retained RISC-V/LoongArch Linux packages")
