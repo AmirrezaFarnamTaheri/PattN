@@ -135,6 +135,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      attestations: write
     name: sign and upload zip x64 arm64
     needs: package
     strategy:
