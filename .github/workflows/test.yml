@@ -241,6 +241,39 @@ jobs:
             raise SystemExit("\n".join(failures))
         PY
 
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+
+        cancellable = [
+            "test.yml",
+            "stack-audit.yml",
+            "abrupt-loss-durability.yml",
+            "discovery-load.yml",
+            "dns-evidence-capture.yml",
+            "dns-evidence-corpus-candidates.yml",
+            "dns-fuzz-corpus.yml",
+            "dns-trust-anchor-source-check.yml",
+            "resolver-catalog-audit.yml",
+        ]
+        failures = []
+        for name in cancellable:
+            text = (Path(".github/workflows") / name).read_text(encoding="utf-8")
+            if not re.search(r"(?ms)^concurrency:\s*\n(?:^[ \t].*\n)*?^[ \t]+cancel-in-progress:\s*true\s*$", text):
+                failures.append(f"{name}: top-level test/assurance runs must cancel superseded queued/running runs")
+        upload = Path(".github/workflows/upload-sign.yml").read_text(encoding="utf-8")
+        required = [
+            "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
+            "id-token: write",
+            "attestations: write",
+        ]
+        for needle in required:
+            if needle not in upload:
+                failures.append(f"upload-sign.yml: missing mandatory release attestation control: {needle}")
+        if failures:
+            raise SystemExit("\n".join(failures))
+        PY
+
         if bash ./package-osx.sh invalid-arch "$RUNNER_TEMP/path with spaces" 0.0.0; then
           echo "::error::package-osx.sh accepted an unsupported architecture"
           exit 1
