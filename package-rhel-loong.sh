@@ -98,12 +98,19 @@ This script only supports: RHEL / Rocky / AlmaLinux / Fedora / CentOS."
 install_dependencies() {
   local install_ok=0
   local tmp_dotnet=""
+  local deps=(
+    rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio binutils
+    glibc-devel kernel-headers libatomic file ca-certificates libicu
+  )
+
+  # The release workflow cross-builds pattn-discovery on the trusted host.
+  # Only standalone invocations need the guest distro's Go toolchain.
+  if [[ -z "${PATTN_DISCOVERY_PREBUILT:-}" ]]; then
+    deps+=(golang)
+  fi
 
   if command -v dnf >/dev/null 2>&1; then
-    sudo dnf -y install \
-      rpm-build rpmdevtools curl unzip tar jq rsync git python3 cpio golang binutils \
-      glibc-devel kernel-headers libatomic file ca-certificates libicu \
-      && install_ok=1
+    sudo dnf -y install "${deps[@]}" && install_ok=1
 
     mkdir -p "$HOME/.dotnet"
     tmp_dotnet="$(mktemp -d)"
