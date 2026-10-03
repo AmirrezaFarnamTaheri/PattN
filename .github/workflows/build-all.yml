@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
+        description: PattN release tag (x.y.z or x.y.z-Pn)
         required: false
         type: string
   push:
+    branches:
+      - my-releases
+    paths:
+      - '.github/release-request.json'
     tags:
       - '*'
 
@@ -18,26 +23,104 @@ permissions:
   contents: read
 
 jobs:
+  prepare:
+    name: resolve immutable release ref
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
+      release_ref: ${{ steps.resolve.outputs.release_ref }}
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and pin release tag
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          tag=""
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && -n "$INPUT_RELEASE_TAG" ]]; then
+            tag="$INPUT_RELEASE_TAG"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="$REF_NAME"
+          elif [[ "$EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/my-releases" ]]; then
+            [[ -s .github/release-request.json ]] || {
+              echo "::error::.github/release-request.json is required for branch-triggered release"
+              exit 1
+            }
+            tag="$(jq -er '.release_tag' .github/release-request.json)"
+          else
+            echo "::error::could not resolve release tag for $EVENT_NAME / $GITHUB_REF"
+            exit 1
+          fi
+
+          [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-P[0-9]+)?$ ]] || {
+            echo "::error::release tag must be x.y.z or x.y.z-Pn (got '$tag')"
+            exit 1
+          }
+
+          version="$(python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("v2rayN/Directory.Build.props").getroot()
+          value = root.findtext(".//Version")
+          if not value:
+              raise SystemExit("Directory.Build.props has no Version")
+          print(value.strip())
+          PY
+          )"
+          if [[ "$tag" != "$version" && "$tag" != "$version"-P* ]]; then
+            echo "::error::release tag '$tag' does not match application version '$version'"
+            exit 1
+          fi
+
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+          if [[ -n "$existing" ]]; then
+            [[ "$existing" == "$GITHUB_SHA" ]] || {
+              echo "::error::tag '$tag' already points to $existing, not $GITHUB_SHA"
+              exit 1
+            }
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/tags/$tag" \
+              -f "sha=$GITHUB_SHA" >/dev/null
+          fi
+
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_ref=$tag" >> "$GITHUB_OUTPUT"
+
   public-key:
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.release_tag != ''
+    needs: prepare
+    if: needs.prepare.outputs.release_tag != ''
     permissions:
       contents: write
     uses: ./.github/workflows/pub-key.yml
     with:
-      release_tag: ${{ case(inputs.release_tag != '', inputs.release_tag, github.ref_name) }}
+      release_tag: ${{ needs.prepare.outputs.release_tag }}
     secrets:
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
   update:
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.release_tag != ''
+    needs: prepare
+    if: needs.prepare.outputs.release_tag != ''
     permissions:
       actions: write
       contents: read
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RELEASE_TAG: ${{ case(inputs.release_tag != '', inputs.release_tag, github.ref_name) }}
-      REF_NAME: ${{ case(inputs.release_tag != '', inputs.release_tag, github.ref_name) }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+      REF_NAME: ${{ needs.prepare.outputs.release_ref }}
     steps:
       - name: Trigger platform release workflows
         shell: bash
@@ -51,5 +134,8 @@ jobs:
             build-windows-x86.yml
           )
           for workflow in "${workflows[@]}"; do
-            gh workflow run "$workflow"               --repo "$GITHUB_REPOSITORY"               --ref "$REF_NAME"               -f "release_tag=$RELEASE_TAG"
+            gh workflow run "$workflow" \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref "$REF_NAME" \
+              -f "release_tag=$RELEASE_TAG"
           done
