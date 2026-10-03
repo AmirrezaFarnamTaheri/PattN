@@ -258,10 +258,21 @@ jobs:
 
         if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
           notes_file="../.github/release-notes/$RELEASE_TAG.md"
+          create_args=(release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --prerelease)
           if [[ -f "$notes_file" ]]; then
-            gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes-file "$notes_file" --prerelease
+            create_args+=(--notes-file "$notes_file")
           else
-            gh release create "$RELEASE_TAG" --title "PattN v$RELEASE_TAG" --notes "." --prerelease
+            create_args+=(--notes ".")
+          fi
+
+          # Release upload jobs run concurrently across platforms/architectures.
+          # Another job may create the same release after our initial view check.
+          if ! gh "${create_args[@]}"; then
+            gh release view "$RELEASE_TAG" >/dev/null 2>&1 || {
+              echo "::error::failed to create or observe release $RELEASE_TAG"
+              exit 1
+            }
+            echo "Release $RELEASE_TAG was created concurrently; continuing with asset upload."
           fi
         fi
         gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
