@@ -56,6 +56,7 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Audit release packaging integrity lock
+      timeout-minutes: 5
       shell: bash
       run: |
         set -euo pipefail
@@ -353,6 +354,7 @@ jobs:
         }
 
     - name: Run verified actionlint
+      timeout-minutes: 5
       shell: bash
       run: |
         set -euo pipefail
