@@ -266,10 +266,10 @@ jobs:
             if not re.search(r"(?ms)^concurrency:\s*\n(?:^[ \t].*\n)*?^[ \t]+cancel-in-progress:\s*true\s*$", text):
                 failures.append(f"{name}: top-level test/assurance runs must cancel superseded queued/running runs")
         def push_paths(workflow_text):
-            push = re.search(r"(?ms)^  push:\\n(?P<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:|\\Z)", workflow_text)
+            push = re.search(r"(?ms)^  push:\n(?P<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:|\Z)", workflow_text)
             if not push:
                 return set()
-            paths = re.search(r"(?ms)^    paths:\\n(?P<body>(?:^      - .+\\n?)+)", push.group("body"))
+            paths = re.search(r"(?ms)^    paths:\n(?P<body>(?:^      - .+\n?)+)", push.group("body"))
             if not paths:
                 return set()
             return {
