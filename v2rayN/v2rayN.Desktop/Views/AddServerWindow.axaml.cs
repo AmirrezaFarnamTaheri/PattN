@@ -313,6 +313,7 @@ public partial class AddServerWindow : WindowBase<AddServerViewModel>
                 cmbFingerprint.IsEnabled = false;
                 cmbAlpn.IsEnabled = false;
                 txtCipherSuites.IsEnabled = false;
+                togAllowInsecure.IsEnabled = false;
                 break;
         }
         cmbStreamSecurity.ItemsSource = lstStreamSecurity;
