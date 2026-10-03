@@ -1017,6 +1017,7 @@ public static class ConfigHandler
         profileItem.Password = profileItem.Password.TrimEx();
         profileItem.Fingerprint = string.Empty;
         profileItem.Alpn = string.Empty;
+        profileItem.CipherSuites = string.Empty;
         profileItem.Network = string.Empty;
         profileItem.AllowInsecure = string.Empty;
         if (profileItem.StreamSecurity.IsNullOrEmpty())
