@@ -410,6 +410,9 @@ jobs:
           exit 1
         }
 
+    - name: Verify release CI orchestration contracts
+      run: python3 scripts/check_release_ci_contract.py
+
     - name: Run verified actionlint
       timeout-minutes: 5
       shell: bash
